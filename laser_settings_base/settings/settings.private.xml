@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<visicutPreferences version="0">
+  <defaultMapping>cut everything</defaultMapping>
+  <disableSandbox>false</disableSandbox>
+  <useFilenamesForJobs>false</useFilenamesForJobs>
+  <labName>KU_Make</labName>
+  <enableQRCodes>false</enableQRCodes>
+  <fastQRCodes>false</fastQRCodes>
+  <fabqrActive>false</fabqrActive>
+  <fabqrPrivateURL></fabqrPrivateURL>
+  <fabqrPublicURL></fabqrPublicURL>
+  <fabqrPrivateUser></fabqrPrivateUser>
+  <fabqrPrivatePassword></fabqrPrivatePassword>
+  <autoUpdateSettingsDisabled>false</autoUpdateSettingsDisabled>
+  <lastAutoUpdateTime>0</lastAutoUpdateTime>
+  <lastAutoUpdateLabName></lastAutoUpdateLabName>
+  <windowBounds>
+    <x>167</x>
+    <y>95</y>
+    <width>2009</width>
+    <height>1000</height>
+  </windowBounds>
+  <useThicknessAsFocusOffset>true</useThicknessAsFocusOffset>
+  <recentFiles>
+    <string>/Users/vwn277/projects/fedtlike/FEDT/L0.svg</string>
+    <string>/Users/vwn277/Downloads/discoball-hairtie.svg</string>
+  </recentFiles>
+  <lastMaterial>Acrylic</lastMaterial>
+  <lastLaserDevice>Epilog Helix</lastLaserDevice>
+</visicutPreferences>

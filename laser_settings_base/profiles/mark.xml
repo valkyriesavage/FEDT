@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<vectorProfile version="0.0">
+  <DPI>400.0</DPI>
+  <description>Cut through the material</description>
+  <name>mark</name>
+  <orderStrategy>NEAREST</orderStrategy>
+  <useOutline>false</useOutline>
+  <isCut>true</isCut>
+  <width>1.0</width>
+</vectorProfile>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<java version="11.0.5" class="java.beans.XMLDecoder">
+ <object class="java.awt.geom.AffineTransform">
+  <array class="double" length="6">
+   <void index="0">
+    <double>0.2822222222222222</double>
+   </void>
+   <void index="3">
+    <double>0.2822222222222222</double>
+   </void>
+   <void index="4">
+    <double>86.02132988823784</double>
+   </void>
+   <void index="5">
+    <double>64.51600172254774</double>
+   </void>
+  </array>
+ </object>
+</java>

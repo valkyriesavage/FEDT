@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<vectorProfile version="0.0">
+  <DPI>400.0</DPI>
+  <description>weld 2 layers of material (plexi) together</description>
+  <name>weld 2 layers</name>
+  <orderStrategy>INNER_FIRST</orderStrategy>
+  <useOutline>false</useOutline>
+  <isCut>true</isCut>
+  <width>1.0</width>
+</vectorProfile>

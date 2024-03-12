@@ -11,6 +11,13 @@ def do_experiment(measurement_variables, hypothesis, experiment_csv,
                     interaction_variables +\
                     measurement_variables
     
+    for variable in variables_tea:
+        # munge it to have the right stuff. we name things a little differently
+        if variable["data type"] == "nominal":
+            variable["categories"] = variable["test_values"]
+        # anything else we want to do? we could add "values" to the ratio ones
+        # or do anything else we like
+
     study_design = {
         'study type': 'experiment',
         'independent variables': [var['name'] for var in CAD_variables +

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<material version="0">
+  <description></description>
+  <engraveColor>#000000</engraveColor>
+  <cutColor>#ff3333</cutColor>
+  <color>#946231</color>
+  <name>Wood</name>
+  <materialThicknesses>
+    <float>3.6</float>
+  </materialThicknesses>
+</material>

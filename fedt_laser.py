@@ -11,23 +11,19 @@ laser_bed = {
     'height': 18 * 2.54 * 10 # in mm
 }
 
-def create_labelled(drawing_function, label = "L0", label_location = (0,0), svg_location = "./"):
+def build_geometry(geometry_function, label_function=None, label = "L0", label_location = (0,0), svg_location = "./"):
     d = draw.Drawing(laser_bed['width'], laser_bed['height'], origin='center', displayInline=False)
     
-    drawing_function(d)
+    geometry_function(d)
+    if label_function is not None:
+        label_function(d, label)
 
-    d.append(draw.Text(x=label_location[0], y=label_location[1], fill='blue', text=label, font_size=10))
-
-    svg_location = svg_location + label + '.svg'
+    svg_location = os.path.join(svg_location, "expt_" + label + '.svg')
     d.save_svg(svg_location)
     #d.savePng('example.png')
-    
-    # Display in Jupyter notebook
-    #d.rasterize()  # Display as PNG
-    return d, svg_location
+    return svg_location
 
 def prep_cam(cut_powers=[100], cut_speeds=[100], frequencies=[5000], materials=["Acrylic"], thicknesses=["3.0mm"]):
-    # the .vcsettings file is also just a secret zip file that's renamed...
     # the vcsettings file cannot be added from commandline...
     # so we need to do something like... build a huge one and ask the user to open manually to import.
     template_string = '''
@@ -67,11 +63,11 @@ def prep_cam(cut_powers=[100], cut_speeds=[100], frequencies=[5000], materials=[
     temp_vcsettings = temp_zf.replace('.zip','.vcsettings')
     os.rename(temp_zf, temp_vcsettings)
 
-    print("please open visicut and Options > Import Settings > " + temp_vcsettings)
+    print("please open Visicut and Options > Import Settings > " + temp_vcsettings)
 
     return
 
-def execute_lasercut(cut_file, laserdevice="Epilog Helix", mapping_file="mappings.xml"):
+def fabricate(cut_file, laserdevice="Epilog Helix", mapping_file="mappings.xml"):
     # make the svg into the .plf file that they like
     temp_zf = 'spam.zip'
     with ZipFile(temp_zf, 'w') as myzip:
