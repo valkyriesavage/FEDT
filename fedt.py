@@ -74,18 +74,34 @@ def label_all_conditions(CAD_variables=[], CAM_variables=[], fab_repetitions=1,
 def create_experiment_csv(vars_to_labels, interaction_variables, measurement_variables, measurement_repetitions):
     experiment_csv = "experiment-{}.csv".format(time.strftime("%Y%m%d-%H%M%S"))
 
-    with open(experiment_csv, 'w', newline='') as csvfile:
-        spamwriter = csv.writer(csvfile)
-        spamwriter.writerow(['Labelled Object'] + [var['name'] for var in measurement_variables])
-        for rep in range(measurement_repetitions):
-            for config in vars_to_labels.keys():
-                spamwriter.writerow([str(vars_to_labels[config])] + []*len(measurement_variables))
+    if len(interaction_variables) > 0:
+        #... we get to explode _those_ now
+        expanded_ixn = []
+        for var in interaction_variables:
+            expanded_ixn.append([(var['instruction'].format(val)) for val in var['test_values']])
+        exploded_ixn = list(itertools.product(*expanded_ixn))
+
+        with open(experiment_csv, 'w', newline='') as csvfile:
+            spamwriter = csv.writer(csvfile,delimiter='\t')
+            spamwriter.writerow(['Labelled Object','User Interaction'] + [var['name'] for var in measurement_variables])
+            for _ in range(measurement_repetitions):
+                for _, label in vars_to_labels.items():
+                    for ixn in exploded_ixn:
+                        spamwriter.writerow([label,str(ixn)] + []*len(measurement_variables))
+
+    else:
+        with open(experiment_csv, 'w', newline='') as csvfile:
+            spamwriter = csv.writer(csvfile,delimiter='\t')
+            spamwriter.writerow(['Labelled Object'] + [var['name'] for var in measurement_variables])
+            for _ in range(measurement_repetitions):
+                for config, label in vars_to_labels.items():
+                    spamwriter.writerow([label] + []*len(measurement_variables))
 
     key_csv = experiment_csv.replace('.csv','_key.csv')
     with open(key_csv, 'w', newline='') as csvfile:
         spamwriter = csv.writer(csvfile)
         spamwriter.writerow(['Label','Configuration'])
-        for config in vars_to_labels.keys():
+        for config, label in vars_to_labels.items():
             spamwriter.writerow([vars_to_labels[config], config])
 
     return experiment_csv, key_csv
