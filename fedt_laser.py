@@ -98,9 +98,9 @@ def prep_cam(CAM_variables):
 
     return
 
-def do_cam(*args, **kwargs):
-    # do nothing
-    return
+def do_cam(geom_path, *args, **kwargs):
+    # there is no CAM to do in the laser
+    return geom_path
 
 def prep_all_for_fab(vars_to_labels, geometry_function, label_function):
     CAM_paths = []

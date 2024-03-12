@@ -76,9 +76,16 @@ def create_experiment_csv(vars_to_labels, interaction_variables, measurement_var
 
     with open(experiment_csv, 'w', newline='') as csvfile:
         spamwriter = csv.writer(csvfile)
-        spamwriter.writerow(['Labelled Object'] + measurement_variables + ["ID"])
+        spamwriter.writerow(['Labelled Object'] + [var['name'] for var in measurement_variables])
         for rep in range(measurement_repetitions):
             for config in vars_to_labels.keys():
-                spamwriter.writerow(vars_to_labels[config] + []*len(measurement_variables) + [config.split('//')[0]])
+                spamwriter.writerow([str(vars_to_labels[config])] + []*len(measurement_variables))
 
-    return experiment_csv
+    key_csv = experiment_csv.replace('.csv','_key.csv')
+    with open(key_csv, 'w', newline='') as csvfile:
+        spamwriter = csv.writer(csvfile)
+        spamwriter.writerow(['Label','Configuration'])
+        for config in vars_to_labels.keys():
+            spamwriter.writerow([vars_to_labels[config], config])
+
+    return experiment_csv, key_csv
