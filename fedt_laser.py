@@ -1,29 +1,60 @@
-from config import *
-
 import os
 import subprocess
 import time
 from zipfile import ZipFile
 import drawsvg as draw
 
+from config import *
+from fedt import *
+
 laser_bed = {
     'width': 24 * 2.54 * 10, # in mm
     'height': 18 * 2.54 * 10 # in mm
 }
 
-def build_geometry(geometry_function, label_function=None, label = "L0", label_location = (0,0), svg_location = "./"):
+default_laser_settings = {
+    CUT_POWER: 100,
+    CUT_SPEED: 100,
+    CUT_FREQUENCY: 5000,
+    MATERIAL: "Acrylic",
+    THICKNESS: "3.0mm"
+}
+
+def build_geometry(geometry_function, label_function=None, label = "L0", svg_location = "./expt_svgs/", CAD_vars=[]):
     d = draw.Drawing(laser_bed['width'], laser_bed['height'], origin='center', displayInline=False)
     
-    geometry_function(d)
+    geometry_function(draw, d, CAD_vars)
     if label_function is not None:
-        label_function(d, label)
+        label_function(draw, d, label)
 
-    svg_location = os.path.join(svg_location, "expt_" + label + '.svg')
-    d.save_svg(svg_location)
+    if not os.path.exists(svg_location):
+        os.path.makedirs(svg_location)
+
+    svg_fname = "expt_" + label + ".svg"
+    svg_fullpath = os.path.join(svg_location, svg_fname)
+    d.save_svg(svg_fullpath)
     #d.savePng('example.png')
-    return svg_location
+    return svg_fullpath
 
-def prep_cam(cut_powers=[100], cut_speeds=[100], frequencies=[5000], materials=["Acrylic"], thicknesses=["3.0mm"]):
+def prep_cam(CAM_variables):
+    cut_powers=[default_laser_settings[CUT_POWER]]
+    cut_speeds=[default_laser_settings[CUT_SPEED]]
+    frequencies=[default_laser_settings[CUT_FREQUENCY]]
+    materials=[default_laser_settings[MATERIAL]]
+    thicknesses=[default_laser_settings[THICKNESS]]
+
+    for variable in CAM_variables:
+        if variable[NAME] == CUT_POWER:
+            cut_powers = variable[TEST_VALUES]
+        if variable[NAME] == CUT_SPEED:
+            cut_speeds = variable[TEST_VALUES]
+        if variable[NAME] == CUT_FREQUENCY:
+            frequencies = variable[TEST_VALUES]
+        if variable[NAME] == MATERIAL:
+            materials = variable[TEST_VALUES]
+        if variable[NAME] == THICKNESS:
+            thicknesses = variable[TEST_VALUES]
+
     # the vcsettings file cannot be added from commandline...
     # so we need to do something like... build a huge one and ask the user to open manually to import.
     template_string = '''
@@ -66,6 +97,32 @@ def prep_cam(cut_powers=[100], cut_speeds=[100], frequencies=[5000], materials=[
     print("please open Visicut and Options > Import Settings > " + temp_vcsettings)
 
     return
+
+def do_cam(*args, **kwargs):
+    # do nothing
+    return
+
+def prep_all_for_fab(vars_to_labels, geometry_function, label_function):
+    CAM_paths = []
+
+    CAD_to = 0
+    for pos,var in enumerate(vars_to_labels[list(vars_to_labels.keys())[0]][0]):
+        if var[0] == 'CAD':
+            CAD_to = pos+1
+        else:
+            break
+
+    for vars, label in vars_to_labels.items():
+        # separate variables
+        CAD_vars = vars[0][:CAD_to]
+        CAM_vars = vars[0][CAD_to:]
+        post_process_vars = vars[1] # honestly don't need this rn
+
+        geom_file = build_geometry(geometry_function, label_function, label, CAD_vars=CAD_vars)
+        CAM_path = do_cam(geom_file, CAM_vars)
+        CAM_paths.append(CAM_path)
+    
+    return CAM_paths
 
 def fabricate(cut_file, laserdevice="Epilog Helix", mapping_file="mappings.xml"):
     # make the svg into the .plf file that they like

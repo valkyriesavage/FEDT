@@ -1,4 +1,17 @@
+import csv
+import itertools
+import time
+
 from config import *
+
+NAME = "name"
+TEST_VALUES = "test_values"
+
+CUT_POWER = "cut power"
+CUT_SPEED = "speed"
+CUT_FREQUENCY = "frequency"
+MATERIAL = "material"
+THICKNESS = "thickness"
 
 def experiment_size(CAD_variables=[], CAM_variables=[], fab_repetitions=1,
                     post_process_variables=[], post_process_repetitions=1,
@@ -19,3 +32,53 @@ def experiment_size(CAD_variables=[], CAM_variables=[], fab_repetitions=1,
     print("This experiment will require fabricating {} unique objects.\n".format(number_of_fabbed_objects) + 
           "Users will perform {} interactions.\n".format(number_of_user_interactions) +
           "{} total measurements will be recorded.".format(number_of_recorded_values))
+
+label_i = 0
+def incrementing_labels(*args, **kwargs):
+    global label_i
+    label_str = "L"+str(label_i)
+    label_i = label_i + 1
+    return label_str
+
+def hash_labels(*args, **kwargs):
+    label_str = "L" + str(hash(str(args)))
+    return label_str
+
+def label_all_conditions(CAD_variables=[], CAM_variables=[], fab_repetitions=1,
+                    post_process_variables=[], post_process_repetitions=1, label_gen_function=incrementing_labels):
+    expanded_CAD = []
+    for var in CAD_variables:
+        expanded_CAD.append([('CAD', var['argname'], val) for val in var['test_values']])
+
+    expanded_CAM = []
+    for var in CAM_variables:
+        expanded_CAM.append([('CAM', var['argname'], val) for val in var['test_values']])
+
+    exploded_fab = list(itertools.product(*expanded_CAD,*expanded_CAM))*fab_repetitions
+
+    expanded_PP = []
+    for var in post_process_variables:
+        expanded_PP.append([('PP', var['description'].format(val)) for val in var['test_values']])
+    expanded_PP = expanded_PP*post_process_repetitions
+
+    exploded_vars = itertools.product(exploded_fab,*expanded_PP)
+
+    vars_to_labels = {}
+    for exploded in exploded_vars:
+        condition_label = label_gen_function(exploded)
+        vars_to_labels[exploded] = condition_label
+    
+    return vars_to_labels
+    
+
+def create_experiment_csv(vars_to_labels, interaction_variables, measurement_variables, measurement_repetitions):
+    experiment_csv = "experiment-{}.csv".format(time.strftime("%Y%m%d-%H%M%S"))
+
+    with open(experiment_csv, 'w', newline='') as csvfile:
+        spamwriter = csv.writer(csvfile)
+        spamwriter.writerow(['Labelled Object'] + measurement_variables + ["ID"])
+        for rep in range(measurement_repetitions):
+            for config in vars_to_labels.keys():
+                spamwriter.writerow(vars_to_labels[config] + []*len(measurement_variables) + [config.split('//')[0]])
+
+    return experiment_csv

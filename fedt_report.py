@@ -8,7 +8,6 @@ def latex(tea_results,
             post_process_variables,
             post_process_repetitions,
             interaction_variables,
-            interaction_repetitions,
             measurement_variables,
             measurement_repetitions):
     
@@ -23,6 +22,5 @@ def latex(tea_results,
             post_process_variables,
             post_process_repetitions,
             interaction_variables,
-            interaction_repetitions,
             measurement_variables,
             measurement_repetitions)
