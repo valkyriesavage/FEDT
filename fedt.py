@@ -30,7 +30,7 @@ def experiment_size(CAD_variables=[], CAM_variables=[], fab_repetitions=1,
     number_of_recorded_values = number_of_user_interactions * len(measurement_variables)
 
     print("This experiment will require fabricating {} unique objects.\n".format(number_of_fabbed_objects) + 
-          "Users will perform {} interactions.\n".format(number_of_user_interactions) +
+          ("Users will perform {} interactions.\n".format(number_of_user_interactions) if len(interaction_variables) > 0 else "") +
           "{} total measurements will be recorded.".format(number_of_recorded_values))
 
 label_i = 0
@@ -42,6 +42,10 @@ def incrementing_labels(*args, **kwargs):
 
 def hash_labels(*args, **kwargs):
     label_str = "L" + str(hash(str(args)))
+    return label_str
+
+def raw_labels(*args, **kwargs):
+    label_str = str(args)
     return label_str
 
 def label_all_conditions(CAD_variables=[], CAM_variables=[], fab_repetitions=1,
@@ -71,8 +75,9 @@ def label_all_conditions(CAD_variables=[], CAM_variables=[], fab_repetitions=1,
     return vars_to_labels
     
 
-def create_experiment_csv(vars_to_labels, interaction_variables, measurement_variables, measurement_repetitions):
-    experiment_csv = "experiment-{}.csv".format(time.strftime("%Y%m%d-%H%M%S"))
+def create_experiment_csv(vars_to_labels, interaction_variables, measurement_variables, measurement_repetitions, experiment_csv="experiment-{}.csv"):
+
+    experiment_csv = experiment_csv.format(time.strftime("%Y%m%d-%H%M%S"))
 
     if len(interaction_variables) > 0:
         #... we get to explode _those_ now
@@ -105,3 +110,11 @@ def create_experiment_csv(vars_to_labels, interaction_variables, measurement_var
             spamwriter.writerow([vars_to_labels[config], config])
 
     return experiment_csv, key_csv
+
+def request_postprocess(vars_to_labels):
+    for vars, label in vars_to_labels.items():
+        if len(vars) < 2:
+            # no post-process
+            pass
+        else:
+            print("for object {}, {}".format(label,vars[1][1]))
