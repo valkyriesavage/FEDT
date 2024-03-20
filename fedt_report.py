@@ -13,14 +13,16 @@ def latex(CAD_variables=[],
     
     # uh oh, do we need state variables to track what kind of printing and stuff we called?
 
-    return '''{} was the outcome of {} and {} and also {} we did {} with our {} and {} {} {} {}'''.format(
-            str(tea_results),
-            str(tea_hypothesis),
-            str(CAD_variables),
-            str(CAM_variables),
-            str(fab_repetitions),
-            str(post_process_variables),
-            str(post_process_repetitions),
-            str(interaction_variables),
-            str(measurement_variables),
-            str(measurement_repetitions))
+    return '''{tea_results} was the outcome of {tea_hypothesis} and {CAD_variables} and also {CAM_variables} we did {fab_repetitions} with our {post_process_variables} and {post_process_repetitions} {interaction_variables} {measurement_variables} {measurement_repetitions}'''.format(
+            {
+                tea_results: str(tea_results),
+                tea_hypothesis: str(tea_hypothesis),
+                CAD_variables: str(CAD_variables),
+                CAM_variables: str(CAM_variables),
+                fab_repetitions: str(fab_repetitions),
+                post_process_variables: str(post_process_variables),
+                post_process_repetitions: str(post_process_repetitions),
+                interaction_variables: str(interaction_variables),
+                measurement_variables: str(measurement_variables),
+                measurement_repetitions: str(measurement_repetitions)
+            })
