@@ -2,10 +2,16 @@ import os
 import subprocess
 import time
 from zipfile import ZipFile
-import drawsvg as draw
 
 from config import *
 from fedt import *
+
+
+CUT_POWER = "cut power"
+CUT_SPEED = "speed"
+CUT_FREQUENCY = "frequency"
+MATERIAL = "material"
+THICKNESS = "thickness"
 
 laser_bed = {
     'width': 24 * 2.54 * 10, # in mm
@@ -19,22 +25,6 @@ default_laser_settings = {
     MATERIAL: "Acrylic",
     THICKNESS: "3.0mm"
 }
-
-def build_geometry(geometry_function, label_function=None, label = "L0", svg_location = "./expt_svgs/", CAD_vars=[]):
-    d = draw.Drawing(laser_bed['width'], laser_bed['height'], origin='center', displayInline=False)
-    
-    geometry_function(draw, d, CAD_vars)
-    if label_function is not None:
-        label_function(draw, d, label)
-
-    if not os.path.exists(svg_location):
-        os.path.makedirs(svg_location)
-
-    svg_fname = "expt_" + label + ".svg"
-    svg_fullpath = os.path.join(svg_location, svg_fname)
-    d.save_svg(svg_fullpath)
-    #d.savePng('example.png')
-    return svg_fullpath
 
 def prep_cam(CAM_variables):
     cut_powers=[default_laser_settings[CUT_POWER]]
@@ -101,28 +91,6 @@ def prep_cam(CAM_variables):
 def do_cam(geom_path, *args, **kwargs):
     # there is no CAM to do in the laser
     return geom_path
-
-def prep_all_for_fab(vars_to_labels, geometry_function, label_function):
-    CAM_paths = []
-
-    CAD_to = 0
-    for pos,var in enumerate(vars_to_labels[list(vars_to_labels.keys())[0]][0]):
-        if var[0] == 'CAD':
-            CAD_to = pos+1
-        else:
-            break
-
-    for vars, label in vars_to_labels.items():
-        # separate variables
-        CAD_vars = vars[0][:CAD_to]
-        CAM_vars = vars[0][CAD_to:]
-        post_process_vars = vars[1] # honestly don't need this rn
-
-        geom_file = build_geometry(geometry_function, label_function, label, CAD_vars=CAD_vars)
-        CAM_path = do_cam(geom_file, CAM_vars)
-        CAM_paths.append(CAM_path)
-    
-    return CAM_paths
 
 def fabricate(cut_file, laserdevice="Epilog Helix", mapping_file="mappings.xml"):
     # make the svg into the .plf file that they like
