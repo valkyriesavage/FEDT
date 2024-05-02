@@ -210,43 +210,59 @@ class FEDTExperiment:
         self.measure_executor.measure(self.experiment_csv)
 
     @staticmethod
-    def stringify_variable_list(variable_list):
+    def stringify_variable_list(begin_string, variable_list):
         human_string = ""
         for variable in variable_list:
             if 'test_values' in variable.keys(): # should catch all independent variables
                 human_string += "{} (values {})".format(variable['name'], variable['test_values'])
             elif 'name' in variable.keys(): # should catch dependent variables
                 human_string += " " + str(variable['name'])
+        if len(human_string) > 0:
+            human_string = begin_string + human_string + '.'
+
         return human_string
 
     def report_latex(self):
         ''' render a string of LaTeX that describes what has been done on this experiment '''
 
-        setup = '''{CAD_executor} We generated objects varying along the following dimensions: {CAD_variables}.
-        {CAM_executor}. We generated different CAM settings: {CAM_variables}.
+        post_process_string = ''
+        if len(self.post_process_variables) > 0:
+            post_process_string = '''After fabrication, we post-processed {post_process_repetitions} objects with each of the following values: {post_process_variables}. {post_process_executor}'''.format(
+                **{
+                    'post_process_variables': self.stringify_variable_list(self.post_process_variables),
+                    'post_process_repetitions': str(self.post_process_repetitions),
+                    'post_process_executor': str(self.post_process_executor)
+                })
+        interaction_string = ''
+        if len(self.interaction_variables) > 0:
+            interaction_string = '''{interaction_executor} Users did {interaction_variables} {measurement_repetitions} times on every object ({num_user_ixns} total interactions).'''.format(
+                **{
+                    'interaction_variables': self.stringify_variable_list(self.interaction_variables),
+                    'interaction_executor': str(self.interaction_executor),
+                    'num_user_ixns': str(self.number_of_user_interactions)
+                })
+
+        setup = '''{CAD_executor} {CAD_variables}
+        {CAM_executor} {CAM_variables}
         We fabricated objects of each configuration {fab_repetitions} times. {fab_executor}
         In all, we fabricated {num_fabbed_objects} objects.
-        After fabrication, we post-processed {post_process_repetitions} objects with each of the following values: {post_process_variables}. {post_process_executor}
-        {interaction_executor} Users did {interaction_variables} {measurement_repetitions} times on every object ({num_user_ixns} total interactions).
+        {post_process_string}
+        {interaction_string}
         {measurement_executor} We recorded {measurement_variables} for each ({num_recorded_values} total measurements).'''.format(
                 **{
                     'CAD_executor': str(self.cad_executor),
-                    'CAD_variables': self.stringify_variable_list(self.CAD_variables),
+                    'CAD_variables': self.stringify_variable_list('We generated objects varying along the following dimensions: ',self.CAD_variables),
                     'CAM_executor': str(self.cam_executor),
-                    'CAM_variables': self.stringify_variable_list(self.CAM_variables),
+                    'CAM_variables': self.stringify_variable_list('We generated different CAM settings:',self.CAM_variables),
                     'fab_repetitions': str(self.fab_repetitions*self.post_process_repetitions),
                     'fab_executor': str(self.fabricate_executor),
-                    'post_process_variables': self.stringify_variable_list(self.post_process_variables),
-                    'post_process_repetitions': str(self.post_process_repetitions),
-                    'post_process_executor': str(self.post_process_executor),
-                    'interaction_variables': self.stringify_variable_list(self.interaction_variables),
-                    'interaction_executor': str(self.interaction_executor),
-                    'measurement_variables': self.stringify_variable_list(self.measurement_variables),
+                    'post_process_string': post_process_string,
+                    'interaction_string': interaction_string,
+                    'measurement_variables': self.stringify_variable_list('', self.measurement_variables),
                     'measurement_repetitions': str(self.measurement_repetitions),
                     'measurement_executor': str(self.measure_executor),
                     'num_fabbed_objects': str(self.number_of_fabbed_objects),
-                    'num_recorded_values': str(self.number_of_recorded_values),
-                    'num_user_ixns': str(self.number_of_user_interactions),
+                    'num_recorded_values': str(self.number_of_recorded_values)
                 })
 
         if self.tea_results is not None:
