@@ -49,17 +49,22 @@ class FEDTExperiment:
     geometry_function = None
     label_function = None
     label_gen_function = None
-    cad_function = fedt_manual.build_geometry
-    prep_cam_function = fedt_manual.prep_cam
-    fabricate_function = fedt_manual.fabricate
-    post_process_function = fedt_manual.post_process
-    interaction_function = fedt_manual.interact
-    measurement_function = fedt_manual.measure
 
-    cad_tool = None
-    machine = None
-    fab_type = None
-    configuration_base_file = None
+    def __init__(self,
+                 cad_executor=fedt_manual.FEDTHuman(),
+                 cam_executor=fedt_manual.FEDTHuman(),
+                 fabricate_executor=fedt_manual.FEDTHuman(),
+                 post_process_executor=fedt_manual.FEDTHuman(),
+                 interaction_executor=fedt_manual.FEDTHuman(),
+                 measure_executor=fedt_manual.FEDTHuman(),
+                 label_gen_function=raw_labels):
+        self.cad_executor = cad_executor
+        self.cam_executor = cam_executor
+        self.fabricate_executor = fabricate_executor
+        self.post_process_executor = post_process_executor
+        self.interaction_executor = interaction_executor
+        self.measure_executor = measure_executor
+        self.label_gen_function = label_gen_function
 
     def experiment_size(self):
         ''' report the size of the specified experiment '''
@@ -79,8 +84,7 @@ class FEDTExperiment:
             ("Users will perform {} interactions.\n".format(self.number_of_user_interactions) if len(self.interaction_variables) > 0 else "") +
             "{} total measurements will be recorded.".format(self.number_of_recorded_values))
     
-    def label_all_conditions(self, label_gen_function=incrementing_labels):
-        self.label_gen_function=label_gen_function
+    def label_all_conditions(self):
 
         expanded_CAD = []
         for var in self.CAD_variables:
@@ -101,7 +105,7 @@ class FEDTExperiment:
 
         vars_to_labels = {}
         for exploded in exploded_vars:
-            condition_label = label_gen_function(exploded)
+            condition_label = self.label_gen_function(exploded)
             vars_to_labels[exploded] = condition_label
         
         self.vars_to_labels = vars_to_labels
@@ -109,8 +113,8 @@ class FEDTExperiment:
         return vars_to_labels
 
     def create_experiment_csv(self, experiment_csv="experiment-{}.csv"):
-        if not self.vars_to_labels:
-            self.label_all_conditions(label_gen_function=raw_labels)
+        if not hasattr(self, 'vars_to_labels'):
+            self.label_all_conditions()
 
         experiment_csv = experiment_csv.format(time.strftime("%Y%m%d-%H%M%S"))
 
@@ -151,36 +155,26 @@ class FEDTExperiment:
     
     def configure_for_freecad(self):
         import fedt_3D_geom
-        self.cad_function = fedt_3D_geom.build_geometry
-        self.cad_tool = "FreeCAD"
+        self.cad_executor = fedt_3D_geom.FEDTFreeCAD()
     
-    def configure_for_printing(self, machine=PRUSA, cam_tool=PRUSA_SLICER_LOCATION, base_config=PRUSA_CONFIG_LOCATION):
+    def configure_for_printing(self):
         import fedt_print
-        self.machine = machine
-        self.fab_type = THREED_PRINTING
-        self.cam_tool = cam_tool
-        self.configuration_base_file = base_config
-        self.prep_cam_function = fedt_print.prep_cam
-        self.cam_function = fedt_print.do_cam
-        self.fabricate_function = fedt_print.fabricate
+        self.cam_executor = fedt_print.FEDTPrinter()
+        self.fabricate_executor = fedt_print.FEDTPrinter()
 
     def configure_for_drawsvg(self):
         import fedt_2D_geom
-        self.cad_function = fedt_2D_geom.build_geometry
-        self.cad_tool = "drawsvg"
+        self.cad_executor = fedt_2D_geom.FEDTdrawsvg()
 
-    def configure_for_lasercutting(self, machine="Epilog Helix", cam_tool=VISICUT_LOCATION, base_config="mappings.xml"):
+    def configure_for_lasercutting(self):
         import fedt_laser
-        self.machine = machine
-        self.fab_type = LASERCUTTING
-        self.cam_tool = VISICUT_LOCATION
-        self.prep_cam_function = fedt_laser.prep_cam
-        self.cam_function = fedt_laser.do_cam
-        self.fabricate_function = fedt_laser.fabricate
+        self.cam_executor = fedt_laser.FEDTLaser()
+        self.fabricate_executor = fedt_laser.FEDTLaser()
+
+    def prep_cam(self):
+        self.cam_executor.prep_cam(self.CAM_variables)
 
     def fabricate(self):
-        self.prep_cam_function(self.CAM_variables)
-
         CAM_paths = []
 
         CAD_to = 0
@@ -194,57 +188,62 @@ class FEDTExperiment:
             # separate variables
             CAD_vars = vars[0][:CAD_to]
             CAM_vars = vars[0][CAD_to:]
-            post_process_vars = vars[1] # honestly don't need this rn
+            post_process_vars = []
+            if len(vars) > 1:
+                post_process_vars = vars[1] # honestly don't need this rn
 
-            geom_file = self.cad_function(self.geometry_function, self.label_function, label, CAD_vars=CAD_vars)
-            CAM_path = self.cam_function(geom_file, CAM_vars)
+            geom_file = self.cad_executor.build_geometry(geometry_function=self.geometry_function, label_function=self.label_function, label=label, CAD_vars=CAD_vars)
+            CAM_path = self.cam_executor.do_cam(geom_file, CAM_vars)
             CAM_paths.append(CAM_path)
         
         self.CAM_paths = CAM_paths
         for path in CAM_paths:
-            self.fabricate(path)
+            self.fabricate_executor.fabricate(path)
 
     def post_process(self):
-        self.post_process_function(self.vars_to_labels)
+        self.post_process_executor.post_process(self.vars_to_labels)
 
     def interact(self):
-        self.interaction_function(self.interaction_variables, self.vars_to_labels)
+        self.interaction_executor.interact(self.interaction_variables, self.vars_to_labels)
     
     def measure(self):
-        self.measurement_function(self.experiment_csv)
+        self.measure_executor.measure(self.experiment_csv)
 
     @staticmethod
     def stringify_variable_list(variable_list):
         human_string = ""
         for variable in variable_list:
-            if variable['test_values']: # should catch all independent variables
+            if 'test_values' in variable.keys(): # should catch all independent variables
                 human_string += "{} (values {})".format(variable['name'], variable['test_values'])
-            elif variable['name']: # should catch dependent variables
+            elif 'name' in variable.keys(): # should catch dependent variables
                 human_string += " " + str(variable['name'])
         return human_string
 
     def report_latex(self):
         ''' render a string of LaTeX that describes what has been done on this experiment '''
 
-        setup = '''We used {cad_tool} to generate objects varying along the following dimensions: {CAD_variables}.
-        We then used {cam_tool} to generate different CAM settings: {CAM_variables}.
-        We fabricated objects of each configuration {fab_repetitions} times on our {machine}.
+        setup = '''{CAD_executor} We generated objects varying along the following dimensions: {CAD_variables}.
+        {CAM_executor}. We generated different CAM settings: {CAM_variables}.
+        We fabricated objects of each configuration {fab_repetitions} times. {fab_executor}
         In all, we fabricated {num_fabbed_objects} objects.
-        After fabrication, we performed post-processing, processing {post_process_repetitions} objects with each of the following values: {post_process_variables}.
-        Users then interacted with our objects, doing {interaction_variables} {measurement_repetitions} times on every object ({num_user_ixns} total interactions).
-        We recorded {measurement_variables} for each ({num_recorded_values} total measurements).'''.format(
+        After fabrication, we post-processed {post_process_repetitions} objects with each of the following values: {post_process_variables}. {post_process_executor}
+        {interaction_executor} Users did {interaction_variables} {measurement_repetitions} times on every object ({num_user_ixns} total interactions).
+        {measurement_executor} We recorded {measurement_variables} for each ({num_recorded_values} total measurements).'''.format(
                 **{
-                    'cad_tool': str(self.cad_tool),
+                    'CAD_executor': str(self.cad_executor),
                     'CAD_variables': self.stringify_variable_list(self.CAD_variables),
-                    'cam_tool': str(os.path.split(self.cam_tool)[-1]),
+                    'CAM_executor': str(self.cam_executor),
                     'CAM_variables': self.stringify_variable_list(self.CAM_variables),
                     'fab_repetitions': str(self.fab_repetitions*self.post_process_repetitions),
+                    'fab_executor': str(self.fabricate_executor),
                     'post_process_variables': self.stringify_variable_list(self.post_process_variables),
                     'post_process_repetitions': str(self.post_process_repetitions),
+                    'post_process_executor': str(self.post_process_executor),
                     'interaction_variables': self.stringify_variable_list(self.interaction_variables),
+                    'interaction_executor': str(self.interaction_executor),
                     'measurement_variables': self.stringify_variable_list(self.measurement_variables),
                     'measurement_repetitions': str(self.measurement_repetitions),
-                    'machine': str(self.machine),
+                    'measurement_executor': str(self.measure_executor),
                     'num_fabbed_objects': str(self.number_of_fabbed_objects),
                     'num_recorded_values': str(self.number_of_recorded_values),
                     'num_user_ixns': str(self.number_of_user_interactions),
