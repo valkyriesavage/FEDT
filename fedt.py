@@ -3,12 +3,16 @@ import itertools
 import os
 import time
 
+import pandas
+
 from config import *
 import fedt_manual
 
 NAME = "name"
 TEST_VALUES = "test_values"
 INSTRUCTION = "instruction"
+DATA_TYPE = 'data type'
+ARGNAME = 'argname'
 
 THREED_PRINTING = "3D printing"
 LASERCUTTING = "lasercutting"
@@ -88,17 +92,17 @@ class FEDTExperiment:
 
         expanded_CAD = []
         for var in self.CAD_variables:
-            expanded_CAD.append([('CAD', var['argname'], val) for val in var['test_values']])
+            expanded_CAD.append([('CAD', var[ARGNAME], val) for val in var[TEST_VALUES]])
 
         expanded_CAM = []
         for var in self.CAM_variables:
-            expanded_CAM.append([('CAM', var['argname'], val) for val in var['test_values']])
+            expanded_CAM.append([('CAM', var[ARGNAME], val) for val in var[TEST_VALUES]])
 
         exploded_fab = list(itertools.product(*expanded_CAD,*expanded_CAM))*self.fab_repetitions
 
         expanded_PP = []
         for var in self.post_process_variables:
-            expanded_PP.append([('PP', var['description'].format(val)) for val in var['test_values']])
+            expanded_PP.append([('PP', var[INSTRUCTION].format(val)) for val in var[TEST_VALUES]])
         expanded_PP = expanded_PP*self.post_process_repetitions
 
         exploded_vars = itertools.product(exploded_fab,*expanded_PP)
@@ -122,12 +126,12 @@ class FEDTExperiment:
             #... we get to explode _those_ now
             expanded_ixn = []
             for var in self.interaction_variables:
-                expanded_ixn.append([(var['instruction'].format(val)) for val in var['test_values']])
+                expanded_ixn.append([(var[INSTRUCTION].format(val)) for val in var[TEST_VALUES]])
             exploded_ixn = list(itertools.product(*expanded_ixn))
 
             with open(experiment_csv, 'w', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile,delimiter='\t')
-                spamwriter.writerow(['Labelled Object','User Interaction'] + [var['name'] for var in self.measurement_variables])
+                spamwriter.writerow(['Labelled Object','User Interaction'] + [var[NAME] for var in self.measurement_variables])
                 for _ in range(self.measurement_repetitions):
                     for _, label in self.vars_to_labels.items():
                         for ixn in exploded_ixn:
@@ -136,14 +140,14 @@ class FEDTExperiment:
         else:
             with open(experiment_csv, 'w', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile,delimiter='\t')
-                spamwriter.writerow(['Labelled Object'] + [var['name'] for var in self.measurement_variables])
+                spamwriter.writerow(['Labelled Object'] + [var[NAME] for var in self.measurement_variables])
                 for _ in range(self.measurement_repetitions):
                     for config, label in self.vars_to_labels.items():
                         spamwriter.writerow([label] + []*len(self.measurement_variables))
 
         key_csv = experiment_csv.replace('.csv','_key.csv')
         with open(key_csv, 'w', newline='') as csvfile:
-            spamwriter = csv.writer(csvfile)
+            spamwriter = csv.writer(csvfile,delimiter='\t')
             spamwriter.writerow(['Label','Configuration'])
             for config, label in self.vars_to_labels.items():
                 spamwriter.writerow([self.vars_to_labels[config], config])
@@ -248,7 +252,7 @@ class FEDTExperiment:
         In all, we fabricated {num_fabbed_objects} objects.
         {post_process_string}
         {interaction_string}
-        {measurement_executor} We recorded {measurement_variables} for each ({num_recorded_values} total measurements).'''.format(
+        {measurement_executor} We recorded {measurement_variables} {measurement_repetitions} times for each object ({num_recorded_values} total measurements).\n'''.format(
                 **{
                     'CAD_executor': str(self.cad_executor),
                     'CAD_variables': self.stringify_variable_list('We generated objects varying along the following dimensions: ',self.CAD_variables),
@@ -264,11 +268,32 @@ class FEDTExperiment:
                     'num_fabbed_objects': str(self.number_of_fabbed_objects),
                     'num_recorded_values': str(self.number_of_recorded_values)
                 })
+        
+        results = ''''''
+        with open(self.experiment_csv) as f:
+            res = pandas.read_csv(f, delimiter='\t')
+            for variable in self.measurement_variables:
+                var_data = res.loc[:,variable[NAME]]
+                if variable[DATA_TYPE] == 'ratio':
+                    results += '''{variable} ranged from {min}--{max} UNIT (mean {mean} UNIT, std {std} UNIT) across all samples. ...\n'''.format(
+                        **{
+                            'variable': variable[NAME],
+                            'min': var_data.min(),
+                            'max': var_data.max(),
+                            'mean': var_data.mean(),
+                            'std': var_data.std()
+                        }
+                    )
+                else:
+                    results += '''{variable} details...\n'''.format(
+                        **{
+                            'variable': variable[NAME]
+                        })
 
         if self.tea_results is not None:
-            setup += '''{tea_results} was the outcome of {tea_hypothesis}'''.format({
+            results += '''{tea_results} was the outcome of {tea_hypothesis}'''.format({
                         'tea_results': str(self.tea_results),
                         'tea_hypothesis': str(self.tea_hypothesis)
                     })
         
-        return setup
+        return setup + results
