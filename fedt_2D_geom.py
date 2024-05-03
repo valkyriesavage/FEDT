@@ -6,7 +6,8 @@ from fedt import *
 import fedt_laser
 
 
-def drawcircle(draw, d, radius=30):
+def drawcircle(draw, d, CAD_vars):
+    radius = CAD_vars['radius']
     d.append(draw.Circle(-40, -10, radius,
             fill='none', stroke_width=1, stroke='red'))
 
@@ -14,7 +15,7 @@ class FEDTdrawsvg:
     def __init__(self, laserdevice=fedt_laser.FEDTLaser()):
         self.laser_bed = laserdevice.laser_bed
 
-    def build_geometry(self, geometry_function=drawcircle, label_function=None, label = "L0", svg_location = "./expt_svgs/", CAD_vars=[]):
+    def build_geometry(self, geometry_function=drawcircle, label_function=None, label = "L0", svg_location = "./expt_svgs/", CAD_vars={}):
         d = draw.Drawing(self.laser_bed['width'], self.laser_bed['height'], origin='center', displayInline=False)
         
         self.geometry_function = geometry_function

@@ -178,15 +178,19 @@ class FEDTExperiment:
     def prep_cam(self):
         self.cam_executor.prep_cam(self.CAM_variables)
 
+    def dictionaryfy(self, tuplething):
+        # we have a tuplething which is of the format (('type','name','value),...) which we want to be a dictionary of {'name':'value', ...}
+        mydictionary = {}
+        namepos = 1
+        valuepos = 2
+        for item in tuplething:
+            mydictionary[item[namepos]] = item[valuepos]
+        return mydictionary
+
     def fabricate(self):
         CAM_paths = []
 
-        CAD_to = 0
-        for pos,var in enumerate(self.vars_to_labels[list(self.vars_to_labels.keys())[0]][0]):
-            if var[0] == 'CAD':
-                CAD_to = pos+1
-            else:
-                break
+        CAD_to = len(self.CAD_variables)
 
         for vars, label in self.vars_to_labels.items():
             # separate variables
@@ -195,7 +199,10 @@ class FEDTExperiment:
             post_process_vars = []
             if len(vars) > 1:
                 post_process_vars = vars[1] # honestly don't need this rn
-
+            
+            CAD_vars = self.dictionaryfy(CAD_vars)
+            CAM_vars = self.dictionaryfy(CAM_vars)
+            
             geom_file = self.cad_executor.build_geometry(geometry_function=self.geometry_function, label_function=self.label_function, label=label, CAD_vars=CAD_vars)
             CAM_path = self.cam_executor.do_cam(geom_file, CAM_vars)
             CAM_paths.append(CAM_path)

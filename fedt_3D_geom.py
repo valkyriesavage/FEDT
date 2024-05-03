@@ -21,7 +21,7 @@ class FEDTFreeCAD():
         self.CAD_tool_path = CAD_tool_path
 
     # Add label
-    def build_geometry(self, geometry_function=drawcube, label_function=None, label_string="L0", *geom_args, **geom_kwargs):
+    def build_geometry(self, geometry_function=drawcube, label_function=None, label_string="L0", CAD_vars={}, *geom_args, **geom_kwargs):
         App.newDocument()
         
         self.geometry_function = geometry_function
