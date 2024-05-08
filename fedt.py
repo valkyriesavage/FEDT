@@ -14,6 +14,12 @@ INSTRUCTION = "instruction"
 DATA_TYPE = 'data type'
 ARGNAME = 'argname'
 
+CAD = 'CAD'
+CAM = 'CAM'
+FAB = 'fab'
+POST_PROCESS = 'post-process'
+INTERACTION = 'interaction'
+
 THREED_PRINTING = "3D printing"
 LASERCUTTING = "lasercutting"
 
@@ -44,6 +50,8 @@ class FEDTExperiment:
     measurement_variables = []
     measurement_repetitions = 1
 
+    executor_order = []
+
     tea_hypothesis = None
     tea_results = None
 
@@ -70,14 +78,21 @@ class FEDTExperiment:
         self.measure_executor = measure_executor
         self.label_gen_function = label_gen_function
 
+        self.specific_conditions = []
+
+        self.executor_order = []
+
+    def add_non_crossed_condition(self, condition_description):
+        self.specific_conditions.append(condition_description)
+
     def experiment_size(self):
         ''' report the size of the specified experiment '''
         number_of_fabbed_objects = 1
         for var in self.CAD_variables + self.CAM_variables + self.post_process_variables:
             number_of_fabbed_objects = number_of_fabbed_objects * len(var['test_values'])
-        self.number_of_fabbed_objects = number_of_fabbed_objects * self.fab_repetitions * self.post_process_repetitions
+        self.number_of_fabbed_objects = number_of_fabbed_objects * self.fab_repetitions * self.post_process_repetitions + len(self.specific_conditions)
 
-        number_of_user_interactions = number_of_fabbed_objects
+        number_of_user_interactions = self.number_of_fabbed_objects
         for var in self.interaction_variables:
             number_of_user_interactions = number_of_user_interactions * len(var['test_values'])
         self.number_of_user_interactions = number_of_user_interactions * self.measurement_repetitions
@@ -92,20 +107,47 @@ class FEDTExperiment:
 
         expanded_CAD = []
         for var in self.CAD_variables:
-            expanded_CAD.append([('CAD', var[ARGNAME], val) for val in var[TEST_VALUES]])
+            expanded_CAD.append([(CAD, (var[ARGNAME] if ARGNAME in var.keys() else var[INSTRUCTION]), val) for val in var[TEST_VALUES]])
 
         expanded_CAM = []
         for var in self.CAM_variables:
-            expanded_CAM.append([('CAM', var[ARGNAME], val) for val in var[TEST_VALUES]])
+            expanded_CAM.append([(CAM, (var[ARGNAME] if ARGNAME in var.keys() else var[INSTRUCTION]), val) for val in var[TEST_VALUES]])
 
         exploded_fab = list(itertools.product(*expanded_CAD,*expanded_CAM))*self.fab_repetitions
 
         expanded_PP = []
         for var in self.post_process_variables:
-            expanded_PP.append([('PP', var[INSTRUCTION].format(val)) for val in var[TEST_VALUES]])
+            expanded_PP.append([(POST_PROCESS, var[INSTRUCTION].format(val)) for val in var[TEST_VALUES]])
         expanded_PP = expanded_PP*self.post_process_repetitions
 
-        exploded_vars = itertools.product(exploded_fab,*expanded_PP)
+        exploded_vars = list(itertools.product(exploded_fab,*expanded_PP))
+
+        # here's where to add a specific condition
+        for condition in self.specific_conditions:
+            # reshape the condition to be in the same format
+            '''((('CAD', 'include geometric features of {}', 'circular'),), ('PP', 'use the substrate in the grow kit material in the printed mould')),'''
+            condition_tuple = ()
+            for vartypename in condition.keys():
+                those_vars = condition[vartypename]
+                those_vars_tuple = ()
+                for var in those_vars.keys():
+                    var_value = those_vars[var]
+                    look_in_list = []
+                    if vartypename == CAD:
+                        look_in_list = self.CAD_variables
+                    elif vartypename == CAM:
+                        look_in_list = self.CAM_variables
+                    elif vartypename == POST_PROCESS:
+                        look_in_list = self.post_process_variables
+                    # find the instructions or argument name for it
+                    built_on_var = None
+                    for existing_var in look_in_list:
+                        if existing_var[NAME] == var:
+                            built_on_var = existing_var
+                    this_tuple = (vartypename, built_on_var[INSTRUCTION] if INSTRUCTION in built_on_var.keys() else built_on_var[ARGNAME], var_value)
+                    those_vars_tuple = those_vars_tuple + this_tuple
+                condition_tuple = condition_tuple + those_vars_tuple
+            exploded_vars.append(condition_tuple)
 
         vars_to_labels = {}
         for exploded in exploded_vars:
@@ -202,7 +244,7 @@ class FEDTExperiment:
             
             CAD_vars = self.dictionaryfy(CAD_vars)
             CAM_vars = self.dictionaryfy(CAM_vars)
-            
+
             geom_file = self.cad_executor.build_geometry(geometry_function=self.geometry_function, label_function=self.label_function, label=label, CAD_vars=CAD_vars)
             CAM_path = self.cam_executor.do_cam(geom_file, CAM_vars)
             CAM_paths.append(CAM_path)
@@ -211,16 +253,20 @@ class FEDTExperiment:
         for path in CAM_paths:
             self.fabricate_executor.fabricate(path)
 
+        self.executor_order.extend([self.cad_executor, self.cam_executor, self.fabricate_executor])
+
     def post_process(self):
         self.post_process_executor.post_process(self.vars_to_labels)
+        self.executor_order.append(self.post_process_executor)
 
     def interact(self):
         self.interaction_executor.interact(self.interaction_variables, self.vars_to_labels)
+        self.executor_order.append(self.interaction_executor)
     
     def measure(self):
         self.measure_executor.measure(self.experiment_csv)
+        self.executor_order.append(self.measure_executor)
 
-    @staticmethod
     def stringify_variable_list(begin_string, variable_list):
         human_string = ""
         for variable in variable_list:

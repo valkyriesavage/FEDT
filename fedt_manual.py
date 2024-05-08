@@ -36,7 +36,8 @@ class FEDTHuman:
                 # no post-process
                 pass
             else:
-                print("for object {}, {}".format(label,vars[1][1]))
+                operation = vars[1][1]
+                print("for object {}, {}".format(label,operation))
 
     def interact(self, interaction_variables, vars_to_labels):
         self.did_interact = True
