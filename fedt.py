@@ -92,6 +92,8 @@ class FEDTExperiment:
             number_of_fabbed_objects = number_of_fabbed_objects * len(var['test_values'])
         self.number_of_fabbed_objects = number_of_fabbed_objects * self.fab_repetitions * self.post_process_repetitions + len(self.specific_conditions)
 
+        print("hey! don't forget that your specific conditions count needs to consider that there could be non-crossed conditions in interaction???")
+
         number_of_user_interactions = self.number_of_fabbed_objects
         for var in self.interaction_variables:
             number_of_user_interactions = number_of_user_interactions * len(var['test_values'])
@@ -125,7 +127,6 @@ class FEDTExperiment:
         # here's where to add a specific condition
         for condition in self.specific_conditions:
             # reshape the condition to be in the same format
-            '''((('CAD', 'include geometric features of {}', 'circular'),), ('PP', 'use the substrate in the grow kit material in the printed mould')),'''
             condition_tuple = ()
             for vartypename in condition.keys():
                 those_vars = condition[vartypename]
@@ -221,7 +222,9 @@ class FEDTExperiment:
         self.cam_executor.prep_cam(self.CAM_variables)
 
     def dictionaryfy(self, tuplething):
-        # we have a tuplething which is of the format (('type','name','value),...) which we want to be a dictionary of {'name':'value', ...}
+        # we have a tuplething which is of the format (('type','name','value),...)
+        # (where all 'type' values are identical; that's a precondition)
+        # which we want to be a dictionary of {'name':'value', ...}
         mydictionary = {}
         namepos = 1
         valuepos = 2

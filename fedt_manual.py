@@ -10,7 +10,7 @@ class FEDTHuman:
         self.did_interact = False
         self.did_measure = False
 
-    def build_geometry(self, label_function=None, label = "L0", CAD_vars=[]):
+    def build_geometry(self, label_function=None, label = "L0", CAD_vars=[], geometry_function=None):
         print("create geometry which has the following values: {}".format(str(CAD_vars)))
         CAD_file = input("enter the file location of this geometry file:")
         self.did_CAD = True
