@@ -74,6 +74,7 @@ class FEDTExperiment:
         self.cam_executor = cam_executor
         self.fabricate_executor = fabricate_executor
         self.post_process_executor = post_process_executor
+        print("hey! did you know that there's a difference between something not having variables and not happening? make some stuff optional~")
         self.interaction_executor = interaction_executor
         self.measure_executor = measure_executor
         self.label_gen_function = label_gen_function
@@ -270,8 +271,8 @@ class FEDTExperiment:
         self.measure_executor.measure(self.experiment_csv)
         self.executor_order.append(self.measure_executor)
 
-    def stringify_variable_list(begin_string, variable_list):
-        human_string = ""
+    def stringify_variable_list(self, begin_string, variable_list):
+        human_string = ''
         for variable in variable_list:
             if 'test_values' in variable.keys(): # should catch all independent variables
                 human_string += "{} (values {})".format(variable['name'], variable['test_values'])
@@ -285,44 +286,52 @@ class FEDTExperiment:
     def report_latex(self):
         ''' render a string of LaTeX that describes what has been done on this experiment '''
 
-        post_process_string = ''
-        if len(self.post_process_variables) > 0:
-            post_process_string = '''After fabrication, we post-processed {post_process_repetitions} objects with each of the following values: {post_process_variables}. {post_process_executor}'''.format(
-                **{
-                    'post_process_variables': self.stringify_variable_list(self.post_process_variables),
-                    'post_process_repetitions': str(self.post_process_repetitions),
-                    'post_process_executor': str(self.post_process_executor)
+        setup = ''''''
+        for executor in self.executor_order:
+            introstr = ''
+            varbeginstr = ''
+            vars = []
+            if executor == self.cad_executor:
+                varbeginstr = 'We generated object designs varying along the following dimensions: '
+                vars = self.CAD_variables
+            if executor == self.cam_executor:
+                varbeginstr = 'We generated different CAM settings:'
+                vars = self.CAM_variables
+            if executor == self.fabricate_executor:
+                introstr = 'We fabricated objects of each configuration {fab_repetitions} times. In all, we fabricated {num_fabbed_objects} objects.'.format(
+                    **{
+                        'fab_repetitions': self.fab_repetitions,
+                        'num_fabbed_objects': self.number_of_fabbed_objects
+                    })
+                vars = []
+            if executor == self.post_process_executor and len(self.post_process_variables) > 0:
+                introstr = 'After fabrication, we post-processed {} objects.'.format(self.post_process_repetitions)
+                varbeginstr = 'We used the following processes: '
+                vars = self.post_process_variables
+            if executor == self.interaction_executor and len(self.interaction_variables) > 0:
+                introstr = 'Users performed {count_ixns} interactions {measurement_repetitions} times on each fabricated object ({num_user_ixns} total interactions).'.format(
+                    **{
+                    'num_user_ixns': str(self.number_of_user_interactions),
+                    'count_ixns': str(len(self.interaction_variables)),
+                    'measurement_repetitions': str(self.measurement_repetitions)
                 })
-        interaction_string = ''
-        if len(self.interaction_variables) > 0:
-            interaction_string = '''{interaction_executor} Users did {interaction_variables} {measurement_repetitions} times on every object ({num_user_ixns} total interactions).'''.format(
+                varbeginstr = 'Users did the following interactions: '
+                vars = self.interaction_variables
+            if executor == self.measure_executor:
+                introstr = 'We recorded {count_measurements} measurements {measurement_repetitions} times for each object ({num_recorded_values} total measurements)'.format(
                 **{
-                    'interaction_variables': self.stringify_variable_list(self.interaction_variables),
-                    'interaction_executor': str(self.interaction_executor),
-                    'num_user_ixns': str(self.number_of_user_interactions)
-                })
-
-        setup = '''{CAD_executor} {CAD_variables}
-        {CAM_executor} {CAM_variables}
-        We fabricated objects of each configuration {fab_repetitions} times. {fab_executor}
-        In all, we fabricated {num_fabbed_objects} objects.
-        {post_process_string}
-        {interaction_string}
-        {measurement_executor} We recorded {measurement_variables} {measurement_repetitions} times for each object ({num_recorded_values} total measurements).\n'''.format(
-                **{
-                    'CAD_executor': str(self.cad_executor),
-                    'CAD_variables': self.stringify_variable_list('We generated objects varying along the following dimensions: ',self.CAD_variables),
-                    'CAM_executor': str(self.cam_executor),
-                    'CAM_variables': self.stringify_variable_list('We generated different CAM settings:',self.CAM_variables),
-                    'fab_repetitions': str(self.fab_repetitions*self.post_process_repetitions),
-                    'fab_executor': str(self.fabricate_executor),
-                    'post_process_string': post_process_string,
-                    'interaction_string': interaction_string,
-                    'measurement_variables': self.stringify_variable_list('', self.measurement_variables),
+                    'count_measurements': str(len(self.measurement_variables)),
                     'measurement_repetitions': str(self.measurement_repetitions),
-                    'measurement_executor': str(self.measure_executor),
-                    'num_fabbed_objects': str(self.number_of_fabbed_objects),
                     'num_recorded_values': str(self.number_of_recorded_values)
+                })
+                varbeginstr = 'We measured the following: '
+                vars = self.measurement_variables
+
+            if len(varbeginstr) > 0:    
+                setup += '''{executorstr} {introstr} {executorvars}'''.format(**{
+                    'executorstr': str(executor),
+                    'introstr': introstr,
+                    'executorvars': self.stringify_variable_list(varbeginstr, vars)
                 })
         
         results = ''''''

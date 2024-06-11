@@ -7,7 +7,9 @@ import fedt_laser
 
 
 def drawcircle(draw, d, CAD_vars):
-    radius = CAD_vars['radius']
+    radius = 10
+    if 'radius' in CAD_vars:
+        radius = CAD_vars['radius']
     d.append(draw.Circle(-40, -10, radius,
             fill='none', stroke_width=1, stroke='red'))
 
