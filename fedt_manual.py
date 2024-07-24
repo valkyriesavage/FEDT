@@ -8,6 +8,7 @@ class FEDTHuman:
         self.did_fab = False
         self.did_postprocess = False
         self.did_interact = False
+        self.did_wait = False
         self.did_measure = False
 
     def build_geometry(self, label_function=None, label = "L0", CAD_vars=[], geometry_function=None):
@@ -33,11 +34,26 @@ class FEDTHuman:
         self.did_postprocess = True
         for vars, label in vars_to_labels.items():
             if len(vars) < 2:
+                '''
+                TODO : this is sloppy and brittle. vars_to_labels might need to be a dictionary or something,
+                instead of a tuple of tuples or whatever horrific thing it is that itertools.product generates
+                '''
                 # no post-process
                 pass
             else:
                 operation = vars[1][1]
                 print("for object {}, {}".format(label,operation))
+
+    def await_time(self, vars_to_labels):
+        self.did_wait = True
+        for vars, label in vars_to_labels.items():
+            if len(vars) < 2:
+                # no time
+                pass
+            else:
+                timelen = vars[-1][1]
+                timeunit = vars[-1][0]
+                print("for object {}, wait {} {}".format(label, timelen, timeunit))
 
     def interact(self, interaction_variables, vars_to_labels):
         self.did_interact = True

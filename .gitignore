@@ -1,7 +1,10 @@
 *.csv
 *.svg
 *.plf
+*.vcsettings
 *.zip
 *.stl
 *.xml
 *.DS_Store*
+__pycache__
+.ipynb_checkpoints/*

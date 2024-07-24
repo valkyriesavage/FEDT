@@ -19,6 +19,7 @@ CAM = 'CAM'
 FAB = 'fab'
 POST_PROCESS = 'post-process'
 INTERACTION = 'interaction'
+TIME = 'time'
 
 THREED_PRINTING = "3D printing"
 LASERCUTTING = "lasercutting"
@@ -46,6 +47,7 @@ class FEDTExperiment:
     post_process_variables = []
     post_process_repetitions = 1
     interaction_variables = []
+    time_variables = []
 
     measurement_variables = []
     measurement_repetitions = 1
@@ -69,14 +71,15 @@ class FEDTExperiment:
                  post_process_executor=fedt_manual.FEDTHuman(),
                  interaction_executor=fedt_manual.FEDTHuman(),
                  measure_executor=fedt_manual.FEDTHuman(),
+                 time_executor=fedt_manual.FEDTHuman(),
                  label_gen_function=raw_labels):
         self.cad_executor = cad_executor
         self.cam_executor = cam_executor
         self.fabricate_executor = fabricate_executor
         self.post_process_executor = post_process_executor
-        print("hey! did you know that there's a difference between something not having variables and not happening? make some stuff optional~")
         self.interaction_executor = interaction_executor
         self.measure_executor = measure_executor
+        self.time_executor = time_executor
         self.label_gen_function = label_gen_function
 
         self.specific_conditions = []
@@ -123,7 +126,11 @@ class FEDTExperiment:
             expanded_PP.append([(POST_PROCESS, var[INSTRUCTION].format(val)) for val in var[TEST_VALUES]])
         expanded_PP = expanded_PP*self.post_process_repetitions
 
-        exploded_vars = list(itertools.product(exploded_fab,*expanded_PP))
+        expanded_time = []
+        for var in self.time_variables:
+            expanded_time.append([(TIME, "wait {} {}".format(val,var[NAME])) for val in var[TEST_VALUES]])
+
+        exploded_vars = list(itertools.product(exploded_fab,*expanded_PP,*expanded_time))
 
         # here's where to add a specific condition
         for condition in self.specific_conditions:
@@ -262,6 +269,10 @@ class FEDTExperiment:
     def post_process(self):
         self.post_process_executor.post_process(self.vars_to_labels)
         self.executor_order.append(self.post_process_executor)
+    
+    def pass_time(self):
+        self.time_executor.await_time(self.vars_to_labels)
+        self.executor_order.append(self.time_executor)
 
     def interact(self):
         self.interaction_executor.interact(self.interaction_variables, self.vars_to_labels)
@@ -308,6 +319,9 @@ class FEDTExperiment:
                 introstr = 'After fabrication, we post-processed {} objects.'.format(self.post_process_repetitions)
                 varbeginstr = 'We used the following processes: '
                 vars = self.post_process_variables
+            if executor == self.time_executor and len(self.time_variables) > 0:
+                varbeginstr = 'We allowed different amounts of time to pass: '
+                vars = self.time_variables
             if executor == self.interaction_executor and len(self.interaction_variables) > 0:
                 introstr = 'Users performed {count_ixns} interactions {measurement_repetitions} times on each fabricated object ({num_user_ixns} total interactions).'.format(
                     **{

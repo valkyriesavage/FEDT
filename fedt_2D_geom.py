@@ -12,6 +12,9 @@ def drawcircle(draw, d, CAD_vars):
         radius = CAD_vars['radius']
     d.append(draw.Circle(-40, -10, radius,
             fill='none', stroke_width=1, stroke='red'))
+    
+def labelcentre(draw, d, label):
+    d.append(draw.Text(x=-20, y=-20, fill='blue', text=label, font_size=10))
 
 class FEDTdrawsvg:
     def __init__(self, laserdevice=fedt_laser.FEDTLaser()):
