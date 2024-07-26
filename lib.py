@@ -64,19 +64,21 @@ class Laser:
 
     generated_setting_names = {}
 
-    def __init__(self, default_laser_settings = default_laser_settings):
-        self.default_laser_settings = default_laser_settings
-
     @staticmethod
-    def generate_setting_key(material,thickness,cut_power,cut_speed,frequency):
+    def generate_setting_key(material=default_laser_settings[MATERIAL],
+                             thickness=default_laser_settings[THICKNESS],
+                             cut_power=default_laser_settings[CUT_POWER],
+                             cut_speed=default_laser_settings[CUT_SPEED],
+                             frequency=default_laser_settings[CUT_FREQUENCY]):
         return "{}.{}.{}.{}.{}".format(material,thickness,cut_power,cut_speed,frequency)
 
-    def prep_cam(self, CAM_variables):
-        cut_powers=[self.default_laser_settings[Laser.CUT_POWER]]
-        cut_speeds=[self.default_laser_settings[Laser.CUT_SPEED]]
-        frequencies=[self.default_laser_settings[Laser.CUT_FREQUENCY]]
-        materials=[self.default_laser_settings[Laser.MATERIAL]]
-        thicknesses=[self.default_laser_settings[Laser.THICKNESS]]
+    @staticmethod
+    def prep_cam(CAM_variables):
+        cut_powers=[Laser.default_laser_settings[Laser.CUT_POWER]]
+        cut_speeds=[Laser.default_laser_settings[Laser.CUT_SPEED]]
+        frequencies=[Laser.default_laser_settings[Laser.CUT_FREQUENCY]]
+        materials=[Laser.default_laser_settings[Laser.MATERIAL]]
+        thicknesses=[Laser.default_laser_settings[Laser.THICKNESS]]
 
         for variable in CAM_variables:
             if variable[NAME] == Laser.CUT_POWER:
@@ -106,6 +108,9 @@ class Laser:
     </linked-list>'''
 
         temp_zf = 'fedt_generated.zip'
+
+        generated_setting_names = {}
+
         with ZipFile(temp_zf, 'w') as myzip:
             for root, dirs, files in os.walk("./laser_settings_base/"):
                 for name in files:
@@ -118,7 +123,7 @@ class Laser:
                                                         cut_speed=cut_speed,
                                                         frequency=frequency)
                         cut_setting_fname = "fedt_{}.xml".format(hash("{}.{}.{}".format(cut_power,cut_speed,frequency)))
-                        self.generated_setting_names[Laser.generate_setting_key(material,thickness,cut_power,cut_speed,frequency)] = cut_setting_fname
+                        generated_setting_names[Laser.generate_setting_key(material,thickness,cut_power,cut_speed,frequency)] = cut_setting_fname
                         with open(cut_setting_fname, "w+") as f:
                             f.write(xmlstr)
                         myzip.write(cut_setting_fname, "profiles/{}".format(cut_setting_fname))            
@@ -132,19 +137,13 @@ class Laser:
 
         instruction("please open Visicut and Options > Import Settings > " + temp_vcsettings)
 
-        return
+        return generated_setting_names
         
-
-    def fab(self, line_file: LineFile,
-                    colors_to_mappings = {RED: "cut", BLUE: "mark"},
-                    specific_color = GREEN,
-                    specific_cut_power = default_laser_settings[CUT_POWER],
-                    specific_cut_speed = default_laser_settings[CUT_SPEED],
-                    specific_cut_frequency = default_laser_settings[CUT_FREQUENCY],
-                    material = default_laser_settings[MATERIAL],
-                    thickness = default_laser_settings[THICKNESS],
-                    focal_height_mm = default_laser_settings[FOCAL_HEIGHT_MM],
-                    mapping_file=None):
+    @staticmethod
+    def fab(line_file: LineFile,
+            colors_to_mappings = {RED: "cut", BLUE: "mark"},
+            focal_height_mm = default_laser_settings[FOCAL_HEIGHT_MM],
+            mapping_file=None):
 
         mapping_file_template = '''<?xml version="1.0" encoding="UTF-8"?>
 
@@ -207,18 +206,6 @@ class Laser:
                                                             green=mapping[1],
                                                             blue=mapping[2],
                                                             actionname=colors_to_mappings[mapping])
-                try:
-                    mappings += single_mapping_template.format(red=specific_color[0],
-                                                            green=specific_color[1],
-                                                            blue=specific_color[2],
-                                                            actionname=self.generated_setting_names[Laser.generate_setting_key(material,
-                                                                                                                                thickness,
-                                                                                                                                specific_cut_power,
-                                                                                                                                specific_cut_speed,
-                                                                                                                                specific_cut_frequency)])
-                except:
-                    # if they didn't actually generate custom settings, pass!
-                    pass
                 map_file.write(mapping_file_template.format(mappings=mappings))
             mapping_file = temp_mapping_file
 
@@ -249,19 +236,19 @@ class Laser:
             # it might happen that the user supplied a mapping file and we never made a temp... in this case, just ignore it -\_(._.)_/-
             pass
 
-    def circ_wood_fab(self,
-                      line_file: LineFile,
-                      focal_height_mm: int) -> RealWorldObject:
+    @staticmethod
+    def circwood_fab(line_file: LineFile,
+                      focal_height_mm: int,
+                      num_scans = 1) -> RealWorldObject:
     
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            pass
+            Laser.fab(line_file.svg_location, focal_height_mm=focal_height_mm)
         instruction("Run the laser cutter.")
 
-        self.fab(line_file.svg_location, focal_height_mm=focal_height_mm)
-
         return fabricate({"line_file": line_file,
-                          "focal_height_mm": focal_height_mm,})
+                          "focal_height_mm": focal_height_mm,
+                          "num_scans": num_scans})
     
     def __str__(self):
         setup = '''We used a {machine} with bed size {bedsize} and Visicut. Our default settings were {defaults}.'''.format(
@@ -341,3 +328,7 @@ class Multimeter:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Multimeter.resistance.procedure)
         return Measurements.single(obj, Multimeter.resistance)
+
+    @staticmethod
+    def lower_resistance(meas1: Measurement, meas2: Measurement):
+        return False

@@ -16,7 +16,7 @@ def my_experiment1():
     fabbed_objects: list[RealWorldObject] = []
     for focal_offset_height_mm in range(1, 5):
         fabbed_objects.append(
-            LaserSlicer.cam_and_fab(line_file, focal_offset_height_mm))
+            Laser.circwood_fab(line_file, focal_offset_height_mm))
     results = Measurements.empty()
     for fabbed_object in fabbed_objects:
         results += Multimeter.measure_resistance(fabbed_object)
@@ -30,7 +30,7 @@ def my_experiment2():
     instruction("Check that wood is in the bed.")
     results = Measurements.empty()
     for focal_offset_height_mm in range(1, 5):
-        fabbed_object = LaserSlicer.cam_and_fab(line_file,
+        fabbed_object = Laser.circwood_fab(line_file,
                                                 focal_offset_height_mm)
         results += Multimeter.measure_resistance(fabbed_object)
     data = results.get_data()
