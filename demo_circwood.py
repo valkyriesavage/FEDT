@@ -1,5 +1,7 @@
 import math
 
+from numpy import arange
+
 from instruction import instruction
 from measurement import Measurements
 from fabricate import RealWorldObject
@@ -13,17 +15,10 @@ def summarize(data):
 
 @fedt_experiment
 def test_height_vs_focal_point():
-    # TODO: when we initialize the laser, we should probably tell it about all the cut variables we plan to send so we can build that run file. static analysis?
-    # setting_names = Laser.prep_cam(cut_speeds, cut_powers, whatever)
-    # for cut_speed in cut_speeds:
-    #   for cut_power in cut_powers:
-    #       setting_names[Laser.generate_setting_key(cut_power=cut_power,cut_speed=cut_speed)]
-    #       fabbed_objects.append(Laser.circ_wood_fab(line_file, ...))
-
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
     instruction("Check that wood is in the bed.")
     fabbed_objects: list[RealWorldObject] = []
-    for focal_height_mm in range(1, 5):
+    for focal_height_mm in range(0, 5):
         fabbed_objects.append(
             Laser.circwood_fab(line_file, focal_height_mm=focal_height_mm))
     results = Measurements.empty()
@@ -57,6 +52,23 @@ def test_optimal_number_of_scans():
     data = results.get_data()
     return summarize(data)
 
+@fedt_experiment
+def test_laser_power_and_speed():
+    speeds = arange(20,81,10)
+    powers = arange(10,51,5)
+    setting_names = Laser.prep_cam(speeds, powers)
+
+    line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
+    instruction("Check that wood is in the bed.")
+    results = Measurements.empty()
+
+    for cut_speed in speeds:
+      for cut_power in powers:
+          for repetition in range(4):
+            fabbed_object = Laser.fab_with_setting(line_file, setting_names, cut_speed, cut_power, color_to_setting=Laser.GREEN)
+    		resistance = Multimeter.measure_resistance(fabbed_object)
+            results += resistance
+    summarize(results)
 
 if __name__ == "__main__":
     print(test_optimal_number_of_scans())

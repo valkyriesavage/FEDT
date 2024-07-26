@@ -44,9 +44,10 @@ class Laser:
 
     LASERVARS = [CUT_POWER,CUT_SPEED,CUT_FREQUENCY,MATERIAL,THICKNESS,FOCAL_HEIGHT_MM]
 
-    RED = (255,0,0)
-    GREEN = (0,255,0)
-    BLUE = (0,0,255)
+    class SvgColor:
+        RED = (255,0,0)
+        GREEN = (0,255,0)
+        BLUE = (0,0,255)
 
     default_laser_settings = {
         CUT_POWER: 100,
@@ -141,7 +142,7 @@ class Laser:
         
     @staticmethod
     def fab(line_file: LineFile,
-            colors_to_mappings = {RED: "cut", BLUE: "mark"},
+            colors_to_mappings = {SvgColor.RED: "cut", SvgColor.BLUE: "mark"},
             focal_height_mm = default_laser_settings[FOCAL_HEIGHT_MM],
             mapping_file=None):
 
@@ -221,13 +222,13 @@ class Laser:
         temp_plf = temp_zf.replace('.zip','.plf')
         os.rename(temp_zf, temp_plf)
         cut_command = [VISICUT_LOCATION,
-                    '--laserdevice ' + self.default_laser_settings[Laser.LASERDEVICE],
+                    '--laserdevice ' + Laser.default_laser_settings[Laser.LASERDEVICE],
                     '--execute',
                     temp_plf]
         try:
             results = subprocess.check_output(cut_command)
         except:
-            # it probably didn't work! incredible. that's likely because we didn't get visicut in here right.
+            # it probably didn't work! incredible. that's likely because we didn't get visicut in here right, or we're running offline.
             print("was not able to call visicut properly")
         os.remove(temp_plf)
         try:
@@ -237,9 +238,9 @@ class Laser:
             pass
 
     @staticmethod
-    def circwood_fab(line_file: LineFile,
-                      focal_height_mm: int,
-                      num_scans = 1) -> RealWorldObject:
+    def fab_tracked(line_file: LineFile,
+                      focal_height_mm: int = default_laser_settings[FOCAL_HEIGHT_MM],
+                      num_scans: int = 1) -> RealWorldObject:
     
         from control import MODE, Execute
         if isinstance(MODE, Execute):
@@ -250,12 +251,29 @@ class Laser:
                           "focal_height_mm": focal_height_mm,
                           "num_scans": num_scans})
     
-    def __str__(self):
+    @staticmethod
+    def fab_with_setting(line_file: LineFile,
+                         setting_names: dict,
+                         cut_speed: int,
+                         cut_power: int,
+                         color_to_setting: SvgColor) -> RealWorldObject:
+    
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            Laser.fab(line_file.svg_location, 
+                       colors_to_mappings = {color_to_setting: setting_names[Laser.generate_setting_key(cut_speed=cut_speed,cut_power=cut_power)]})
+        instruction("Run the laser cutter.")
+
+        return fabricate({"line_file": line_file,
+                          "cut_speed": cut_speed,
+                          "cut_power": cut_power})
+    
+    def __str__():
         setup = '''We used a {machine} with bed size {bedsize} and Visicut. Our default settings were {defaults}.'''.format(
                 **{
-                    'machine': str(self.default_laser_settings[Laser.LASERDEVICE]),
-                    'bedsize': str(self.default_laser_settings[Laser.LASER_BED]),
-                    'defaults': ', '.join([str(x) + ':' + str(y) for x, y in zip(self.default_laser_settings.keys(), self.default_laser_settings.values()) if x not in [Laser.LASERDEVICE, Laser.LASER_BED]])
+                    'machine': str(Laser.default_laser_settings[Laser.LASERDEVICE]),
+                    'bedsize': str(Laser.default_laser_settings[Laser.LASER_BED]),
+                    'defaults': ', '.join([str(x) + ':' + str(y) for x, y in zip(Laser.default_laser_settings.keys(), Laser.default_laser_settings.values()) if x not in [Laser.LASERDEVICE, Laser.LASER_BED]])
                 })
         return setup
 
