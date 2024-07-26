@@ -1,7 +1,9 @@
 import ast
 import ast
+from functools import wraps
 import inspect
 import types
+
 
 from flowchart import FlowChart
 
@@ -112,3 +114,12 @@ def fedt_measure():
         return new_f
 
     return inner
+
+# from https://stackoverflow.com/questions/14749328/how-to-check-whether-optional-function-parameter-is-set/58166804#58166804
+def explicit_checker(f):
+    varnames = inspect.getfullargspec(f)[0]
+    @wraps(f)
+    def wrapper(*a, **kw):
+        kw['explicit_params'] = set(list(varnames[:len(a)]) + list(kw.keys()))
+        return f(*a, **kw)
+    return wrapper

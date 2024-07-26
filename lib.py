@@ -8,6 +8,7 @@ from instruction import instruction
 from measurement import Measurement, Measurements
 from fabricate import fabricate, RealWorldObject
 from dataclasses import dataclass
+from decorator import explicit_checker
 
 from config import *
 
@@ -41,6 +42,7 @@ class Laser:
     FOCAL_HEIGHT_MM = "focal height mm"
     LASERDEVICE = "laser device"
     LASER_BED = "laser bed size in mm"
+    MAPPINGS = "mappings from colors to cut lines"
 
     LASERVARS = [CUT_POWER,CUT_SPEED,CUT_FREQUENCY,MATERIAL,THICKNESS,FOCAL_HEIGHT_MM]
 
@@ -60,7 +62,8 @@ class Laser:
         LASER_BED: {
             'width': 24 * 2.54 * 10, # in mm
             'height': 18 * 2.54 * 10 # in mm
-        }
+        },
+        MAPPINGS: {SvgColor.RED: "cut", SvgColor.BLUE: "mark"}
     }
 
     generated_setting_names = {}
@@ -142,7 +145,7 @@ class Laser:
         
     @staticmethod
     def fab(line_file: LineFile,
-            colors_to_mappings = {SvgColor.RED: "cut", SvgColor.BLUE: "mark"},
+            colors_to_mappings = default_laser_settings[MAPPINGS],
             focal_height_mm = default_laser_settings[FOCAL_HEIGHT_MM],
             mapping_file=None):
 
@@ -238,35 +241,41 @@ class Laser:
             pass
 
     @staticmethod
-    def fab_tracked(line_file: LineFile,
-                      focal_height_mm: int = default_laser_settings[FOCAL_HEIGHT_MM],
-                      num_scans: int = 1) -> RealWorldObject:
+    @explicit_checker
+    def fab(line_file: LineFile,
+            setting_names: dict = {},
+            material: str = default_laser_settings[MATERIAL],
+            thickness: str = default_laser_settings[THICKNESS],
+            cut_speed: int = default_laser_settings[CUT_SPEED],
+            cut_power: int = default_laser_settings[CUT_POWER],
+            frequency: int = default_laser_settings[CUT_FREQUENCY],
+            color_to_setting: SvgColor = SvgColor.GREEN,
+            focal_height_mm: int = default_laser_settings[FOCAL_HEIGHT_MM],
+            mapping_file: str = None,
+            explict_args = None,
+            **kwargs
+            ) -> RealWorldObject:
     
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            Laser.fab(line_file.svg_location, focal_height_mm=focal_height_mm)
+            # figure out if they set up a mapping request
+            colors_to_mappings = Laser.default_laser_settings[Laser.MAPPINGS]
+            if setting_names:
+                desired_setting = setting_names[Laser.generate_setting_key(material, thickness, cut_power, cut_speed, frequency)]
+                colors_to_mappings[color_to_setting] = desired_setting
+            # actually call the laser
+            Laser.fab(line_file.svg_location,
+                      mapping_file=mapping_file,
+                      focal_height_mm=focal_height_mm)
         instruction("Run the laser cutter.")
 
-        return fabricate({"line_file": line_file,
-                          "focal_height_mm": focal_height_mm,
-                          "num_scans": num_scans})
-    
-    @staticmethod
-    def fab_with_setting(line_file: LineFile,
-                         setting_names: dict,
-                         cut_speed: int,
-                         cut_power: int,
-                         color_to_setting: SvgColor) -> RealWorldObject:
-    
-        from control import MODE, Execute
-        if isinstance(MODE, Execute):
-            Laser.fab(line_file.svg_location, 
-                       colors_to_mappings = {color_to_setting: setting_names[Laser.generate_setting_key(cut_speed=cut_speed,cut_power=cut_power)]})
-        instruction("Run the laser cutter.")
+        stored_values = {"line_file": line_file}
+        if explict_args:
+            stored_values.update(explict_args)
+        if kwargs:
+            stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
 
-        return fabricate({"line_file": line_file,
-                          "cut_speed": cut_speed,
-                          "cut_power": cut_power})
+        return fabricate(stored_values)
     
     def __str__():
         setup = '''We used a {machine} with bed size {bedsize} and Visicut. Our default settings were {defaults}.'''.format(
