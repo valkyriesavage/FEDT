@@ -18,12 +18,14 @@ def test_materials():
     materials = ["lauan solid wood", "lauan plywood", "Japanese cypress",
                          "paulownia", "Magnolia obovata", "Japanese cedar", "basswood",
                          "beech", "oak", "walnut"]
+    coatings = ['fire retardant', 'no coating']
 
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
     fabbed_objects: list[RealWorldObject] = []
     for material in materials:
-        instruction("Check that {} is in the bed.".format(material))
-        fabbed_objects.append(Laser.fab(line_file, material=material))
+        for coating in coatings:
+            instruction("Check that {} {} is in the bed.".format(coating, material))
+            fabbed_objects.append(Laser.fab(line_file, material=material, coating=coating))
     results = Measurements.empty()
     for fabbed_object in fabbed_objects:
         results += Multimeter.measure_resistance(fabbed_object)
@@ -85,7 +87,7 @@ def test_laser_power_and_speed():
             fabbed_object = Laser.fab(line_file, setting_names, cut_speed, cut_power, color_to_setting=Laser.GREEN)
             resistance = Multimeter.measure_resistance(fabbed_object)
             results += resistance
-    summarize(results)
+    summarize(results.get_data())
 
 @fedt_experiment
 def test_grain_direction():
@@ -116,7 +118,7 @@ def test_change_over_time():
         # how to stuff wait months onto the object or measurement information?
         for fabbed_object in fabbed_objects:
             results += Multimeter.measure_resistance(fabbed_object)
-    summarize(results)
+    summarize(results.get_data())
 
 if __name__ == "__main__":
     print(test_change_over_time())
