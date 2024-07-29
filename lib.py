@@ -1,3 +1,5 @@
+from datetime import date
+from dateutil.relativedelta import relativedelta
 import drawsvg as draw
 import os
 import subprocess
@@ -296,7 +298,7 @@ class SvgEditor:
     @staticmethod
     def design() -> LineFile:
         instruction("Get the line file from the website.")
-        return LineFile()
+        return LineFile(".......")
 
     @staticmethod
     def draw_circle(draw, d, CAD_vars):
@@ -311,7 +313,13 @@ class SvgEditor:
         d.append(draw.Text(x=-20, y=-20, fill='blue', text=label, font_size=10))
 
     @staticmethod
-    def build_geometry(geometry_function=None, label_function=None, label = "L0", svg_location = "./expt_svgs/", CAD_vars={}) -> LineFile:
+    #@explicit_checker -> consider this!
+    def build_geometry(geometry_function=None,
+                       label_function=None,
+                       label = "L0",
+                       svg_location = "./expt_svgs/",
+                       CAD_vars={},
+                       explicit_args=None) -> LineFile:
         if geometry_function is None:
             geometry_function = SvgEditor.draw_circle
 
@@ -359,3 +367,41 @@ class Multimeter:
     @staticmethod
     def lower_resistance(meas1: Measurement, meas2: Measurement):
         return False
+
+class Human:
+    # so multifunctional!
+
+    @staticmethod
+    def post_process(obj: RealWorldObject,
+                     action: str) -> RealWorldObject:
+        instruction("do " + action + "to object #{obj.uid}", header=True)
+        obj.metadata.update({"post-process":str})
+        return obj
+
+    @staticmethod
+    def __str__():
+        setup = '''We manually performed some steps. ???? HOW TO TRACK WHICH ONES STATICALLY ????'''
+        return setup
+
+    def __repr__(self):
+        return str(self)
+
+class Environment:
+    # this is not the way I would prefer to write this...
+    begin_time = date.today()
+
+    @staticmethod
+    def wait_up_to_months(num_months: int):
+        instruction("beginning a {} month count from {}".format(num_months, Environment.begin_time))
+        while date.today() < (Environment.begin_time + relativedelta(months=num_months)):
+            pass
+        instruction("a total of {} months has passed!".format(num_months))
+        return
+
+    @staticmethod
+    def __str__():
+        setup = '''We allowed nature to take its course.'''
+        return setup
+
+    def __repr__(self):
+        return str(self)

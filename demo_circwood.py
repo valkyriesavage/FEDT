@@ -20,11 +20,10 @@ def test_materials():
                          "beech", "oak", "walnut"]
 
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
-    instruction("Check that wood is in the bed.")
     fabbed_objects: list[RealWorldObject] = []
-    for focal_height_mm in range(0, 5):
-        fabbed_objects.append(
-            Laser.fab(line_file, focal_height_mm=focal_height_mm))
+    for material in materials:
+        instruction("Check that {} is in the bed.".format(material))
+        fabbed_objects.append(Laser.fab(line_file, material=material))
     results = Measurements.empty()
     for fabbed_object in fabbed_objects:
         results += Multimeter.measure_resistance(fabbed_object)
@@ -56,7 +55,7 @@ def test_optimal_number_of_scans():
     num_scans = 0
     while(True):
         num_scans += num_scans
-        fabbed_object = Laser.fab(line_file, num_scans=num_scans) # is this the right way to do this? in a single function with the previous one?
+        fabbed_object = Laser.fab(line_file, num_scans=num_scans)
         resistance = Multimeter.measure_resistance(fabbed_object)
         results += resistance
         if not best_result:
@@ -94,8 +93,9 @@ def test_grain_direction():
     instruction("Check that wood is in the bed.")
     fabbed_objects: list[RealWorldObject] = []
     for orientation in ["orthogonal","along grain"]:
+        instruction("orient the wood {}".format(orientation))
         fabbed_objects.append(
-            Laser.fab(line_file, orientation=orientation)) # TODO need to add tracking of orientation to this function
+            Laser.fab(line_file, orientation=orientation))
     results = Measurements.empty()
     for fabbed_object in fabbed_objects:
         results += Multimeter.measure_resistance(fabbed_object)
@@ -104,20 +104,19 @@ def test_grain_direction():
 
 @fedt_experiment
 def test_change_over_time():
-    line_file = SvgEditor.design()
+    line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
     fabbed_objects = []
-    '''
     for post_process_condition in ['varnished','unvarnished']:
-    	for repetition in range(1, 4):
-    		fabbed_object = Laser.fab_tracked(line_file)
-    		fabbed_object = post_process(fabbed_object, post_process_condition)
-    		fabbed_objects.push(fabbed_object)
+        for repetition in range(1, 4):
+            fabbed_object = Laser.fab(line_file)
+            fabbed_objects.append(Human.post_process(fabbed_object, post_process_condition))
     results = []
     for wait_months in range(1, 6):
-    	wait_up_to_months(wait_months)
-    	for fabbed_object in fabbed_objects:
-    		results.push(multimeter.measure_resistance(fabbed_object))
-    summarize(results)'''
+        Environment.wait_up_to_months(wait_months)
+        # how to stuff wait months onto the object or measurement information?
+        for fabbed_object in fabbed_objects:
+            results += Multimeter.measure_resistance(fabbed_object)
+    summarize(results)
 
 if __name__ == "__main__":
-    print(test_height_vs_focal_point())
+    print(test_change_over_time())
