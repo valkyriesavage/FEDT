@@ -26,6 +26,8 @@ def test_materials():
         for coating in coatings:
             instruction("Check that {} {} is in the bed.".format(coating, material))
             fabbed_objects.append(Laser.fab(line_file, material=material, coating=coating))
+            # not completely sure how to capture what they did here... it seems like
+            # they did some experimentation, but it's not really documented?
     results = Measurements.empty()
     for fabbed_object in fabbed_objects:
         results += Multimeter.measure_resistance(fabbed_object)
@@ -112,9 +114,9 @@ def test_change_over_time():
         for repetition in range(1, 4):
             fabbed_object = Laser.fab(line_file)
             fabbed_objects.append(Human.post_process(fabbed_object, post_process_condition))
-    results = []
+    results = Measurements.empty()
     for wait_months in range(1, 6):
-        Environment.wait_up_to_months(wait_months)
+        Environment.wait_up_to_times(num_months=wait_months)
         # how to stuff wait months onto the object or measurement information?
         for fabbed_object in fabbed_objects:
             results += Multimeter.measure_resistance(fabbed_object)

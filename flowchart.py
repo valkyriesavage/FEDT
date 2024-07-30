@@ -31,6 +31,13 @@ class Instr(Node):
     def toXML(self) -> str:
         return f"<instruction>{self.instr}</instruction>"
 
+@dataclass
+class Decis(Node):
+    instr: str
+
+    def toXML(self) -> str:
+        return f"<decision>{self.instr}</decision>"
+
 
 @dataclass
 class Header(Node):
@@ -72,6 +79,13 @@ class FlowChart:
                                  Instr(x) if not header else Header(x))
         else:
             self.node = Seq(self.node, Instr(x))
+
+    def add_decision(self, x: str, header=False):
+        if self.in_loop:
+            self.temp_node = Seq(self.temp_node,
+                                 Decis(x) if not header else Header(x))
+        else:
+            self.node = Seq(self.node, Decis(x))
 
     def enter_loop(self):
         self.in_loop = True

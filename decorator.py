@@ -120,6 +120,6 @@ def explicit_checker(f):
     varnames = inspect.getfullargspec(f)[0]
     @wraps(f)
     def wrapper(*a, **kw):
-        kw['explicit_params'] = set(list(varnames[:len(a)]) + list(kw.keys()))
+        kw['explicit_args'] = set(list(varnames[:len(a)]) + list(kw.keys()))
         return f(*a, **kw)
     return wrapper

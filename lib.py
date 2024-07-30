@@ -6,6 +6,7 @@ import subprocess
 import time
 from zipfile import ZipFile
 
+from decision import decision
 from instruction import instruction
 from measurement import Measurement, Measurements
 from fabricate import fabricate, RealWorldObject
@@ -21,6 +22,20 @@ class LineFile:
 
     def __init__(self, svg_location):
         self.svg_location = svg_location
+
+@dataclass
+class VolumeFile:
+    stl_location = ''
+
+    def __init__(self, svg_location):
+        self.svg_location = svg_location
+
+@dataclass
+class GCodeFile:
+    gcode_location = ''
+
+    def __init__(self, gcode_location):
+        self.gcode_location = gcode_location
 
 NAME = "name"
 TEST_VALUES = "test_values"
@@ -254,7 +269,7 @@ class Laser:
             color_to_setting: SvgColor = SvgColor.GREEN,
             focal_height_mm: int = default_laser_settings[FOCAL_HEIGHT_MM],
             mapping_file: str = None,
-            explict_args = None,
+            explicit_args = None,
             **kwargs
             ) -> RealWorldObject:
     
@@ -272,8 +287,8 @@ class Laser:
         instruction("Run the laser cutter.")
 
         stored_values = {"line_file": line_file}
-        if explict_args:
-            stored_values.update(explict_args)
+        if explicit_args:
+            stored_values.update(explicit_args)
         if kwargs:
             stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
 
@@ -284,13 +299,14 @@ class Laser:
                 **{
                     'machine': str(Laser.default_laser_settings[Laser.LASERDEVICE]),
                     'bedsize': str(Laser.default_laser_settings[Laser.LASER_BED]),
-                    'defaults': ', '.join([str(x) + ':' + str(y) for x, y in zip(Laser.default_laser_settings.keys(), Laser.default_laser_settings.values()) if x not in [Laser.LASERDEVICE, Laser.LASER_BED]])
+                    'defaults': ', '.join([str(x) + ':' + str(y) for x, y in zip(Laser.default_laser_settings.keys(),
+                                                                                 Laser.default_laser_settings.values())
+                                                                              if x not in [Laser.LASERDEVICE, Laser.LASER_BED]])
                 })
         return setup
 
     def __repr__(self):
         return str(self)
-
 
 class SvgEditor:
     laser_bed = Laser.default_laser_settings[Laser.LASER_BED]
@@ -347,6 +363,135 @@ class SvgEditor:
     def __repr__(self):
         return str(self)
 
+class Slicer:
+    MATERIAL = 'material'
+    TEMPERATURE = 'temperature'
+    NOZZLE = 'nozzle'
+    LAYER_HEIGHT = 'layer height'
+    INFILL_PATTERN = 'infill pattern'
+    INFILL_DENSITY = 'infill density'
+    WALL_THICKNESS = 'wall thickness'
+
+    default_slicer_settings = {
+        MATERIAL: 'PLA',
+        TEMPERATURE: '290 C',
+        NOZZLE: '0.4mm',
+        LAYER_HEIGHT: '0.4mm',
+        INFILL_PATTERN: 'checkerboard',
+        INFILL_DENSITY: '50%',
+        WALL_THICKNESS: '1.2mm'
+    }
+
+    @staticmethod
+    def slice(volume_file: VolumeFile) -> GCodeFile:
+        instruction("slice {volume_file} in the slicing software")
+        return input("where is the sliced file located?")
+
+    class PrusaSlicer:
+        @staticmethod
+        def slice(volume_file: VolumeFile) -> GCodeFile:
+            # TODO : map argdict into real commandline calls for prusa, add function args for this
+            argdict = {}
+
+            slice_command = [PRUSA_SLICER_LOCATION,
+                            '--load', PRUSA_CONFIG_LOCATION]
+            for keyval in argdict.items():
+                slice_command.extend(list(keyval))
+            slice_command.extend(['--export-gcode', volume_file])
+            results = subprocess.check_output(slice_command)
+        
+            # the last line from Prusa Slicer is "Slicing result exported to ..."
+            last_line = results.decode('utf-8').strip().split("\n")[-1]
+            location = last_line.split(" exported to ")[1]
+
+            return location
+        
+        def __str__():
+            setup = '''We used Prusa Slicer'''
+
+    class BambuSlicer:
+        @staticmethod
+        def slice(volume_file: VolumeFile) -> GCodeFile:
+            # TODO prep_cam(argdict)
+            # there is some kind of processing that needs to happen here to encode the arguments into files
+            # because Bambu does not take commandline arguments
+            slice_command = [BAMBU_SLICER_LOCATION,
+                            '--debug 2',
+                            '--load-settings "{BAMBU_MACHINE_SETTINGS_LOCATION};{BAMBU_PROCESS_SETTINGS_LOCATION}"',
+                            volume_file]
+            location = subprocess.check_output(slice_command)
+
+            return location
+        
+        def __str__():
+            setup = '''We used Bambu Slicer'''
+        
+    def __str__():
+        setup = '''We used a slicer software'''
+
+    def __repr__(self):
+        return str(self)
+
+
+class Printer:
+    PRINTER = 'printer'
+    SLICER = 'slicer'
+
+    default_printer_settings = {
+        PRINTER: 'Ultimaker 3',
+        SLICER: Slicer.PrusaSlicer
+    }
+
+    @staticmethod
+    def print(gcode_file_location: str):
+        pass
+    
+    @staticmethod
+    @explicit_checker
+    def slice_and_print(volume_file: VolumeFile,
+                        printer: str = default_printer_settings[PRINTER],
+                        material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
+                        temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
+                        nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
+                        layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
+                        infill_pattern: str = Slicer.default_slicer_settings[Slicer.INFILL_PATTERN],
+                        infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
+                        wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
+                        explicit_args = None,
+                        **kwargs
+                        ) -> RealWorldObject:
+
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            gcode_location = Printer.default_printer_settings[Printer.SLICER].slice(volume_file)
+            # actually call the printer
+            Printer.print(gcode_location)
+        instruction("Slice the file.")
+        instruction("Run the printer.")
+
+        stored_values = {"volume_file": volume_file}
+        if explicit_args:
+            stored_values.update(explicit_args)
+        if kwargs:
+            stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
+
+        return fabricate(stored_values)
+    
+    def __str__():
+        setup = '''We used a {machine}, which we controlled through {slicer}. Our default settings were {defaults}.'''.format(
+                **{
+                    'machine': str(Printer.default_printer_settings[Printer.PRINTER]),
+                    'bedsize': str(Printer.default_printer_settings[Printer.SLICER]),
+                    'defaults': ', '.join([str(x) + ':' + str(y) for x, y in zip(Slicer.default_slicer_settings.keys(),
+                                                                                 Slicer.default_slicer_settings.values())])
+                })
+        return setup
+
+    def __repr__(self):
+        return str(self)
+
+class StlEditor:
+    pass
 
 class Multimeter:
     resistance = Measurement(
@@ -368,19 +513,108 @@ class Multimeter:
     def lower_resistance(meas1: Measurement, meas2: Measurement):
         return False
 
+class Calipers:
+    # TODO : is this the best way to make these granular?
+    x_size = Measurement(
+        name="size",
+        description="The dimension of the object in the x direction.",
+        procedure="""
+            Align the calipers around the x axis of the object,
+            then close them around it.
+            """,
+        units="mm")
+    y_size = Measurement(
+        name="size",
+        description="The dimension of the object in the y direction.",
+        procedure="""
+            Align the calipers around the y axis of the object,
+            then close them around it.
+            """,
+        units="mm")
+    z_size = Measurement(
+        name="size",
+        description="The dimension of the object in the z direction.",
+        procedure="""
+            Align the calipers around the z axis of the object,
+            then close them around it.
+            """,
+        units="mm")
+    generic_size = Measurement(
+        name="size",
+        description="The dimension of the object in the some direction.",
+        procedure="""
+            Align the calipers around the the object where you are interested to measure,
+            then close them around it.
+            """,
+        units="mm")
+
+    @staticmethod
+    def measure_size(obj: RealWorldObject,
+                     dimension: str) -> Measurements:
+        instruction(f"Measure object #{obj.uid}.", header=True)
+        match dimension:
+            case "x":
+                instruction(Multimeter.x_size.procedure)
+                return Measurements.single(obj, Calipers.x_size)
+            case "y":
+                instruction(Multimeter.y_size.procedure)
+                return Measurements.single(obj, Calipers.y_size)
+            case "z":
+                instruction(Multimeter.z_size.procedure)
+                return Measurements.single(obj, Calipers.z_size)
+            case _:
+                instruction(Multimeter.generic_size.procedure)
+                return Measurements.single(obj, Calipers.generic_size)
+            
+class Scanner:
+    geometry_scan = Measurement(
+        name="geometry scan",
+        description="A full scan of the object's geometry, stored in a file.",
+        procedure="""
+            Place the object on the scanning table. Open the Einscan software and
+            slowly move the scanner around the object. Export the scan file to
+            .stl and save it.
+            """,
+        units="filename")
+
+    @staticmethod
+    def scan(obj: RealWorldObject) -> Measurements:
+        instruction(f"Scan object #{obj.uid}.", header=True)
+        instruction(Scanner.geometry_scan.procedure)
+        return Measurements.single(obj, Scanner.geometry_scan)
+
 class Human:
     # so multifunctional!
 
     @staticmethod
     def post_process(obj: RealWorldObject,
                      action: str) -> RealWorldObject:
-        instruction("do " + action + "to object #{obj.uid}", header=True)
+        instruction("do " + action + " to object #{obj.uid}", header=True)
         obj.metadata.update({"post-process":str})
+        return obj
+    
+    @staticmethod
+    def mould_mycomaterial(obj: RealWorldObject,
+                            type: str) -> RealWorldObject:
+        instruction("mould " + type + " mycomaterial from mould #{obj.uid}", header=True)
+        obj.metadata.update({"mycomaterial":str})
+        return obj
+    
+    @staticmethod
+    def is_reasonable(obj: RealWorldObject):
+        if decision("does object #{obj.uid} look reasonable?", header=True): # is this a header? why? what does that mean?
+            obj.metadata.update({"human reasonableness check": True}) # TODO no idea how to encode this
+        return obj
+    
+    @staticmethod
+    def compress_to(obj: RealWorldObject,
+                    size: str):
+        instruction("compress object #{obj.uid} until it is {size}")
         return obj
 
     @staticmethod
     def __str__():
-        setup = '''We manually performed some steps. ???? HOW TO TRACK WHICH ONES STATICALLY ????'''
+        setup = '''We manually performed some steps. ???? HOW TO TRACK WHICH ONES ????'''
         return setup
 
     def __repr__(self):
@@ -391,11 +625,13 @@ class Environment:
     begin_time = date.today()
 
     @staticmethod
-    def wait_up_to_months(num_months: int):
-        instruction("beginning a {} month count from {}".format(num_months, Environment.begin_time))
-        while date.today() < (Environment.begin_time + relativedelta(months=num_months)):
+    def wait_up_to_times(num_days: int=0,
+                         num_weeks: int=0,
+                         num_months: int=0):
+        instruction("beginning a {} day, {} week, {} month count from {}".format(num_days, num_weeks, num_months, Environment.begin_time))
+        while date.today() < (Environment.begin_time + relativedelta(num_days=num_days, num_weeks=num_weeks, months=num_months)):
             pass
-        instruction("a total of {} months has passed!".format(num_months))
+        instruction("a total of {} day, {} week, {} month has passed!".format(num_days, num_weeks, num_months))
         return
 
     @staticmethod
