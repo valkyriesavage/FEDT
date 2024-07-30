@@ -11,6 +11,12 @@ def compare(dataset1, dataset2):
 def summarize(data):
     return "Oh wow, great data!"
 
+class CustomModellingTool:
+    # call the custom modelling tool that they created
+    @staticmethod
+    def sphere(radius: int=10) -> VolumeFile:
+        instruction("use the custom tool to make a sphere with radius {radius}")
+        return VolumeFile(input("what is the location of the stl?"))
 
 @fedt_experiment
 def geometric_features():
@@ -18,10 +24,10 @@ def geometric_features():
     scanning_results = Measurements.empty()
     for geometry_file in ['ramps.stl', 'circular.stl', 'patterns.stl']:
         mould = Printer.slice_and_print(geometry_file)
-        for myco_material in ['30\% coffee inclusions', 'no inclusions']:
+        for myco_material in ['30% coffee inclusions', 'no inclusions']:
             fabbed_object = Human.mould_mycomaterial(myco_material, mould)
             Environment.wait_up_to_times(num_weeks=1)
-            fabbed_object.grow() # this loop should unroll somehow so all the grow takes place at once...
+            # fabbed_object.grow() # this loop should unroll somehow so all the grow takes place at once...
             # although each mould is used for 2 different, sequential grows :thinking_face:
             shrinkage_results.push(Calipers.measure_size(fabbed_object, "important dimension"))
             if geometry_file is not 'ramps':
@@ -67,13 +73,13 @@ def mechanical_and_shrinkage_features():
     for myco_material in ['30% coffee inclusions', 'no inclusions']:
         for repetition in range(4):
             fabbed_object = Human.mould_mycomaterial(myco_material, mould)
-            fabbed_object.grow()
+            Environment.wait_up_to_times(num_weeks=1)
             shrinkage_results += Calipers.measure_size(fabbed_object, "interesting dimension")
             for repetition_mechanical in range(5):
                 for depth in range(0,5,.5):
                     assert("fabbed object is appropriately arranged on testing stand")
                     Human.compress_to(depth, fabbed_object) # not clear who compresses in their work?
-                    mechanical_results += force_gauge.measure_force()
+                    mechanical_results += ForceGauge.measure_force()
                 
     summarize(shrinkage_results)
     summarize(mechanical_results)
@@ -81,14 +87,14 @@ def mechanical_and_shrinkage_features():
 @fedt_experiment
 def test_software_tool():
     target_sphere = StlEditor.sphere(20)
-    software_generated_mould = custom_modelling_tool.sphere(20)
+    software_generated_mould = CustomModellingTool.sphere(20)
 
     results = Measurements.empty()
     mould = Printer.slice_and_print(software_generated_mould)
     myco_material = "TODO best from before"
     for repetition in range(3):
         fabbed_object = Human.mould_mycomaterial(myco_material, mould)
-        fabbed_object.grow() # this loop should unroll somehow so all the grow takes place at once...
+        Environment.wait_up_to_times(num_weeks=1) # this loop should unroll somehow so all the grow takes place at once...
         measurement_points = range(0,90,45)
         for x_axis_point in measurement_points:
             results += Calipers.measure_size(fabbed_object, x_axis_point)

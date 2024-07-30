@@ -491,7 +491,40 @@ class Printer:
         return str(self)
 
 class StlEditor:
-    pass
+
+    @staticmethod
+    def cube(size: tuple=(1,1,1)) -> VolumeFile:
+        # TODO import freecad and all that jazz
+        return VolumeFile("")
+    
+    @staticmethod
+    def sphere(radius: int=10) -> VolumeFile:
+        # TODO import freecad and all that jazz
+        return VolumeFile("")
+
+    @staticmethod
+    def extract_profile(volume_file: VolumeFile,
+                        location: tuple=(0,0,0,0,0,0)) -> LineFile:
+        instruction('extract an svg profile of {volume_file.stl_location} at location {location}')
+        return LineFile(input("what is the location of the svg profile?"))
+    
+    @staticmethod
+    def sample_convex(volume_file: VolumeFile) -> LineFile:
+        instruction('extract an svg profile of the convex parts of {volume_file.stl_location}')
+        return LineFile(input("what is the location of the svg profile?"))
+    
+    @staticmethod
+    def sample_concave(volume_file: VolumeFile) -> LineFile:
+        instruction('extract an svg profile of the concave parts of {volume_file.stl_location}')
+        return LineFile(input("what is the location of the svg profile?"))
+
+    @staticmethod
+    def __str__():
+        setup = '''We used FreeCAD to manipulate our STL files.'''
+        return setup
+
+    def __repr__(self):
+        return str(self)
 
 class Multimeter:
     resistance = Measurement(
@@ -582,6 +615,22 @@ class Scanner:
         instruction(f"Scan object #{obj.uid}.", header=True)
         instruction(Scanner.geometry_scan.procedure)
         return Measurements.single(obj, Scanner.geometry_scan)
+
+class ForceGauge:
+    force = Measurement(
+        name="force",
+        description="The force being exerted on (by?) the object.",
+        procedure="""
+            Mount the object in the force gauge cage.
+            Stick the force gauge probe on top of the object.
+            """,
+        units="kg")
+
+    @staticmethod
+    def measure_force(obj: RealWorldObject) -> Measurements:
+        instruction(f"Measure object #{obj.uid}.", header=True)
+        instruction(Multimeter.resistance.procedure)
+        return Measurements.single(obj, Multimeter.resistance)
 
 class Human:
     # so multifunctional!
