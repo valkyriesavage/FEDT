@@ -36,7 +36,7 @@ def geometric_features():
             # this loop should unroll somehow so all the grow takes place at once...
             # although each mould is used for 2 different, sequential grows :thinking_face:
             shrinkage_results.push(Calipers.measure_size(fabbed_object, "important dimension"))
-            if geometry_file != 'ramps':
+            if geometry_file != 'ramps.stl':
                 scanning_results.push(Scanner.scan(fabbed_object))
         if geometry_file == 'circular.stl':
             oneoff_object = Human.mould_mycomaterial(mould, 'no inclusions')
@@ -90,10 +90,10 @@ def mechanical_and_shrinkage_features():
                 for depth in arange(0,5,.5):
                     instruction("ensure fabbed object is appropriately arranged on testing stand")
                     Human.compress_to(fabbed_object, depth) # not clear who/what does the compressing?
-                    mechanical_results += ForceGauge.measure_force(fabbed_object)
-                
-    summarize(shrinkage_results)
-    summarize(mechanical_results)
+                    mechanical_results += ForceGauge.measure_force(fabbed_object)           
+    
+    summarize(shrinkage_results.get_data())
+    summarize(mechanical_results.get_data())
 
 @fedt_experiment
 def test_software_tool():
@@ -102,10 +102,10 @@ def test_software_tool():
 
     results = Measurements.empty()
     mould = Printer.slice_and_print(software_generated_mould)
-    myco_material = "TODO best from before"
+    myco_material = "30% coffee inclusions"
     for repetition in range(3):
         fabbed_object = Human.mould_mycomaterial(mould, myco_material)
-        Environment.wait_up_to_times(num_weeks=1) # this loop should unroll somehow so all the grow takes place at once...
+        Environment.wait_up_to_times(num_weeks=1)
         measurement_points = range(0,90,45)
         for x_axis_point in measurement_points:
             results += Calipers.measure_size(fabbed_object, f"{x_axis_point} on the x axis")
@@ -114,7 +114,7 @@ def test_software_tool():
         for z_axis_point in measurement_points:
             results += Calipers.measure_size(fabbed_object, f"{z_axis_point} on the z axis")
                 
-    summarize(results)
+    summarize(results.get_data())
 
 
 if __name__ == "__main__":
