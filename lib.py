@@ -531,6 +531,43 @@ class StlEditor:
         return LineFile(svg_location)
     
     @staticmethod
+    def rotate(volume_file: VolumeFile,
+               angle: float=0) -> VolumeFile:
+        instruction(f'rotate the object {volume_file.stl_location} {angle} degrees')
+        from control import MODE, Execute
+        stl_location = volume_file.stl_location
+        if isinstance(MODE, Execute):
+            stl_location = input("what is the location of the rotated stl?")
+            volume_file.stl_location = stl_location
+        volume_file.metadata.update({'rotation angle':angle})
+        return volume_file
+            
+    @staticmethod
+    def add_bent_path(volume_file: VolumeFile,
+                        bend_radius: float=0) -> VolumeFile:
+        instruction(f'add a bent path of radius {bend_radius} to the object {volume_file.stl_location}')
+        from control import MODE, Execute
+        stl_location = volume_file.stl_location
+        if isinstance(MODE, Execute):
+            stl_location = input("what is the location of the stl with the bent path added?")
+            volume_file.stl_location = stl_location
+        volume_file.metadata.update({'input bend radius':bend_radius})
+        return volume_file
+
+    @staticmethod
+    def modify_feature_by_hand(volume_file:VolumeFile,
+                               feature_name: str,
+                               feature_value: str|float) -> VolumeFile:
+        instruction(f'modify the file {volume_file.stl_location} to have feature {feature_name} with value {feature_value}')
+        from control import MODE, Execute
+        stl_location = volume_file.stl_location
+        if isinstance(MODE, Execute):
+            stl_location = input(f"what is the location of the modified stl with {feature_name} value {feature_value}?")
+            volume_file.stl_location = stl_location
+        volume_file.metadata.update({feature_name: feature_value})
+        return volume_file
+    
+    @staticmethod
     def sample_convex(volume_file: VolumeFile) -> LineFile:
         instruction(f'extract an svg profile of the convex parts of {volume_file.stl_location}')
         from control import MODE, Execute
@@ -586,7 +623,7 @@ class Calipers:
             then close them around it.
             """,
         units="mm",
-        feature="most interesting object feature")
+        feature="most obvious object feature")
 
     @staticmethod
     def measure_size(obj: RealWorldObject,
@@ -629,8 +666,24 @@ class ForceGauge:
     @staticmethod
     def measure_force(obj: RealWorldObject) -> Measurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
-        instruction(Multimeter.resistance.procedure)
-        return Measurements.single(obj, Multimeter.resistance)
+        instruction(ForceGauge.force.procedure)
+        return Measurements.single(obj, ForceGauge.force)
+    
+class Anemometer:
+    airflow = Measurement(
+        name="airspeed",
+        description="The speed of airflow through the device.",
+        procedure="""
+            Hold the anemometer at an outflow of the object and actuate it.
+            """,
+        units="m/s",
+        feature="output outlet")
+
+    @staticmethod
+    def measure_airflow(obj: RealWorldObject, feature: str=airflow.feature) -> Measurements:
+        instruction(f"Measure object #{obj.uid}.", header=True)
+        instruction(Anemometer.airflow.procedure)
+        return Measurements.single(obj, Anemometer.airflow.set_feature(feature))
 
 class Human:
     # so multifunctional!

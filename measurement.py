@@ -17,15 +17,18 @@ class Measurement:
     feature: str
 
     def set_feature(self, feature):
-        return Measurement(self.name, self.description, self.procedure, self.units, feature)
+        if not feature == self.feature:
+            return Measurement(self.name, self.description, self.procedure, self.units, feature)
+        return self
 
     def __repr__(self):
-        return self.name
+        return self.name + ":" + self.feature
     
     def __hash__(self):
          return hash(self.name + self.feature)
     
     def __eq__(self, other):
+         # TODO might make sense here to compare measurement errors or something...
          return (
              self.__class__ == other.__class__ and
              self.name == other.name and
