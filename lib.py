@@ -10,32 +10,11 @@ from decision import decision
 from instruction import instruction
 from measurement import Measurement, Measurements
 from fabricate import fabricate, RealWorldObject
-from dataclasses import dataclass
+from design import design, VirtualWorldObject, LineFile, VolumeFile, GCodeFile
 from decorator import explicit_checker
 
 from config import *
 
-
-@dataclass
-class LineFile:
-    svg_location = ''
-
-    def __init__(self, svg_location):
-        self.svg_location = svg_location
-
-@dataclass
-class VolumeFile:
-    stl_location = ''
-
-    def __init__(self, svg_location):
-        self.svg_location = svg_location
-
-@dataclass
-class GCodeFile:
-    gcode_location = ''
-
-    def __init__(self, gcode_location):
-        self.gcode_location = gcode_location
 
 NAME = "name"
 TEST_VALUES = "test_values"
@@ -230,8 +209,8 @@ class Laser:
                 map_file.write(mapping_file_template.format(mappings=mappings))
             mapping_file = temp_mapping_file
 
-        instruction("ensure that the line colors in your file match the line colors defined in {}".format(mapping_file))
-        instruction("set the focal height of the laser to {}".format(focal_height_mm))
+        instruction(f"ensure that the line colors in your file match the line colors defined in {mapping_file}")
+        instruction(f"set the focal height of the laser to {focal_height_mm}")
 
         # make the svg into the .plf file that they like
         temp_zf = 'spam.zip'
@@ -329,31 +308,38 @@ class SvgEditor:
         d.append(draw.Text(x=-20, y=-20, fill='blue', text=label, font_size=10))
 
     @staticmethod
-    #@explicit_checker -> consider this!
+    # TODO @explicit_checker -> consider this!
     def build_geometry(geometry_function=None,
                        label_function=None,
                        label = "L0",
                        svg_location = "./expt_svgs/",
                        CAD_vars={},
                        explicit_args=None) -> LineFile:
-        if geometry_function is None:
-            geometry_function = SvgEditor.draw_circle
-
-        d = draw.Drawing(SvgEditor.laser_bed['width'], SvgEditor.laser_bed['height'], origin='center', displayInline=False)
         
-        SvgEditor.geometry_function = geometry_function
-        geometry_function(draw, d, CAD_vars)
-        if label_function is not None:
-            label_function(draw, d, label)
+        svg_fullpath = svg_location
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            if geometry_function is None:
+                geometry_function = SvgEditor.draw_circle
 
-        if not os.path.exists(svg_location):
-            os.path.makedirs(svg_location)
+            d = draw.Drawing(SvgEditor.laser_bed['width'], SvgEditor.laser_bed['height'], origin='center', displayInline=False)
+            
+            SvgEditor.geometry_function = geometry_function
+            geometry_function(draw, d, CAD_vars)
+            if label_function is not None:
+                label_function(draw, d, label)
 
-        svg_fname = "expt_" + label + ".svg"
-        svg_fullpath = os.path.join(svg_location, svg_fname)
-        d.save_svg(svg_fullpath)
-        #d.savePng('example.png')
-        return LineFile(svg_fullpath)
+            if not os.path.exists(svg_location):
+                os.path.makedirs(svg_location)
+
+            svg_fname = "expt_" + label + ".svg"
+            svg_fullpath = os.path.join(svg_location, svg_fname)
+            d.save_svg(svg_fullpath)
+
+        stored_values = explicit_args
+        virtual_object = design(stored_values)
+        virtual_object.svg_location = svg_fullpath
+        return virtual_object
     
     @staticmethod
     def __str__():
@@ -383,28 +369,48 @@ class Slicer:
     }
 
     @staticmethod
-    def slice(volume_file: VolumeFile) -> GCodeFile:
-        instruction("slice {volume_file} in the slicing software")
-        return input("where is the sliced file located?")
+    def slice(volume_file: VolumeFile,
+              **kwargs) -> GCodeFile:
+
+        instruction(f"slice {volume_file.stl_location} in the slicing software with settings {kwargs}")
+        # TODO : how to output the kwargs like that?
+        from control import MODE, Execute
+        gcode_location = ''
+        if isinstance(MODE, Execute):
+            gcode_location = input("where is the sliced file located? ")
+        
+        gcode_file = design({VolumeFile.VOLUME_FILE: volume_file})
+        gcode_file.metadata.update(kwargs)
+        gcode_file.gcode_location = gcode_location
+        return gcode_file
 
     class PrusaSlicer:
         @staticmethod
         def slice(volume_file: VolumeFile) -> GCodeFile:
+            instruction(f"slice {volume_file.stl_location} in the slicing software")
+            gcode_location = ''
             # TODO : map argdict into real commandline calls for prusa, add function args for this
             argdict = {}
 
-            slice_command = [PRUSA_SLICER_LOCATION,
-                            '--load', PRUSA_CONFIG_LOCATION]
-            for keyval in argdict.items():
-                slice_command.extend(list(keyval))
-            slice_command.extend(['--export-gcode', volume_file])
-            results = subprocess.check_output(slice_command)
-        
-            # the last line from Prusa Slicer is "Slicing result exported to ..."
-            last_line = results.decode('utf-8').strip().split("\n")[-1]
-            location = last_line.split(" exported to ")[1]
+            from control import MODE, Execute
+            if isinstance(MODE, Execute):
+                slice_command = [PRUSA_SLICER_LOCATION,
+                                '--load', PRUSA_CONFIG_LOCATION]
+                for keyval in argdict.items():
+                    slice_command.extend(list(keyval))
+                slice_command.extend(['--export-gcode', volume_file])
+                results = subprocess.check_output(slice_command)
+            
+                # the last line from Prusa Slicer is "Slicing result exported to ..."
+                last_line = results.decode('utf-8').strip().split("\n")[-1]
+                gcode_location = last_line.split(" exported to ")[1]
 
-            return location
+            design_bake = {VolumeFile.VOLUME_FILE: volume_file}
+            design_bake.update(argdict)
+            gcode = design(design_bake)
+            gcode.gcode_location = gcode_location
+
+            return gcode
         
         def __str__():
             setup = '''We used Prusa Slicer'''
@@ -412,16 +418,26 @@ class Slicer:
     class BambuSlicer:
         @staticmethod
         def slice(volume_file: VolumeFile) -> GCodeFile:
+            argdict = {}
+            gcode_location = ''
             # TODO prep_cam(argdict)
             # there is some kind of processing that needs to happen here to encode the arguments into files
             # because Bambu does not take commandline arguments
-            slice_command = [BAMBU_SLICER_LOCATION,
-                            '--debug 2',
-                            '--load-settings "{BAMBU_MACHINE_SETTINGS_LOCATION};{BAMBU_PROCESS_SETTINGS_LOCATION}"',
-                            volume_file]
-            location = subprocess.check_output(slice_command)
 
-            return location
+            from control import MODE, Execute
+            if isinstance(MODE, Execute):
+                slice_command = [BAMBU_SLICER_LOCATION,
+                                '--debug 2',
+                                '--load-settings "{BAMBU_MACHINE_SETTINGS_LOCATION};{BAMBU_PROCESS_SETTINGS_LOCATION}"',
+                                volume_file]
+                gcode_location = subprocess.check_output(slice_command)
+
+            design_bake = {VolumeFile.VOLUME_FILE: volume_file}
+            design_bake.update(argdict)
+            gcode = design(design_bake)
+            gcode.gcode_location = gcode_location
+
+            return gcode
         
         def __str__():
             setup = '''We used Bambu Slicer'''
@@ -431,7 +447,6 @@ class Slicer:
 
     def __repr__(self):
         return str(self)
-
 
 class Printer:
     PRINTER = 'printer'
@@ -443,7 +458,7 @@ class Printer:
     }
 
     @staticmethod
-    def print(gcode_file_location: str):
+    def print(gcode: GCodeFile) -> RealWorldObject:
         pass
     
     @staticmethod
@@ -457,19 +472,21 @@ class Printer:
                         infill_pattern: str = Slicer.default_slicer_settings[Slicer.INFILL_PATTERN],
                         infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
                         wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
+                        slicer: Slicer = default_printer_settings[SLICER],
                         explicit_args = None,
                         **kwargs
                         ) -> RealWorldObject:
 
         from control import MODE, Execute
+
+        gcode = slicer.slice(volume_file)
         if isinstance(MODE, Execute):
-            gcode_location = Printer.default_printer_settings[Printer.SLICER].slice(volume_file)
             # actually call the printer
-            Printer.print(gcode_location)
+            Printer.print(gcode)
         instruction("Slice the file.")
         instruction("Run the printer.")
 
-        stored_values = {"volume_file": volume_file}
+        stored_values = {GCodeFile.GCODE_FILE: gcode}
         if explicit_args:
             stored_values.update(explicit_args)
         if kwargs:
@@ -493,30 +510,43 @@ class Printer:
 class StlEditor:
 
     @staticmethod
-    def cube(size: tuple=(1,1,1)) -> VolumeFile:
+    def cube(size: tuple=(1,1,1),
+             scale: float=1.) -> VolumeFile:
         # TODO import freecad and all that jazz
         return VolumeFile("")
     
     @staticmethod
-    def sphere(radius: int=10) -> VolumeFile:
+    def sphere(radius: float=10.) -> VolumeFile:
         # TODO import freecad and all that jazz
         return VolumeFile("")
 
     @staticmethod
     def extract_profile(volume_file: VolumeFile,
                         location: tuple=(0,0,0,0,0,0)) -> LineFile:
-        instruction('extract an svg profile of {volume_file.stl_location} at location {location}')
-        return LineFile(input("what is the location of the svg profile?"))
+        instruction(f'extract an svg profile of {volume_file.stl_location} at location {location}')
+        from control import MODE, Execute
+        svg_location = ''
+        if isinstance(MODE, Execute):
+            svg_location = input("what is the location of the svg profile?")
+        return LineFile(svg_location)
     
     @staticmethod
     def sample_convex(volume_file: VolumeFile) -> LineFile:
-        instruction('extract an svg profile of the convex parts of {volume_file.stl_location}')
-        return LineFile(input("what is the location of the svg profile?"))
+        instruction(f'extract an svg profile of the convex parts of {volume_file.stl_location}')
+        from control import MODE, Execute
+        svg_location = ''
+        if isinstance(MODE, Execute):
+            svg_location = input("what is the location of the svg profile?")
+        return LineFile(svg_location)
     
     @staticmethod
     def sample_concave(volume_file: VolumeFile) -> LineFile:
-        instruction('extract an svg profile of the concave parts of {volume_file.stl_location}')
-        return LineFile(input("what is the location of the svg profile?"))
+        instruction(f'extract an svg profile of the concave parts of {volume_file.stl_location}')
+        from control import MODE, Execute
+        svg_location = ''
+        if isinstance(MODE, Execute):
+            svg_location = input("what is the location of the svg profile?")
+        return LineFile(svg_location)
 
     @staticmethod
     def __str__():
@@ -534,7 +564,8 @@ class Multimeter:
             Use a multimeter to measure the resistance, with one probe
             at one end of the channel and one at the other.
             """,
-        units="ohms")
+        units="ohms",
+        feature="1cm along the edge of the shape")
 
     @staticmethod
     def measure_resistance(obj: RealWorldObject) -> Measurements:
@@ -547,57 +578,24 @@ class Multimeter:
         return False
 
 class Calipers:
-    # TODO : is this the best way to make these granular?
-    x_size = Measurement(
+    length = Measurement(
         name="size",
-        description="The dimension of the object in the x direction.",
+        description="The dimension of the object along the given feature.",
         procedure="""
-            Align the calipers around the x axis of the object,
+            Align the calipers around the given feature of the object,
             then close them around it.
             """,
-        units="mm")
-    y_size = Measurement(
-        name="size",
-        description="The dimension of the object in the y direction.",
-        procedure="""
-            Align the calipers around the y axis of the object,
-            then close them around it.
-            """,
-        units="mm")
-    z_size = Measurement(
-        name="size",
-        description="The dimension of the object in the z direction.",
-        procedure="""
-            Align the calipers around the z axis of the object,
-            then close them around it.
-            """,
-        units="mm")
-    generic_size = Measurement(
-        name="size",
-        description="The dimension of the object in the some direction.",
-        procedure="""
-            Align the calipers around the the object where you are interested to measure,
-            then close them around it.
-            """,
-        units="mm")
+        units="mm",
+        feature="most interesting object feature")
 
     @staticmethod
     def measure_size(obj: RealWorldObject,
                      dimension: str) -> Measurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
-        match dimension:
-            case "x":
-                instruction(Multimeter.x_size.procedure)
-                return Measurements.single(obj, Calipers.x_size)
-            case "y":
-                instruction(Multimeter.y_size.procedure)
-                return Measurements.single(obj, Calipers.y_size)
-            case "z":
-                instruction(Multimeter.z_size.procedure)
-                return Measurements.single(obj, Calipers.z_size)
-            case _:
-                instruction(Multimeter.generic_size.procedure)
-                return Measurements.single(obj, Calipers.generic_size)
+        measurement = Calipers.length
+        if measurement.feature != dimension:
+            measurement = measurement.set_feature(dimension)
+        return Measurements.single(obj, measurement)
             
 class Scanner:
     geometry_scan = Measurement(
@@ -608,7 +606,8 @@ class Scanner:
             slowly move the scanner around the object. Export the scan file to
             .stl and save it.
             """,
-        units="filename")
+        units="filename",
+        feature="full object")
 
     @staticmethod
     def scan(obj: RealWorldObject) -> Measurements:
@@ -624,7 +623,8 @@ class ForceGauge:
             Mount the object in the force gauge cage.
             Stick the force gauge probe on top of the object.
             """,
-        units="kg")
+        units="kg",
+        feature="n/a")
 
     @staticmethod
     def measure_force(obj: RealWorldObject) -> Measurements:
@@ -638,27 +638,29 @@ class Human:
     @staticmethod
     def post_process(obj: RealWorldObject,
                      action: str) -> RealWorldObject:
-        instruction("do " + action + " to object #{obj.uid}", header=True)
+        instruction("do " + action + f" to object #{obj.uid}")
         obj.metadata.update({"post-process":str})
         return obj
     
     @staticmethod
     def mould_mycomaterial(obj: RealWorldObject,
                             type: str) -> RealWorldObject:
-        instruction("mould " + type + " mycomaterial from mould #{obj.uid}", header=True)
-        obj.metadata.update({"mycomaterial":str})
+        instruction(f"mould {type} mycomaterial from mould #{obj.uid}")
+        obj.metadata.update({"mycomaterial":type})
         return obj
     
     @staticmethod
     def is_reasonable(obj: RealWorldObject):
-        if decision("does object #{obj.uid} look reasonable?", header=True): # is this a header? why? what does that mean?
+        if decision(f"does object #{obj.uid} look reasonable?"):
             obj.metadata.update({"human reasonableness check": True}) # TODO no idea how to encode this
+        else:
+            obj.metadata.update({"human reasonableness check": False})
         return obj
     
     @staticmethod
     def compress_to(obj: RealWorldObject,
                     size: str):
-        instruction("compress object #{obj.uid} until it is {size}")
+        instruction(f"compress object #{obj.uid} until it is {size}")
         return obj
 
     @staticmethod
@@ -677,10 +679,13 @@ class Environment:
     def wait_up_to_times(num_days: int=0,
                          num_weeks: int=0,
                          num_months: int=0):
-        instruction("beginning a {} day, {} week, {} month count from {}".format(num_days, num_weeks, num_months, Environment.begin_time))
-        while date.today() < (Environment.begin_time + relativedelta(num_days=num_days, num_weeks=num_weeks, months=num_months)):
-            pass
-        instruction("a total of {} day, {} week, {} month has passed!".format(num_days, num_weeks, num_months))
+
+        instruction(f"begin a {num_days} day, {num_weeks} week, {num_months} month count from {Environment.begin_time}")
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            while date.today() < (Environment.begin_time + relativedelta(num_days=num_days, num_weeks=num_weeks, months=num_months)):
+                pass
+        instruction(f"a total of {num_days} days, {num_weeks} weeks, {num_months} months has passed!")
         return
 
     @staticmethod

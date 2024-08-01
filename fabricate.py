@@ -28,15 +28,3 @@ def fabricate(metadata: dict[str, object],
     CURRENT_UID += 1
 
     return obj
-
-
-# def postprocess(metadata: dict[str, object],
-#                 obj: RealWorldObject) -> RealWorldObject:
-#     metadata = {**metadata, **obj.metadata}
-#     metadata["old_uid"] = obj.uid
-
-#     global CURRENT_UID
-#     obj = RealWorldObject(CURRENT_UID, metadata)
-#     CURRENT_UID += 1
-
-#     return obj

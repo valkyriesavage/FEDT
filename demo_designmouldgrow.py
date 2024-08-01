@@ -1,3 +1,5 @@
+from numpy import arange
+
 from instruction import instruction
 from measurement import Measurements
 from fabricate import RealWorldObject
@@ -14,9 +16,13 @@ def summarize(data):
 class CustomModellingTool:
     # call the custom modelling tool that they created
     @staticmethod
-    def sphere(radius: int=10) -> VolumeFile:
-        instruction("use the custom tool to make a sphere with radius {radius}")
-        return VolumeFile(input("what is the location of the stl?"))
+    def sphere(radius: float=10.) -> VolumeFile:
+        instruction(f"use the custom tool to make a sphere with radius {radius}")
+        from control import MODE, Execute
+        stl_location = ''
+        if isinstance(MODE, Execute):
+            stl_location = input("what is the location of the stl file generated?")
+        return VolumeFile(stl_location)
 
 @fedt_experiment
 def geometric_features():
@@ -25,23 +31,26 @@ def geometric_features():
     for geometry_file in ['ramps.stl', 'circular.stl', 'patterns.stl']:
         mould = Printer.slice_and_print(geometry_file)
         for myco_material in ['30% coffee inclusions', 'no inclusions']:
-            fabbed_object = Human.mould_mycomaterial(myco_material, mould)
+            fabbed_object = Human.mould_mycomaterial(mould, myco_material)
             Environment.wait_up_to_times(num_weeks=1)
-            # fabbed_object.grow() # this loop should unroll somehow so all the grow takes place at once...
+            # this loop should unroll somehow so all the grow takes place at once...
             # although each mould is used for 2 different, sequential grows :thinking_face:
             shrinkage_results.push(Calipers.measure_size(fabbed_object, "important dimension"))
-            if geometry_file is not 'ramps':
+            if geometry_file != 'ramps':
                 scanning_results.push(Scanner.scan(fabbed_object))
         if geometry_file == 'circular.stl':
-            oneoff_object = Human.mould_mycomaterial('no inclusions', mould)
+            oneoff_object = Human.mould_mycomaterial(mould, 'no inclusions')
             oneoff_object = Human.post_process(oneoff_object, 'glycerine treatment')
             shrinkage_results += Calipers.measure_size(oneoff_object, "important dimension")
             scanning_results += Scanner.scan(oneoff_object)
 
+    shrinkage_results = shrinkage_results.get_data()
+    scanning_results = scanning_results.get_data()
+
     for result in scanning_results:
+        real = None
+        digital = None
         if result.geometry_file == 'circular': # how to do this?
-            real = None
-            digital = None
             for angle in range(7.5, 82.5, 7.5):
                 real = StlEditor.extract_profile(result, angle)
                 digital = StlEditor.extract_profile(result.geometry_file, angle)
@@ -64,22 +73,24 @@ def geometric_features():
 
 @fedt_experiment
 def mechanical_and_shrinkage_features():
-    target_cube = StlEditor.cube(30,60,16)
-    scaled_mould = StlEditor.cube(30, 60, 16, scale=1/.92)
+    target_cube = StlEditor.cube((30,60,16))
+    scaled_mould = StlEditor.cube((30, 60, 16), scale=1/.92)
 
     shrinkage_results = Measurements.empty()
     mechanical_results = Measurements.empty()
     mould = Printer.slice_and_print(scaled_mould)
     for myco_material in ['30% coffee inclusions', 'no inclusions']:
         for repetition in range(4):
-            fabbed_object = Human.mould_mycomaterial(myco_material, mould)
+            fabbed_object = Human.mould_mycomaterial(mould, myco_material)
             Environment.wait_up_to_times(num_weeks=1)
-            shrinkage_results += Calipers.measure_size(fabbed_object, "interesting dimension")
+            shrinkage_results += Calipers.measure_size(fabbed_object, "x-axis")
+            shrinkage_results += Calipers.measure_size(fabbed_object, "y-axis")
+            shrinkage_results += Calipers.measure_size(fabbed_object, "z-axis")
             for repetition_mechanical in range(5):
-                for depth in range(0,5,.5):
-                    assert("fabbed object is appropriately arranged on testing stand")
-                    Human.compress_to(depth, fabbed_object) # not clear who compresses in their work?
-                    mechanical_results += ForceGauge.measure_force()
+                for depth in arange(0,5,.5):
+                    instruction("ensure fabbed object is appropriately arranged on testing stand")
+                    Human.compress_to(fabbed_object, depth) # not clear who/what does the compressing?
+                    mechanical_results += ForceGauge.measure_force(fabbed_object)
                 
     summarize(shrinkage_results)
     summarize(mechanical_results)
@@ -93,18 +104,18 @@ def test_software_tool():
     mould = Printer.slice_and_print(software_generated_mould)
     myco_material = "TODO best from before"
     for repetition in range(3):
-        fabbed_object = Human.mould_mycomaterial(myco_material, mould)
+        fabbed_object = Human.mould_mycomaterial(mould, myco_material)
         Environment.wait_up_to_times(num_weeks=1) # this loop should unroll somehow so all the grow takes place at once...
         measurement_points = range(0,90,45)
         for x_axis_point in measurement_points:
-            results += Calipers.measure_size(fabbed_object, x_axis_point)
+            results += Calipers.measure_size(fabbed_object, f"{x_axis_point} on the x axis")
         for y_axis_point in measurement_points:
-            results += Calipers.measure_size(fabbed_object, y_axis_point)
+            results += Calipers.measure_size(fabbed_object, f"{y_axis_point} on the y axis")
         for z_axis_point in measurement_points:
-            results += Calipers.measure_size(fabbed_object, z_axis_point)
+            results += Calipers.measure_size(fabbed_object, f"{z_axis_point} on the z axis")
                 
     summarize(results)
 
 
 if __name__ == "__main__":
-    print(geometric_features())
+    print(mechanical_and_shrinkage_features())
