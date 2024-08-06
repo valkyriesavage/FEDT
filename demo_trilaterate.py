@@ -100,8 +100,6 @@ def placement_response():
 def force_response():
     fabbed_object = reuse_from_above_experiment() # !!!!! ?? how to do ??
 
-    electrodes = list(range(7))
-
     ground_truth = Measurements.empty()
     processed_results = Measurements.empty()
 
