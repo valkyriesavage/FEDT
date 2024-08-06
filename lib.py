@@ -291,9 +291,12 @@ class SvgEditor:
     laser_bed = Laser.default_laser_settings[Laser.LASER_BED]
 
     @staticmethod
-    def design() -> LineFile:
-        instruction("Get the line file from the website.")
-        return LineFile(".......")
+    def design(specification: str) -> LineFile:
+        if not specification:
+            instruction("Get the svg file from the website.")
+        else:
+            instruction(f"Design an svg file like {specification}")
+        return LineFile("......")
 
     @staticmethod
     def draw_circle(draw, d, CAD_vars):
@@ -508,6 +511,14 @@ class Printer:
         return str(self)
 
 class StlEditor:
+
+    @staticmethod
+    def design(specification: str) -> VolumeFile:
+        if not specification:
+            instruction("Get the stl file from the website.")
+        else:
+            instruction(f"Design an STL file like {specification}")
+        return VolumeFile(".......")
 
     @staticmethod
     def cube(size: tuple=(1,1,1),

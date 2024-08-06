@@ -37,6 +37,66 @@ class WrapFor(ast.NodeTransformer):
             flowchart_call("exit_loop")
         ]
 
+# TODO : Harry, help!
+class WrapIf(ast.NodeTransformer):
+
+    def visit_If(self, node):
+
+        def flowchart_call(fname):
+            return ast.Expr(
+                ast.Call(
+                    ast.Attribute(
+                        ast.Call(ast.Name("FlowChart", ast.Load()), [], []),
+                        fname, ast.Load()), [], []))
+
+        def instruction_call():
+            return ast.Expr(
+                ast.Call(ast.Name("instruction", ast.Load()),
+                         [ast.Constant("If for TODO"),
+                          ast.Constant(True)], []))
+
+        for n in node.body:
+            self.generic_visit(n)
+
+        return [
+            ast.ImportFrom("flowchart", [ast.alias("FlowChart")], 0),
+            flowchart_call("enter_if"),
+            ast.For(node.target, node.iter, [instruction_call()] + node.body +
+                    [flowchart_call("end_body")], node.orelse,
+                    node.type_comment),
+            flowchart_call("exit_if")
+        ]
+
+# TODO : Harry, help!
+class WrapElse(ast.NodeTransformer):
+
+    def visit_Else(self, node):
+
+        def flowchart_call(fname):
+            return ast.Expr(
+                ast.Call(
+                    ast.Attribute(
+                        ast.Call(ast.Name("FlowChart", ast.Load()), [], []),
+                        fname, ast.Load()), [], []))
+
+        def instruction_call():
+            return ast.Expr(
+                ast.Call(ast.Name("instruction", ast.Load()),
+                         [ast.Constant("Else for TODO"),
+                          ast.Constant(True)], []))
+
+        for n in node.body:
+            self.generic_visit(n)
+
+        return [
+            ast.ImportFrom("flowchart", [ast.alias("FlowChart")], 0),
+            flowchart_call("enter_else"),
+            ast.For(node.target, node.iter, [instruction_call()] + node.body +
+                    [flowchart_call("end_body")], node.orelse,
+                    node.type_comment),
+            flowchart_call("exit_else")
+        ]
+
 
 def fedt_experiment(f):
     source = inspect.getsource(f)

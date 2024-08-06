@@ -81,6 +81,7 @@ class FlowChart:
     temp_nodes: list[Node] = []
     in_loop: bool = False
     in_if: bool = False
+    in_else: bool = False
 
     def reset(self):
         self.node = Empty()
