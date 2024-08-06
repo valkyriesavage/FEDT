@@ -771,6 +771,22 @@ class Anemometer:
         instruction(Anemometer.airflow.procedure)
         return Measurements.single(obj, Anemometer.airflow.set_feature(feature))
 
+class Camera:
+    image = Measurement(
+        name="photograph",
+        description="A photograph of the object.",
+        procedure="""
+            Take a photo of the object showing {}.
+            """,
+        units="filename",
+        feature="whole object")
+
+    @staticmethod
+    def take_picture(obj: RealWorldObject, feature: str=image.feature) -> Measurements:
+        instruction(f"Measure object #{obj.uid}.", header=True)
+        instruction(Camera.image.procedure.format(feature))
+        return Measurements.single(obj, Camera.image.set_feature(feature))
+
 class PressureSensor:
     pressure = Measurement(
         name="pressure",
