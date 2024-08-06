@@ -291,12 +291,22 @@ class SvgEditor:
     laser_bed = Laser.default_laser_settings[Laser.LASER_BED]
 
     @staticmethod
-    def design(specification: str=None) -> LineFile:
-        if not specification:
-            instruction("Get the svg file from the website.")
-        else:
+    def design(specification: str=None, vars: dict=None) -> LineFile:
+        if specification:
             instruction(f"Design an svg file like {specification}")
-        return LineFile("......")
+        elif vars:
+            instruction(f"Design an svg file like {vars}")
+        else:
+            instruction("Get the svg file from the website.")
+        location = "...."
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            location = input("where is the svg?")
+        designed = LineFile(location)
+        designed.metadata.update(vars)
+        if specification:
+            designed.metadata.update({"specification": specification})
+        return designed
 
     @staticmethod
     def draw_circle(draw, d, CAD_vars):
