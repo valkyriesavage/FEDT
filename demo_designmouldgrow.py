@@ -35,9 +35,9 @@ def geometric_features():
             Environment.wait_up_to_times(num_weeks=1)
             # this loop should unroll somehow so all the grow takes place at once...
             # although each mould is used for 2 different, sequential grows :thinking_face:
-            shrinkage_results.push(Calipers.measure_size(fabbed_object, "important dimension"))
+            shrinkage_results += Calipers.measure_size(fabbed_object, "important dimension")
             if geometry_file != 'ramps.stl':
-                scanning_results.push(Scanner.scan(fabbed_object))
+                scanning_results += Scanner.scan(fabbed_object)
         if geometry_file == 'circular.stl':
             oneoff_object = Human.mould_mycomaterial(mould, 'no inclusions')
             oneoff_object = Human.post_process(oneoff_object, 'glycerine treatment')
@@ -50,13 +50,13 @@ def geometric_features():
     for result in scanning_results:
         real = None
         digital = None
-        if result.geometry_file == 'circular': # how to do this?
-            for angle in range(7.5, 82.5, 7.5):
+        if result.geometry_file == 'circular': # TODO how to do this?
+            for angle in arange(7.5, 82.6, 7.5):
                 real = StlEditor.extract_profile(result, angle)
                 digital = StlEditor.extract_profile(result.geometry_file, angle)
                 result.comparison = compare(real, digital)
         if result.geometry_file == 'patterns':
-            for offset in range(0, 1.5, 0.1):
+            for offset in arange(0, 1.6, 0.1):
                 real = StlEditor.extract_profile(result, offset)
                 digital = StlEditor.extract_profile(result.geometry_file, offset)
                 result.comparison = compare(real, digital)
@@ -108,11 +108,11 @@ def test_software_tool():
         Environment.wait_up_to_times(num_weeks=1)
         measurement_points = range(0,90,45)
         for x_axis_point in measurement_points:
-            results += Calipers.measure_size(fabbed_object, f"{x_axis_point} on the x axis")
+            results += Calipers.measure_size(fabbed_object, f"{x_axis_point} degrees along the x axis")
         for y_axis_point in measurement_points:
-            results += Calipers.measure_size(fabbed_object, f"{y_axis_point} on the y axis")
+            results += Calipers.measure_size(fabbed_object, f"{y_axis_point} degrees along the y axis")
         for z_axis_point in measurement_points:
-            results += Calipers.measure_size(fabbed_object, f"{z_axis_point} on the z axis")
+            results += Calipers.measure_size(fabbed_object, f"{z_axis_point} degrees along the z axis")
                 
     summarize(results.get_data())
 
