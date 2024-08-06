@@ -637,16 +637,48 @@ class Multimeter:
             """,
         units="ohms",
         feature="1cm along the edge of the shape")
+    
+    current = Measurement(
+        name="current",
+        description="The current on the wire.",
+        procedure="""
+            Use a multimeter to measure the current, with one probe
+            at one end of the channel and one at the other.
+            """,
+        units="amperes",
+        feature="whole object")
 
     @staticmethod
     def measure_resistance(obj: RealWorldObject) -> Measurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Multimeter.resistance.procedure)
         return Measurements.single(obj, Multimeter.resistance)
+    
+    @staticmethod
+    def measure_current(obj: RealWorldObject) -> Measurements:
+        instruction(f"Measure object #{obj.uid}.", header=True)
+        instruction(Multimeter.current.procedure)
+        return Measurements.single(obj, Multimeter.current)
 
     @staticmethod
     def lower_resistance(meas1: Measurement, meas2: Measurement):
         return False
+
+class Stopwatch:
+    elapsed_time = Measurement(
+        name="time elapsed",
+        description="The amount of time that elapsed while the thing happened",
+        procedure="""
+            Start the timer, do {}, stop the timer.
+            """,
+        units="s",
+        feature="n/a")
+
+    @staticmethod
+    def measure_time(obj: RealWorldObject, instr: str) -> Measurements:
+        instruction(f"Measure object #{obj.uid}.", header=True)
+        instruction(Stopwatch.elapsed_time.procedure.format(instr))
+        return Measurements.single(obj, Stopwatch.elapsed_time)
 
 class Calipers:
     length = Measurement(
