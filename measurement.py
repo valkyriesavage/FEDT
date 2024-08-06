@@ -44,6 +44,10 @@ class Measurements:
     @staticmethod
     def single(obj: RealWorldObject, meas: Measurement) -> "Measurements":
         return Measurements(set([obj]), set([meas]))
+    
+    @staticmethod
+    def multiple(obj: RealWorldObject, meases: set[Measurement]) -> "Measurements":
+        return Measurements(set([obj]), meases)
 
     @staticmethod
     def empty() -> "Measurements":

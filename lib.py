@@ -291,7 +291,7 @@ class SvgEditor:
     laser_bed = Laser.default_laser_settings[Laser.LASER_BED]
 
     @staticmethod
-    def design(specification: str) -> LineFile:
+    def design(specification: str=None) -> LineFile:
         if not specification:
             instruction("Get the svg file from the website.")
         else:
@@ -513,12 +513,21 @@ class Printer:
 class StlEditor:
 
     @staticmethod
-    def design(specification: str) -> VolumeFile:
+    def design(specification: str=None) -> VolumeFile:
         if not specification:
             instruction("Get the stl file from the website.")
         else:
             instruction(f"Design an STL file like {specification}")
         return VolumeFile(".......")
+    
+    @staticmethod
+    def edit(stl: VolumeFile, specification: str) -> VolumeFile:
+        instruction(f"Edit {stl.stl_location} like {specification}")
+        HAND_EDIT = "hand-edited"
+        if HAND_EDIT in stl.metadata:
+            specification = stl.metadata[HAND_EDIT] + ", then " + specification
+        stl.metadata.update(HAND_EDIT, specification)
+        return stl
 
     @staticmethod
     def cube(size: tuple=(1,1,1),
@@ -790,7 +799,27 @@ class Human:
 
     @staticmethod
     def __str__():
+        # TODO how to track which ones?
         setup = '''We manually performed some steps. ???? HOW TO TRACK WHICH ONES ????'''
+        return setup
+
+    def __repr__(self):
+        return str(self)
+
+class User:
+
+    @staticmethod
+    def do(obj: RealWorldObject, instr: str, user_id: int):
+        instruction(instr)
+        USER_DID = f"user {user_id} did"
+        if USER_DID in obj.metadata:
+            instr = obj.metadata[USER_DID] + ", then " + instr
+        obj.metadata.update({USER_DID: instr})
+        return obj
+
+    @staticmethod
+    def __str__():
+        setup = '''Users did some interactions with the object.'''
         return setup
 
     def __repr__(self):
