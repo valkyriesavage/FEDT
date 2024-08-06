@@ -111,7 +111,7 @@ def lasting():
             Human.post_process(cube, f"cut open cube #{cube.uid} and let the fluid leak out")
             post_weights += Scale.measure_weight(cube)
         
-    summarize(pre_weights,post_weights)
+    summarize(pre_weights.get_data(),post_weights.get_data())
 
 if __name__ == "__main__":
     print(resin_types())
