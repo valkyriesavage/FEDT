@@ -360,6 +360,8 @@ class Slicer:
     INFILL_PATTERN = 'infill pattern'
     INFILL_DENSITY = 'infill density'
     WALL_THICKNESS = 'wall thickness'
+    SPEED = 'speed'
+    BED_HEAT = 'bed heating'
 
     default_slicer_settings = {
         MATERIAL: 'PLA',
@@ -368,7 +370,9 @@ class Slicer:
         LAYER_HEIGHT: '0.4mm',
         INFILL_PATTERN: 'checkerboard',
         INFILL_DENSITY: '50%',
-        WALL_THICKNESS: '1.2mm'
+        WALL_THICKNESS: '1.2mm',
+        SPEED: '5000',
+        BED_HEAT: '60'
     }
 
     @staticmethod
@@ -376,7 +380,6 @@ class Slicer:
               **kwargs) -> GCodeFile:
 
         instruction(f"slice {volume_file.stl_location} in the slicing software with settings {kwargs}")
-        # TODO : how to output the kwargs like that?
         from control import MODE, Execute
         gcode_location = ''
         if isinstance(MODE, Execute):
@@ -462,7 +465,8 @@ class Printer:
 
     @staticmethod
     def print(gcode: GCodeFile) -> RealWorldObject:
-        pass
+        obj = fabricate(gcode.metadata, "print the object")
+        return obj
     
     @staticmethod
     @explicit_checker
