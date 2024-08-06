@@ -86,8 +86,8 @@ def pneumatic_vs_hydraulic():
     stl = VolumeFile("single_actuator_single_generator.stl")
     for fill in ['water','air']:
         fabbed_object = Printer.slice_and_print(stl)
-        Human.post_process(fabbed_object,f"fill object with {fill}")
-        expansion_results += Calipers.measure_size(fabbed_object,"displacement of tip")
+        filled_object = Human.post_process(fabbed_object,f"fill object with {fill}")
+        expansion_results += Calipers.measure_size(filled_object,"displacement of tip")
 
     summarize(expansion_results.get_data())
 
@@ -108,8 +108,8 @@ def lasting():
         cubes = fabbed_objects[day*cubes_per_day:(day+1)*cubes_per_day]
         for cube in cubes:
             pre_weights += Scale.measure_weight(cube)
-            Human.post_process(cube, f"cut open the cube and let the fluid leak out")
-            post_weights += Scale.measure_weight(cube)
+            leaked_cube = Human.post_process(cube, f"cut open the cube and let the fluid leak out")
+            post_weights += Scale.measure_weight(leaked_cube)
         
     summarize([pre_weights.get_data(),post_weights.get_data()])
 

@@ -28,11 +28,11 @@ def effect_of_b_horizontal():
         linefile = SvgEditor.design(vars = {'A':A, 'B':B, 'C':C, 'D':D})
         fabbed_object = Laser.fab(linefile)
         for repetition in range(5):
-            Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
-            Human.post_process(fabbed_object, "inject air to inflate the object") # ? -> probably human does this, based on the video
+            fabbed_object = Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
+            fabbed_object = Human.post_process(fabbed_object, "inject air to inflate the object") # ? -> probably human does this, based on the video
             results += Protractor.measure_angle(fabbed_object,"overall bend")
-            Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
-            Human.post_process(fabbed_object, "flatten the object") # ? -> it's not specified that they are flattened
+            fabbed_object = Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
+            fabbed_object = Human.post_process(fabbed_object, "flatten the object") # ? -> it's not specified that they are flattened
     
     summarize(results.get_data())
 
@@ -47,8 +47,8 @@ def effect_of_incision_number():
     for num_incisions in [6,12]:
         linefile = SvgEditor.design(vars = {'A':A, 'B':B, 'C':C, 'D':D, 'num_incisions':num_incisions})
         fabbed_object = Laser.fab(linefile)
-        Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
-        Human.post_process(fabbed_object, "inject air to inflate the object") # ? -> probably human does this, based on the video
+        fabbed_object = Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
+        fabbed_object = Human.post_process(fabbed_object, "inject air to inflate the object") # ? -> probably human does this, based on the video
         results += Protractor.measure_angle(fabbed_object,"overall bend")
     
     summarize(results.get_data())
@@ -64,11 +64,11 @@ def effect_of_interplate_distance_vertical():
         instruction("place polycarbonate in the laser bed with spacing %d".format(distance))
         fabbed_object = Laser.fab(linefile)
         for repetition in range(5):
-            Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
-            Human.post_process(fabbed_object, "inject air to inflate the object") # ? -> probably human does this, based on the video
+            fabbed_object = Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
+            fabbed_object = Human.post_process(fabbed_object, "inject air to inflate the object") # ? -> probably human does this, based on the video
             results += Protractor.measure_angle(fabbed_object,"overall bend")
-            Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
-            Human.post_process(fabbed_object, "flatten the object") # ? -> it's not specified that they are flattened
+            fabbed_object = Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
+            fabbed_object = Human.post_process(fabbed_object, "flatten the object") # ? -> it's not specified that they are flattened
     summarize(results.get_data())
 
 if __name__ == "__main__":

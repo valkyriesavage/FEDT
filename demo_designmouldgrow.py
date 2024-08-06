@@ -6,6 +6,7 @@ from fabricate import RealWorldObject
 from decorator import fedt_experiment
 from lib import *
 
+include_last = .001
 
 def compare(dataset1, dataset2):
     return "Hmmmm... I think these two are pretty same-same??"
@@ -51,12 +52,12 @@ def geometric_features():
         real = None
         digital = None
         if result.geometry_file == 'circular': # TODO how to do this?
-            for angle in arange(7.5, 82.6, 7.5):
+            for angle in arange(7.5, 82.5+include_last, 7.5):
                 real = StlEditor.extract_profile(result, angle)
                 digital = StlEditor.extract_profile(result.geometry_file, angle)
                 result.comparison = compare(real, digital)
         if result.geometry_file == 'patterns':
-            for offset in arange(0, 1.6, 0.1):
+            for offset in arange(0, 1.5+include_last, 0.1):
                 real = StlEditor.extract_profile(result, offset)
                 digital = StlEditor.extract_profile(result.geometry_file, offset)
                 result.comparison = compare(real, digital)
@@ -89,7 +90,7 @@ def mechanical_and_shrinkage_features():
             for repetition_mechanical in range(5):
                 for depth in arange(0,5,.5):
                     instruction("ensure fabbed object is appropriately arranged on testing stand")
-                    Human.compress_to(fabbed_object, depth) # not clear who/what does the compressing?
+                    fabbed_object = Human.post_process(fabbed_object, "compress the object to " + str(depth)) # not clear who/what does the compressing?
                     mechanical_results += ForceGauge.measure_force(fabbed_object)           
     
     summarize(shrinkage_results.get_data())

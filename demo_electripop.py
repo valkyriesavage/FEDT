@@ -39,7 +39,7 @@ def optimize_simulation():
                 sim = VirtualWorldObject({'weight of bending energy': math.pow(10,weight_of_be_exp),
                                           'weight of electrical energy': math.pow(10, weight_of_ee_exp),
                                           'file': CustomSimulator.runsimulation(weight_of_be_exp,weight_of_ee_exp)})
-                simmed += Scanner.scan(sim) # hmmm.... increasingly sketchy. measuring virtual objects?
+                simmed += Scanner.scan(sim)
         
     summarize(ground_truths.get_data())
     summarize(simmed.get_data())
@@ -76,7 +76,7 @@ def electrical_deflation():
         ns_elapsed += 1 # not sure exactly how to write this
         current = Multimeter.measure_current(snowman)
         current_measures += current
-        if current.get_data() == 0: # how to do this in FEDT?
+        if current.get_data() == 0: # TODO how to do this in FEDT?
             # we are done
             break
 
@@ -126,7 +126,7 @@ def geometric_accuracy():
         ground_truths += Scanner.scan(fabbed_object) # they did this manually and not with a scanner, but this shorthand seems ok
         for sim_repetition in range(100):
             sim = VirtualWorldObject({'file': CustomSimulator.runsimulation(f)})
-            simmed += Scanner.scan(sim) # hmmm.... increasingly sketchy. measuring virtual objects?
+            simmed += Scanner.scan(sim)
             elapsed_times += Stopwatch.measure_time(sim, "converge simulation")
         
     summarize(ground_truths.get_data())

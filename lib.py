@@ -819,8 +819,14 @@ class Human:
     def post_process(obj: RealWorldObject,
                      action: str) -> RealWorldObject:
         instruction("do " + action + f" to object #{obj.uid}")
-        obj.metadata.update({"post-process":str})
-        return obj
+        VERSIONS = 'versions'
+        versions = []
+        if VERSIONS in obj.metadata:
+            versions = obj.metadata[VERSIONS]
+            versions.append(obj)
+        new_obj = fabricate(obj.metadata)
+        new_obj.metadata.update({VERSIONS: versions, "post-process":str})
+        return new_obj
     
     @staticmethod
     def mould_mycomaterial(obj: RealWorldObject,
@@ -835,12 +841,6 @@ class Human:
             obj.metadata.update({"human reasonableness check": True}) # TODO no idea how to encode this
         else:
             obj.metadata.update({"human reasonableness check": False})
-        return obj
-    
-    @staticmethod
-    def compress_to(obj: RealWorldObject,
-                    size: str):
-        instruction(f"compress object #{obj.uid} until it is {size}")
         return obj
 
     @staticmethod

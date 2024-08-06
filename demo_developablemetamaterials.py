@@ -27,15 +27,14 @@ def test_density_and_materials():
                 fabbed_object = Human.post_process(fabbed_object, "assemble matched ruffles")
                 loads = [0,10,20,50,100,200]
                 results += Calipers.measure_size(fabbed_object,'height at rest in {load_direction}')
-                Human.post_process(fabbed_object, "apply acrylic plate in {load_direction}")
+                fabbed_object = Human.post_process(fabbed_object, "apply acrylic plate in {load_direction}")
                 current_load = 0
                 while Human.is_reasonable(fabbed_object) and current_load < len(loads):
                     results += Calipers.measure_size(fabbed_object,f'height at load {loads[current_load]} in {load_direction}')
                     current_load += 1
-                    Human.post_process(fabbed_object, f"apply load {loads[current_load]} in {load_direction}")
-                    # how did they determine how much load to add?
+                    fabbed_object = Human.post_process(fabbed_object, f"apply load {loads[current_load]} in {load_direction}")
                 # then relax it
-                Human.post_process(fabbed_object, "remove all loads")
+                fabbed_object = Human.post_process(fabbed_object, "remove all loads")
                 results += Calipers.measure_size(fabbed_object,'height at unload in {load_direction}')
 
     summarize(results.get_data())
@@ -51,15 +50,15 @@ def design_versus_stiffness():
             fabbed_object = Human.post_process(fabbed_object, f"assemble matched ruffles with {tab_condition}")
             loads = [0,10,20,50,100,200]
             results += Calipers.measure_size(fabbed_object,'height at rest in {load_direction}')
-            Human.post_process(fabbed_object, "apply acrylic plate in {load_direction}")
+            fabbed_object = Human.post_process(fabbed_object, "apply acrylic plate in {load_direction}")
             current_load = 0
             while Human.is_reasonable(fabbed_object) and current_load < len(loads):
                 results += Calipers.measure_size(fabbed_object,f'height at load {loads[current_load]} in {load_direction}')
                 current_load += 1
-                Human.post_process(fabbed_object, f"apply load {loads[current_load]} in {load_direction}")
+                fabbed_object = Human.post_process(fabbed_object, f"apply load {loads[current_load]} in {load_direction}")
                 # how did they determine how much load to add?
             # then relax it
-            Human.post_process(fabbed_object, "remove all loads")
+            fabbed_object = Human.post_process(fabbed_object, "remove all loads")
             results += Calipers.measure_size(fabbed_object,'height at unload in {load_direction}')
 
     summarize(results.get_data())
