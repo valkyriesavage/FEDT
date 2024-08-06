@@ -49,7 +49,7 @@ def min_wall_thickness():
 
     pressure_results = Measurements.empty()
 
-    base_stl = "wall_thickness_test.stl"
+    base_stl = VolumeFile("wall_thickness_test.stl")
     for orientation in [0,90]:
         stl = StlEditor.rotate(base_stl, orientation)
         for repetition in range(3):
@@ -74,7 +74,7 @@ def min_thin_wall_area():
         stl = VolumeFile(stl_loc)
         fabbed_object = Printer.slice_and_print(stl)
         instruction("pump 20psi into the fabricated object")
-        expansion_results += Calipers.measure_pressure(fabbed_object,"vertical expansion height")
+        expansion_results += Calipers.measure_size(fabbed_object,"vertical expansion height")
 
     summarize(expansion_results.get_data())
  
@@ -86,8 +86,8 @@ def pneumatic_vs_hydraulic():
     stl = VolumeFile("single_actuator_single_generator.stl")
     for fill in ['water','air']:
         fabbed_object = Printer.slice_and_print(stl)
-        Human.post_process(fabbed_object,f"fill object #{fabbed_object.uid} with {fill}")
-        expansion_results += Calipers.measure_pressure(fabbed_object,"displacement of tip")
+        Human.post_process(fabbed_object,f"fill object with {fill}")
+        expansion_results += Calipers.measure_size(fabbed_object,"displacement of tip")
 
     summarize(expansion_results.get_data())
 
@@ -105,13 +105,13 @@ def lasting():
     cubes_per_day = 3
     for day in range(16):
         Environment.wait_up_to_times(num_days=day)
-        cubes = fabbed_objects[day*cubes_per_day:(day+1)*cubes_per_day-1]
+        cubes = fabbed_objects[day*cubes_per_day:(day+1)*cubes_per_day]
         for cube in cubes:
             pre_weights += Scale.measure_weight(cube)
-            Human.post_process(cube, f"cut open cube #{cube.uid} and let the fluid leak out")
+            Human.post_process(cube, f"cut open the cube and let the fluid leak out")
             post_weights += Scale.measure_weight(cube)
         
-    summarize(pre_weights.get_data(),post_weights.get_data())
+    summarize([pre_weights.get_data(),post_weights.get_data()])
 
 if __name__ == "__main__":
-    print(resin_types())
+    print(lasting())

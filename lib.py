@@ -660,7 +660,7 @@ class Protractor:
     def measure_angle(obj: RealWorldObject,
                      dimension: str) -> Measurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
-        measurement = Measurement.angle
+        measurement = Protractor.angle
         if measurement.feature != dimension:
             measurement = measurement.set_feature(dimension)
         return Measurements.single(obj, measurement)
