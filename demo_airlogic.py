@@ -23,8 +23,7 @@ def airflow_gatetypes():
             instruction(f"set the air compressor to {input_massflow} and connect the object")
             results += Anemometer.measure_airflow(fabbed_object, f"input massflow at {input_massflow}")
     
-    # I'm not totally sure about how to write this last bit. it will depend
-    # upon how we structure this data piece.
+    # I'm not totally sure about how to write this last bit. it's possible this is two experiments...
     # summarize([result in results if result.related_object in logic_gate_files])
     # summarize([result in results if result.related_object in input_files])
     summarize(results.get_data())
@@ -66,20 +65,18 @@ def output_airneeds():
 									
     epsilon = '.1kPa' # ?
 
-    mins = []
-    maxs = []
+    mins = Measurements.empty()
+    maxs = Measurements.empty()
     for widget in output_widgets:
-        gcode = slicer.slice(widget)
-        fabbed_object = printer.print(gcode)
-        aircompressor.connect(fabbed_object)
-        while not human.judge_working(fabbed_object):
-            air_compressor.increase_output_pressure(epsilon)
-        mins.push(anemometer.measure_output_pressure(air_compressor))
-        while human.judge_working(fabbed_object):
-            air_compressor.increase_ouput_pressure(epsilon)
-        maxs.push(anemometer.measure_output_pressure(air_compressor))
+        fabbed_object = Printer.slice_and_print(VolumeFile(widget))
+        instruction(f"connect object #{fabbed_object.uid} to the air compressor", header=True)
+        instruction(f"increase the air pressure by {epsilon} at a time until the object starts to work")
+        mins += Anemometer.measure_airflow(fabbed_object)
+        instruction(f"increase the air pressure by {epsilon} at a time until the object stops working")
+        maxs += Anemometer.measure_airflow(fabbed_object)
         
-    summarize(mins, maxs)
+    summarize(mins.get_data())
+    summarize(maxs.get_data())
 
 if __name__ == "__main__":
     print(or_bendradius())

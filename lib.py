@@ -633,7 +633,27 @@ class Calipers:
         if measurement.feature != dimension:
             measurement = measurement.set_feature(dimension)
         return Measurements.single(obj, measurement)
-            
+    
+class Protractor:
+    angle = Measurement(
+        name="angle",
+        description="The angle of the object along the given feature.",
+        procedure="""
+            Align the protractor around the given feature of the object,
+            then read off the angle.
+            """,
+        units="degrees",
+        feature="most obvious object feature")
+
+    @staticmethod
+    def measure_angle(obj: RealWorldObject,
+                     dimension: str) -> Measurements:
+        instruction(f"Measure object #{obj.uid}.", header=True)
+        measurement = Measurement.angle
+        if measurement.feature != dimension:
+            measurement = measurement.set_feature(dimension)
+        return Measurements.single(obj, measurement)
+
 class Scanner:
     geometry_scan = Measurement(
         name="geometry scan",
@@ -685,8 +705,49 @@ class Anemometer:
         instruction(Anemometer.airflow.procedure)
         return Measurements.single(obj, Anemometer.airflow.set_feature(feature))
 
+class PressureSensor:
+    pressure = Measurement(
+        name="pressure",
+        description="The pressure of air in the device.",
+        procedure="""
+            Attach the sensor to the device at an air outlet.
+            """,
+        units="psi",
+        feature="output outlet")
+
+    @staticmethod
+    def measure_pressure(obj: RealWorldObject, feature: str=pressure.feature) -> Measurements:
+        instruction(f"Measure object #{obj.uid}.", header=True)
+        instruction(PressureSensor.pressure.procedure)
+        return Measurements.single(obj, PressureSensor.pressure.set_feature(feature))
+
+class Scale:
+    weight = Measurement(
+        name="weight",
+        description="The weight of the object.",
+        procedure="""
+            Set the object on the scale.
+            """,
+        units="g",
+        feature="whole object")
+
+    @staticmethod
+    def measure_weight(obj: RealWorldObject, feature: str=weight.feature) -> Measurements:
+        instruction(f"Measure object #{obj.uid}.", header=True)
+        instruction(Scale.weight.procedure)
+        return Measurements.single(obj, Scale.weight.set_feature(feature))
+
 class Human:
     # so multifunctional!
+
+    @staticmethod
+    def do_and_respond(instr: str,
+                       question: str):
+        instruction(instr)
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            return input(question)
+        return question
 
     @staticmethod
     def post_process(obj: RealWorldObject,
