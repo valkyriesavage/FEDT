@@ -116,11 +116,10 @@ def test_change_over_time():
             fabbed_objects.append(Human.post_process(fabbed_object, post_process_condition))
     results = Measurements.empty()
     for wait_months in range(1, 6):
-        Environment.wait_up_to_times(num_months=wait_months)
-        # how to stuff wait months onto the object or measurement information?
+        fabbed_objects = Environment.wait_up_to_times(fabbed_objects, num_months=wait_months)
         for fabbed_object in fabbed_objects:
             results += Multimeter.measure_resistance(fabbed_object)
     summarize(results.get_data())
 
 if __name__ == "__main__":
-    print(test_change_over_time())
+    print(test_materials())

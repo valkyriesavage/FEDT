@@ -33,7 +33,7 @@ def geometric_features():
         mould = Printer.slice_and_print(geometry_file)
         for myco_material in ['30% coffee inclusions', 'no inclusions']:
             fabbed_object = Human.mould_mycomaterial(mould, myco_material)
-            Environment.wait_up_to_times(num_weeks=1)
+            Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
             # this loop should unroll somehow so all the grow takes place at once...
             # although each mould is used for 2 different, sequential grows :thinking_face:
             shrinkage_results += Calipers.measure_size(fabbed_object, "important dimension")
@@ -83,7 +83,7 @@ def mechanical_and_shrinkage_features():
     for myco_material in ['30% coffee inclusions', 'no inclusions']:
         for repetition in range(4):
             fabbed_object = Human.mould_mycomaterial(mould, myco_material)
-            Environment.wait_up_to_times(num_weeks=1)
+            Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
             shrinkage_results += Calipers.measure_size(fabbed_object, "x-axis")
             shrinkage_results += Calipers.measure_size(fabbed_object, "y-axis")
             shrinkage_results += Calipers.measure_size(fabbed_object, "z-axis")
@@ -106,7 +106,7 @@ def test_software_tool():
     myco_material = "30% coffee inclusions"
     for repetition in range(3):
         fabbed_object = Human.mould_mycomaterial(mould, myco_material)
-        Environment.wait_up_to_times(num_weeks=1)
+        Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
         measurement_points = range(0,90,45)
         for x_axis_point in measurement_points:
             results += Calipers.measure_size(fabbed_object, f"{x_axis_point} degrees along the x axis")

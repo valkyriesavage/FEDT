@@ -1,4 +1,5 @@
 from datetime import date
+from typing import List
 from dateutil.relativedelta import relativedelta
 import drawsvg as draw
 import os
@@ -685,7 +686,7 @@ class Calipers:
         name="size",
         description="The dimension of the object along the given feature.",
         procedure="""
-            Align the calipers around the given feature of the object,
+            Align the calipers around the {} of the object,
             then close them around it.
             """,
         units="mm",
@@ -693,8 +694,9 @@ class Calipers:
 
     @staticmethod
     def measure_size(obj: RealWorldObject,
-                     dimension: str) -> Measurements:
+                     dimension: str=length.feature) -> Measurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
+        instruction(Calipers.length.procedure.format(dimension))
         measurement = Calipers.length
         if measurement.feature != dimension:
             measurement = measurement.set_feature(dimension)
@@ -705,7 +707,7 @@ class Protractor:
         name="angle",
         description="The angle of the object along the given feature.",
         procedure="""
-            Align the protractor around the given feature of the object,
+            Align the protractor around the {} of the object,
             then read off the angle.
             """,
         units="degrees",
@@ -713,8 +715,9 @@ class Protractor:
 
     @staticmethod
     def measure_angle(obj: RealWorldObject,
-                     dimension: str) -> Measurements:
+                      dimension: str=angle.feature) -> Measurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
+        instruction(Protractor.angle.procedure.format(dimension))
         measurement = Protractor.angle
         if measurement.feature != dimension:
             measurement = measurement.set_feature(dimension)
@@ -892,9 +895,10 @@ class Environment:
     begin_time = date.today()
 
     @staticmethod
-    def wait_up_to_times(num_days: int=0,
-                         num_weeks: int=0,
-                         num_months: int=0):
+    def wait_up_to_time_multiple(fabbed_objects: List[RealWorldObject],
+                                    num_days: int=0,
+                                    num_weeks: int=0,
+                                    num_months: int=0):
 
         instruction(f"begin a {num_days} day, {num_weeks} week, {num_months} month count from {Environment.begin_time}")
         from control import MODE, Execute
@@ -902,7 +906,26 @@ class Environment:
             while date.today() < (Environment.begin_time + relativedelta(num_days=num_days, num_weeks=num_weeks, months=num_months)):
                 pass
         instruction(f"a total of {num_days} days, {num_weeks} weeks, {num_months} months has passed!")
-        return
+        TIME = "time passed"
+        for obj in fabbed_objects:
+            obj.metadata.update({TIME : date.today() - Environment.begin_time})
+        return fabbed_objects
+    
+    @staticmethod
+    def wait_up_to_time_single(fabbed_object: RealWorldObject,
+                                num_days: int=0,
+                                num_weeks: int=0,
+                                num_months: int=0):
+
+        instruction(f"begin a {num_days} day, {num_weeks} week, {num_months} month count from {Environment.begin_time}")
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            while date.today() < (Environment.begin_time + relativedelta(num_days=num_days, num_weeks=num_weeks, months=num_months)):
+                pass
+        instruction(f"a total of {num_days} days, {num_weeks} weeks, {num_months} months has passed!")
+        TIME = "time passed"
+        fabbed_object.metadata.update({TIME : date.today() - Environment.begin_time})
+        return fabbed_object
 
     @staticmethod
     def __str__():

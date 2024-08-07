@@ -95,23 +95,24 @@ def pneumatic_vs_hydraulic():
 def lasting():
 
     stl = VolumeFile("side_11mm_wall_1mm.stl")
+    gcode = Slicer.slice(stl)
     fabbed_objects = []
     for repetition in range(48):
-        fabbed_objects.append(Printer.slice_and_print(stl))
+        fabbed_objects.append(Printer.print(gcode))
 
     pre_weights = Measurements.empty()
     post_weights = Measurements.empty()
 
     cubes_per_day = 3
     for day in range(16):
-        Environment.wait_up_to_times(num_days=day)
+        Environment.wait_up_to_time_multiple(fabbed_objects, num_days=day)
         cubes = fabbed_objects[day*cubes_per_day:(day+1)*cubes_per_day]
         for cube in cubes:
             pre_weights += Scale.measure_weight(cube)
             leaked_cube = Human.post_process(cube, f"cut open the cube and let the fluid leak out")
             post_weights += Scale.measure_weight(leaked_cube)
-        
+
     summarize([pre_weights.get_data(),post_weights.get_data()])
 
 if __name__ == "__main__":
-    print(lasting())
+    print(min_thin_wall_area())
