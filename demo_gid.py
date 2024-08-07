@@ -194,7 +194,7 @@ def camera_angle():
             images += Camera.take_picture(virtual_render, angle)
     
     summarize(images.get_data())
-        
+
 
 if __name__ == "__main__":
     print(camera_angle())

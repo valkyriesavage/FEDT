@@ -1,8 +1,10 @@
 from datetime import date
 from typing import List
+import datetime
 from dateutil.relativedelta import relativedelta
 import drawsvg as draw
 import os
+import random
 import subprocess
 import time
 from zipfile import ZipFile
@@ -22,6 +24,7 @@ TEST_VALUES = "test_values"
 INSTRUCTION = "instruction"
 DATA_TYPE = 'data type'
 ARGNAME = 'argname'
+VERSIONS = 'versions'
 
 CAD = 'CAD'
 CAM = 'CAM'
@@ -141,10 +144,10 @@ class Laser:
         return generated_setting_names
         
     @staticmethod
-    def fab(line_file: LineFile,
-            colors_to_mappings = default_laser_settings[MAPPINGS],
-            focal_height_mm = default_laser_settings[FOCAL_HEIGHT_MM],
-            mapping_file=None):
+    def do_fab(line_file: LineFile,
+                colors_to_mappings = default_laser_settings[MAPPINGS],
+                focal_height_mm = default_laser_settings[FOCAL_HEIGHT_MM],
+                mapping_file=None):
 
         mapping_file_template = '''<?xml version="1.0" encoding="UTF-8"?>
 
@@ -216,7 +219,7 @@ class Laser:
         # make the svg into the .plf file that they like
         temp_zf = 'spam.zip'
         with ZipFile(temp_zf, 'w') as myzip:
-            myzip.write(line_file)
+            myzip.write(line_file.svg_location)
             myzip.write(mapping_file, "mappings.xml")
             myzip.write("transform.xml")
         temp_plf = temp_zf.replace('.zip','.plf')
@@ -261,9 +264,9 @@ class Laser:
                 desired_setting = setting_names[Laser.generate_setting_key(material, thickness, cut_power, cut_speed, frequency)]
                 colors_to_mappings[color_to_setting] = desired_setting
             # actually call the laser
-            Laser.fab(line_file.svg_location,
-                      mapping_file=mapping_file,
-                      focal_height_mm=focal_height_mm)
+            Laser.do_fab(line_file,
+                            mapping_file=mapping_file,
+                            focal_height_mm=focal_height_mm)
         instruction("Run the laser cutter.")
 
         stored_values = {"line_file": line_file}
@@ -272,7 +275,12 @@ class Laser:
         if kwargs:
             stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
 
-        return fabricate(stored_values)
+        fabbed = fabricate(stored_values)
+
+        if isinstance(MODE, Execute):
+            print(f"object number {fabbed.uid} has been fabricated!")
+
+        return fabbed
     
     def __str__():
         setup = '''We used a {machine} with bed size {bedsize} and Visicut. Our default settings were {defaults}.'''.format(
@@ -302,6 +310,12 @@ class SvgEditor:
         location = "...."
         from control import MODE, Execute
         if isinstance(MODE, Execute):
+            if specification:
+                print(f"Design an svg file like {specification}")
+            elif vars:
+                print(f"Design an svg file like {vars}")
+            else:
+                print(f"get the svg file from the website")
             location = input("where is the svg?")
         designed = LineFile(location)
         designed.metadata.update(vars)
@@ -322,13 +336,14 @@ class SvgEditor:
         d.append(draw.Text(x=-20, y=-20, fill='blue', text=label, font_size=10))
 
     @staticmethod
-    # TODO @explicit_checker -> consider this!
+    @explicit_checker
     def build_geometry(geometry_function=None,
                        label_function=None,
-                       label = "L0",
+                       label=None,
                        svg_location = "./expt_svgs/",
                        CAD_vars={},
-                       explicit_args=None) -> LineFile:
+                       explicit_args=None,
+                       **kwargs) -> LineFile:
         
         svg_fullpath = svg_location
         from control import MODE, Execute
@@ -346,13 +361,22 @@ class SvgEditor:
             if not os.path.exists(svg_location):
                 os.path.makedirs(svg_location)
 
-            svg_fname = "expt_" + label + ".svg"
+            svg_fname = "expt_{}.svg".format(label if label else datetime.datetime.now().strftime("%Y%m%d%H%M%S-{}").format(random.randint(0,100)))
             svg_fullpath = os.path.join(svg_location, svg_fname)
             d.save_svg(svg_fullpath)
 
-        stored_values = explicit_args
-        virtual_object = design(stored_values)
+        stored_values = {LineFile.LINE_FILE: svg_fullpath}
+        if explicit_args:
+            stored_values.update(explicit_args)
+        if kwargs:
+            stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
+
+        virtual_object = LineFile(stored_values)
         virtual_object.svg_location = svg_fullpath
+
+        if isinstance(MODE, Execute):
+            print(f"svg has been generated, and is available at {svg_location}")
+
         return virtual_object
     
     @staticmethod
@@ -427,6 +451,9 @@ class Slicer:
             gcode = design(design_bake)
             gcode.gcode_location = gcode_location
 
+            if isinstance(MODE, Execute):
+                print(f"gcode has been generated, and is available at {gcode_location}")
+
             return gcode
         
         def __str__():
@@ -453,6 +480,9 @@ class Slicer:
             design_bake.update(argdict)
             gcode = design(design_bake)
             gcode.gcode_location = gcode_location
+
+            if isinstance(MODE, Execute):
+                print(f"gcode has been generated, and is available at {gcode_location}")
 
             return gcode
         
@@ -510,7 +540,12 @@ class Printer:
         if kwargs:
             stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
 
-        return fabricate(stored_values)
+        fabbed =  fabricate(stored_values)
+
+        if isinstance(MODE, Execute):
+            print(f"object #{fabbed.uid} has been fabricated!")
+        
+        return fabbed
     
     def __str__():
         setup = '''We used a {machine}, which we controlled through {slicer}. Our default settings were {defaults}.'''.format(
@@ -533,16 +568,39 @@ class StlEditor:
             instruction("Get the stl file from the website.")
         else:
             instruction(f"Design an STL file like {specification}")
-        return VolumeFile(".......")
+        
+        stl_location = ''
+
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            if not specification:
+                print("Get the stl file from the website.")
+            else:
+                print(f"Design an STL file like {specification}")
+            stl_location = input("where is the stl file?")
+        
+        designed = VolumeFile(stl_location)
+        designed.metadata.update({"specification":specification})
+        return designed
     
     @staticmethod
     def edit(stl: VolumeFile, specification: str) -> VolumeFile:
         instruction(f"Edit {stl.stl_location} like {specification}")
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            input(f"Edit {stl.stl_location} like {specification}, enter when done")
         HAND_EDIT = "hand-edited"
         if HAND_EDIT in stl.metadata:
             specification = stl.metadata[HAND_EDIT] + ", then " + specification
-        stl.metadata.update(HAND_EDIT, specification)
-        return stl
+
+        versions = []
+        if VERSIONS in stl.metadata:
+            versions = stl.metadata[VERSIONS]
+            versions.append(stl)
+        new_obj = design(stl.metadata)
+        new_obj.metadata.update({VERSIONS: versions, HAND_EDIT: specification})
+
+        return new_obj
 
     @staticmethod
     def cube(size: tuple=(1,1,1),
@@ -562,6 +620,7 @@ class StlEditor:
         from control import MODE, Execute
         svg_location = ''
         if isinstance(MODE, Execute):
+            print(f'extract an svg profile of {volume_file.stl_location} at location {location}')
             svg_location = input("what is the location of the svg profile?")
         return LineFile(svg_location)
     
@@ -831,6 +890,7 @@ class Human:
         instruction(instr)
         from control import MODE, Execute
         if isinstance(MODE, Execute):
+            print(instr)
             return input(question)
         return question
 
@@ -838,13 +898,12 @@ class Human:
     def post_process(obj: RealWorldObject,
                      action: str) -> RealWorldObject:
         instruction("do " + action + f" to object #{obj.uid}")
-        VERSIONS = 'versions'
         versions = []
         if VERSIONS in obj.metadata:
             versions = obj.metadata[VERSIONS]
             versions.append(obj)
         new_obj = fabricate(obj.metadata)
-        new_obj.metadata.update({VERSIONS: versions, "post-process":str})
+        new_obj.metadata.update({VERSIONS: versions, "post-process": action})
         return new_obj
     
     @staticmethod
@@ -903,8 +962,9 @@ class Environment:
         instruction(f"begin a {num_days} day, {num_weeks} week, {num_months} month count from {Environment.begin_time}")
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            while date.today() < (Environment.begin_time + relativedelta(num_days=num_days, num_weeks=num_weeks, months=num_months)):
+            while date.today() < (Environment.begin_time + relativedelta(days=num_days, weeks=num_weeks, months=num_months)):
                 pass
+            input("Enough time has passed; let's get on with it!")
         instruction(f"a total of {num_days} days, {num_weeks} weeks, {num_months} months has passed!")
         TIME = "time passed"
         for obj in fabbed_objects:
@@ -920,8 +980,9 @@ class Environment:
         instruction(f"begin a {num_days} day, {num_weeks} week, {num_months} month count from {Environment.begin_time}")
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            while date.today() < (Environment.begin_time + relativedelta(num_days=num_days, num_weeks=num_weeks, months=num_months)):
+            while date.today() < (Environment.begin_time + relativedelta(days=num_days, weeks=num_weeks, months=num_months)):
                 pass
+            input("Enough time has passed; let's get on with it!")
         instruction(f"a total of {num_days} days, {num_weeks} weeks, {num_months} months has passed!")
         TIME = "time passed"
         fabbed_object.metadata.update({TIME : date.today() - Environment.begin_time})

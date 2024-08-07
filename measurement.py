@@ -93,8 +93,7 @@ class Measurements:
                 return variables
 
             # now let's make a key csv that actually maps the object UIDs to the things varied in them
-            object_variables = walk_metadata(self.objects[0]) # ... all of them should have the same # of vars
-            # TODO check if this is true :joy:
+            object_variables = walk_metadata(self.objects[0]) # TODO : deal with what happens if they don't have the same # of vars??
 
             key_csv = experiment_csv.replace('.csv','_key.csv')
             with open(key_csv, 'w') as csvfile:

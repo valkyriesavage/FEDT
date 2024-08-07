@@ -2,6 +2,8 @@ import math
 
 from numpy import arange
 
+from control import Execute, Evaluate
+import control
 from instruction import instruction
 from measurement import Measurements
 from fabricate import RealWorldObject
@@ -109,6 +111,7 @@ def test_grain_direction():
 @fedt_experiment
 def test_change_over_time():
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
+    print(line_file)
     fabbed_objects = []
     for post_process_condition in ['varnished','unvarnished']:
         for repetition in range(1, 4):
@@ -116,10 +119,11 @@ def test_change_over_time():
             fabbed_objects.append(Human.post_process(fabbed_object, post_process_condition))
     results = Measurements.empty()
     for wait_months in range(1, 6):
-        fabbed_objects = Environment.wait_up_to_times(fabbed_objects, num_months=wait_months)
+        fabbed_objects = Environment.wait_up_to_time_multiple(fabbed_objects, num_months=wait_months)
         for fabbed_object in fabbed_objects:
             results += Multimeter.measure_resistance(fabbed_object)
     summarize(results.get_data())
 
 if __name__ == "__main__":
-    print(test_materials())
+    control.MODE = Execute()
+    print(test_change_over_time())
