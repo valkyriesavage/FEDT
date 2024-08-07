@@ -26,7 +26,7 @@ def test_materials():
     fabbed_objects: list[RealWorldObject] = []
     for material in materials:
         for coating in coatings:
-            instruction("Check that {} {} is in the bed.".format(coating, material))
+            instruction(f"get a piece of {material} with coating {coating}")
             fabbed_objects.append(Laser.fab(line_file, material=material, coating=coating))
             # not completely sure how to capture what they did here... it seems like
             # they did some experimentation, but it's not really documented?
@@ -111,7 +111,6 @@ def test_grain_direction():
 @fedt_experiment
 def test_change_over_time():
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
-    print(line_file)
     fabbed_objects = []
     for post_process_condition in ['varnished','unvarnished']:
         for repetition in range(1, 4):

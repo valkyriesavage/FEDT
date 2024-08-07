@@ -310,12 +310,6 @@ class SvgEditor:
         location = "...."
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            if specification:
-                print(f"Design an svg file like {specification}")
-            elif vars:
-                print(f"Design an svg file like {vars}")
-            else:
-                print(f"get the svg file from the website")
             location = input("where is the svg?")
         designed = LineFile(location)
         designed.metadata.update(vars)
@@ -506,6 +500,7 @@ class Printer:
 
     @staticmethod
     def print(gcode: GCodeFile) -> RealWorldObject:
+        # TODO implement me!
         obj = fabricate(gcode.metadata, "print the object")
         return obj
     
@@ -573,10 +568,6 @@ class StlEditor:
 
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            if not specification:
-                print("Get the stl file from the website.")
-            else:
-                print(f"Design an STL file like {specification}")
             stl_location = input("where is the stl file?")
         
         designed = VolumeFile(stl_location)
@@ -586,9 +577,10 @@ class StlEditor:
     @staticmethod
     def edit(stl: VolumeFile, specification: str) -> VolumeFile:
         instruction(f"Edit {stl.stl_location} like {specification}")
+        stl_location = stl.stl_location
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            input(f"Edit {stl.stl_location} like {specification}, enter when done")
+            stl_location = input(f"What is the location of the modified stl?")
         HAND_EDIT = "hand-edited"
         if HAND_EDIT in stl.metadata:
             specification = stl.metadata[HAND_EDIT] + ", then " + specification
@@ -598,6 +590,7 @@ class StlEditor:
             versions = stl.metadata[VERSIONS]
             versions.append(stl)
         new_obj = design(stl.metadata)
+        new_obj.stl_location = stl_location
         new_obj.metadata.update({VERSIONS: versions, HAND_EDIT: specification})
 
         return new_obj
@@ -890,7 +883,6 @@ class Human:
         instruction(instr)
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            print(instr)
             return input(question)
         return question
 
