@@ -1,11 +1,24 @@
 import ast
 import ast
+import copy
 from functools import wraps
 import inspect
 import types
 
-
 from flowchart import FlowChart
+
+
+class UseVariables(ast.NodeTransformer):
+
+    def visit_Name(self, node):
+        if isinstance(node.ctx, ast.Store):
+            node.ctx = ast.Load()
+        return self.generic_visit(node)
+
+    def visit_Tuple(self, node):
+        if isinstance(node.ctx, ast.Store):
+            node.ctx = ast.Load()
+        return self.generic_visit(node)
 
 
 class WrapFor(ast.NodeTransformer):
@@ -19,23 +32,30 @@ class WrapFor(ast.NodeTransformer):
                         ast.Call(ast.Name("FlowChart", ast.Load()), [], []),
                         fname, ast.Load()), [], []))
 
-        def instruction_call():
+        def instruction_call(item):
             return ast.Expr(
-                ast.Call(ast.Name("instruction", ast.Load()),
-                         [ast.Constant("Loop for TODO"),
-                          ast.Constant(True)], []))
+                ast.Call(ast.Name("instruction", ast.Load()), [
+                    ast.BinOp(
+                        ast.Constant(f"Loop for "), ast.Add(),
+                        ast.Call(ast.Name("str", ast.Load()), [item], [])),
+                    ast.Constant(True)
+                ], []))
 
         for n in node.body:
             self.generic_visit(n)
 
+        target_use = copy.deepcopy(node.target)
+        UseVariables().visit(target_use)
+
         return [
             ast.ImportFrom("flowchart", [ast.alias("FlowChart")], 0),
             flowchart_call("enter_loop"),
-            ast.For(node.target, node.iter, [instruction_call()] + node.body +
-                    [flowchart_call("end_body")], node.orelse,
+            ast.For(node.target, node.iter, [instruction_call(target_use)] +
+                    node.body + [flowchart_call("end_body")], node.orelse,
                     node.type_comment),
             flowchart_call("exit_loop")
         ]
+
 
 # TODO : Harry, help!
 class WrapIf(ast.NodeTransformer):
@@ -66,6 +86,7 @@ class WrapIf(ast.NodeTransformer):
                     node.type_comment),
             flowchart_call("exit_if")
         ]
+
 
 # TODO : Harry, help!
 class WrapElse(ast.NodeTransformer):
@@ -175,9 +196,11 @@ def fedt_measure():
 
     return inner
 
+
 # from https://stackoverflow.com/questions/14749328/how-to-check-whether-optional-function-parameter-is-set/58166804#58166804
 def explicit_checker(f):
     varnames = inspect.getfullargspec(f)[0]
+
     @wraps(f)
     def wrapper(*a, **kw):
         explicit_dict = {}
@@ -185,4 +208,5 @@ def explicit_checker(f):
             explicit_dict[explicit_arg] = kw.get(explicit_arg)
         kw['explicit_args'] = explicit_dict
         return f(*a, **kw)
+
     return wrapper
