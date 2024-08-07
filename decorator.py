@@ -7,6 +7,14 @@ import types
 
 from flowchart import FlowChart
 
+UNIQUE_ID = 0
+
+
+def fresh_name():
+    global UNIQUE_ID
+    UNIQUE_ID += 1
+    return f"__FEDT_identifier_{UNIQUE_ID}"
+
 
 class UseVariables(ast.NodeTransformer):
 
@@ -32,6 +40,14 @@ class WrapFor(ast.NodeTransformer):
                         ast.Call(ast.Name("FlowChart", ast.Load()), [], []),
                         fname, ast.Load()), [], []))
 
+        def enter_loop_call(iter):
+            arg = ast.Call(ast.Attribute(iter, "kind", ast.Load()), [], [])
+            return ast.Expr(
+                ast.Call(
+                    ast.Attribute(
+                        ast.Call(ast.Name("FlowChart", ast.Load()), [], []),
+                        "enter_loop", ast.Load()), [arg], []))
+
         def instruction_call(item):
             return ast.Expr(
                 ast.Call(ast.Name("instruction", ast.Load()), [
@@ -46,12 +62,15 @@ class WrapFor(ast.NodeTransformer):
 
         target_use = copy.deepcopy(node.target)
         UseVariables().visit(target_use)
+        iter_name = fresh_name()
 
         return [
             ast.ImportFrom("flowchart", [ast.alias("FlowChart")], 0),
-            flowchart_call("enter_loop"),
-            ast.For(node.target, node.iter, [instruction_call(target_use)] +
-                    node.body + [flowchart_call("end_body")], node.orelse,
+            ast.Assign([ast.Name(iter_name, ast.Store())], node.iter),
+            enter_loop_call(ast.Name(iter_name, ast.Load())),
+            ast.For(node.target, ast.Name(iter_name, ast.Load()),
+                    [instruction_call(target_use)] + node.body +
+                    [flowchart_call("end_body")], node.orelse,
                     node.type_comment),
             flowchart_call("exit_loop")
         ]

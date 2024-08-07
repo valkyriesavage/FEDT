@@ -9,6 +9,13 @@ def instruction(s: str, header=False):
         print(s)  # TODO: Checkbox or something
 
 
+def note(s: str, header=False):
+    if isinstance(MODE, Evaluate):
+        FlowChart().add_instruction(s, header)
+    elif isinstance(MODE, Execute):
+        print(s)  # TODO: Checkbox or something
+
+
 # class FEDTLoopEnder:
 
 # class FEDTLoop:
