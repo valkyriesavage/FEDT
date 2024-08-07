@@ -3,13 +3,8 @@ from config import *
 import subprocess
 
 PRUSA = "PRUSA"
-PRUSA_SLICER_LOCATION = '/Applications/PrusaSlicer.app/Contents/MacOS/PrusaSlicer'
-PRUSA_CONFIG_LOCATION = '/Users/vwn277/projects/fedtlike/FEDT/config.ini'
 
 BAMBU = "BAMBU"
-BAMBU_SLICER_LOCATION = '/Applications/BambuStudio.app/Contents/MacOS/BambuStudio'
-BAMBU_MACHINE_SETTINGS_LOCATION = '/Users/vwn277/projects/fedtlike/FEDT/machine.json'
-BAMBU_PROCESS_SETTINGS_LOCATION = '/Users/vwn277/projects/fedtlike/FEDT/process.json'
 
 class FEDTPrinter:
     printer = 'Creality Ender 3'
