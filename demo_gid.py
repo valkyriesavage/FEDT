@@ -3,12 +3,11 @@ import random
 from numpy import arange
 
 from instruction import instruction
+from iterators import Series, Parallel, include_last
 from measurement import Measurements
 from design import VolumeFile
 from decorator import fedt_experiment
 from lib import *
-
-include_last = .0001
 
 def summarize(data):
     return "Oh wow, great data!"
@@ -31,23 +30,23 @@ def find_bottom_spacings():
     infill_pattern_results = Measurements.empty()
 
     # these guesses are made based on the labels in the figure at the top of page 8, which has no caption or name, and table 1
-    for obj_file in [large_object,medium_object,small_object]:
+    for obj_file in Parallel([large_object,medium_object,small_object]):
 
-        for bottom_angle in arange(0,180+include_last,1): # or was it arange(0,6+include_last,1) ?
+        for bottom_angle in Parallel(arange(0,180+include_last,1)): # or was it arange(0,6+include_last,1) ?
             fabbed_object = Printer.slice_and_print(obj_file, bottom_angle=bottom_angle)
             bottom_angle_results += Camera.take_picture(fabbed_object, "bottom")
         
-        for bottom_width in arange(0.35,0.6+include_last,.01): # or was it arange(0.35,0.35+0.06+include_last,.01) ?
+        for bottom_width in Parallel(arange(0.35,0.6+include_last,.01)): # or was it arange(0.35,0.35+0.06+include_last,.01) ?
             fabbed_object = Printer.slice_and_print(obj_file, bottom_width=bottom_width)
             bottom_width_results += Camera.take_picture(fabbed_object, "bottom")
         
-        for infill_pattern in ['trihexagon','triangular','grid']:
+        for infill_pattern in Parallel(['trihexagon','triangular','grid']):
             infill_angles = None
             if infill_pattern in ['trihexagon', 'triangular']:
                 infill_angles = arange(0,60+include_last,1) # or was it arange(0,6+include_last,1) ?
             else: # if it's grid
                 infill_angles = arange(0,90+include_last,1) # or was it arange(0,6+include_last,1) ?
-            for infill_angle in infill_angles:
+            for infill_angle in Parallel(infill_angles):
                 fabbed_object = Printer.slice_and_print(obj_file,
                                                         infill_pattern=infill_pattern,
                                                         infill_rotation=infill_angle)
@@ -57,7 +56,7 @@ def find_bottom_spacings():
                 if infill_angle == 0:
                     infill_pattern_results += picture
         
-        for infill_density in arange(2.6, 3.2+include_last, 0.1): # or was it arange(2.6, 2.6+0.7+include_last, 0.1) ?
+        for infill_density in Parallel(arange(2.6, 3.2+include_last, 0.1)): # or was it arange(2.6, 2.6+0.7+include_last, 0.1) ?
             fabbed_object = Printer.slice_and_print(obj_file,
                                                     infill_density=infill_density)
             infill_density_results += Camera.take_picture(fabbed_object, "bottom")
@@ -95,7 +94,7 @@ def cross_validation():
 
     all_object_results = Measurements.empty()
 
-    for obj in objs:
+    for obj in Parallel(objs):
         bottom_angle, bottom_width, infill_pattern, infill_rotation, infill_density = random_param_set()
         fabbed_object = Printer.slice_and_print(obj,
                                                 infill_pattern=infill_pattern,
@@ -120,13 +119,13 @@ def materials_lighting_thicknesses():
 
     lighted_photos = Measurements.empty()
 
-    for color in filament_colors:
-        for config_id in range(len(bottom_line_angles)):
+    for color in Parallel(filament_colors):
+        for config_id in Parallel(range(len(bottom_line_angles))):
             fabbed_object = Printer.slice_and_print(model,
                                                     filament_color=color,
                                                     bottom_line_angle=bottom_line_angles[config_id],
                                                     bottom_line_width=bottom_line_widths[config_id])
-            for light_intensity in light_intensities:
+            for light_intensity in Series(light_intensities):
                 fabbed_object = Human.post_process(fabbed_object, f"light brightness of {light_intensity}")
                 lighted_photos += Camera.take_picture(fabbed_object, "bottom")
     
@@ -145,8 +144,8 @@ def different_printers():
     width_deviation_results = Measurements.empty()
     photos = Measurements.empty()
 
-    for printer in printers:
-        for config_id in range(len(bottom_line_angles)):
+    for printer in Parallel(printers):
+        for config_id in Parallel(range(len(bottom_line_angles))):
             fabbed_object = Printer.slice_and_print(model,
                                                     printer=printer,
                                                     bottom_line_angle = bottom_line_angles[config_id],
@@ -164,12 +163,12 @@ def different_printers():
 def camera_distance():
     cameras = ['iPhone 5s', 'Pixel 2', 'OnePlus 6']
 
-    fabbed_objects = [] # I cannot tell what kinds of objects were fabricated and tested here
+    fabbed_objects = [] # I cannot tell what kinds of or how many objects were fabricated and tested here
 
     camera_data = Measurements.empty()
 
-    for camera in cameras:
-        for fabbed_object in fabbed_objects:
+    for camera in Parallel(cameras):
+        for fabbed_object in Parallel(fabbed_objects):
             camera_data += Camera.take_picture(fabbed_object, f"bottom with {camera}")
         
     summarize(camera_data.get_data())
@@ -181,7 +180,7 @@ def camera_angle():
 
     images = Measurements.empty()
     
-    for model in models:
+    for model in Parallel(models):
         bottom_angle, bottom_width, infill_pattern, infill_rotation, infill_density = random_param_set()
         gcode = Slicer.slice(model,
                                 infill_pattern=infill_pattern,
@@ -190,11 +189,11 @@ def camera_angle():
                                 bottom_width=bottom_width,
                                 infill_density=infill_density)
         virtual_render = Blender.render_gcode(gcode)
-        for angle in angles:
+        for angle in Parallel(angles):
             images += Camera.take_picture(virtual_render, angle)
     
     summarize(images.get_data())
 
 
 if __name__ == "__main__":
-    print(camera_angle())
+    print(find_bottom_spacings())
