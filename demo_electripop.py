@@ -3,12 +3,11 @@ import math
 from numpy import arange
 
 from instruction import instruction
+from iterators import Series, Parallel, Infinite, include_last
 from measurement import Measurements
 from fabricate import RealWorldObject
 from decorator import fedt_experiment
 from lib import *
-
-include_last = .001
 
 def summarize(data):
     return "Oh wow, great data!"
@@ -31,11 +30,11 @@ def optimize_simulation():
     ground_truths = Measurements.empty()
     simmed = Measurements.empty()
 
-    for f in test_files:
+    for f in Parallel(test_files):
         fabbed_object = Laser.fab(f) # not 100% clear what machine was used. they also mention vinyl cutters and scissors
         ground_truths += Scanner.scan(fabbed_object) # they did this manually and not with a scanner, but this shorthand seems ok
-        for weight_of_be_exp in arange(-3,6+include_last):
-            for weight_of_ee_exp in arange(-1, 1+include_last, .2):
+        for weight_of_be_exp in Parallel(arange(-3,6+include_last)):
+            for weight_of_ee_exp in Parallel(arange(-1, 1+include_last, .2)):
                 sim = VirtualWorldObject({'weight of bending energy': math.pow(10,weight_of_be_exp),
                                           'weight of electrical energy': math.pow(10, weight_of_ee_exp),
                                           'file': CustomSimulator.runsimulation(weight_of_be_exp,weight_of_ee_exp)})
@@ -57,7 +56,7 @@ def physical_inflation():
     fabbed_objects = [Laser.fab(LineFile(fname)) for fname in ['snowman.svg','christmas_tree.svg']]
     
     elapsed_times = Measurements.empty()
-    for obj in fabbed_objects:
+    for obj in Parallel(fabbed_objects):
         # were there repeitions? were there other objects? they mention "remarkably consistent", and imply that some others were tested
         elapsed_times += Stopwatch.measure_time(obj, "inflate to full")
     
@@ -71,11 +70,11 @@ def electrical_deflation():
 
     current_measures = Measurements.empty()
     instruction('connect a 1kOhm resistor to the plate')
-    ns_elapsed = 0
-    while(True):
-        ns_elapsed += 1 # not sure exactly how to write this
+    for time_elapsing in Infinite(range(10000)):
         current = Multimeter.measure_current(snowman)
+        timestamp = Timestamper.get_ts(snowman)
         current_measures += current
+        current_measures += timestamp
         if current.get_data() == 0: # TODO how to do this in FEDT?
             # we are done
             break
@@ -121,10 +120,10 @@ def geometric_accuracy():
     simmed = Measurements.empty()
     elapsed_times = Measurements.empty()
 
-    for f in test_files:
+    for f in Parallel(test_files):
         fabbed_object = Laser.fab(f) # not 100% clear what machine was used. they also mention vinyl cutters and scissors
         ground_truths += Scanner.scan(fabbed_object) # they did this manually and not with a scanner, but this shorthand seems ok
-        for sim_repetition in range(100):
+        for sim_repetition in Parallel(range(100)):
             sim = VirtualWorldObject({'file': CustomSimulator.runsimulation(f)})
             simmed += Scanner.scan(sim)
             elapsed_times += Stopwatch.measure_time(sim, "converge simulation")

@@ -42,6 +42,23 @@ def my_experiment2():
     data = results.get_data()
     return summarize(data)
 
+@fedt_experiment
+def my_experiment3():
+    snowman = Laser.fab(LineFile('snowman.svg'))
+
+    current_measures = Measurements.empty()
+    instruction('connect a 1kOhm resistor to the plate')
+    for time_elapsing in Infinite(range(10000)):
+        current = Multimeter.measure_current(snowman)
+        timestamp = Timestamper.get_ts(snowman)
+        current_measures += current
+        current_measures += timestamp
+        if current.get_data() == 0: # TODO how to do this in FEDT?
+            # we are done
+            break
+
+    summarize(current_measures.get_data())
+
 
 if __name__ == "__main__":
     print(my_experiment2())

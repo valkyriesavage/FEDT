@@ -718,6 +718,22 @@ class Stopwatch:
         instruction(Stopwatch.elapsed_time.procedure.format(instr))
         return Measurements.single(obj, Stopwatch.elapsed_time)
 
+class Timestamper:
+    timestamp = Measurement(
+        name="current time",
+        description="What time it is right now",
+        procedure="""
+            Look at the clock or use a code module to record the current time.
+            """,
+        units="ms since epoch",
+        feature="n/a")
+
+    @staticmethod
+    def get_ts(obj: RealWorldObject) -> Measurements:
+        instruction(f"Measure object #{obj.uid}.", header=True)
+        instruction(Timestamper.timestamp.procedure)
+        return Measurements.single(obj, Timestamper.timestamp)
+
 class Calipers:
     length = Measurement(
         name="size",
