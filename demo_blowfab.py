@@ -3,6 +3,7 @@ import math
 from numpy import arange
 
 from instruction import instruction
+from iterators import Series, Parallel, include_last
 from measurement import Measurements
 from fabricate import RealWorldObject
 from decorator import fedt_experiment
@@ -21,13 +22,12 @@ def effect_of_b_horizontal():
     D = 14
 
     delta = (27.5-4)/3 # ? -> there are 3 values in the figure, so probably?
-    include_top = .001
 
     results = Measurements.empty()
-    for B in arange(4, 27.5+include_top, delta):
+    for B in Parallel(arange(4, 27.5+include_last, delta)):
         linefile = SvgEditor.design(vars = {'A':A, 'B':B, 'C':C, 'D':D})
         fabbed_object = Laser.fab(linefile)
-        for repetition in range(5):
+        for repetition in Parallel(range(5)):
             fabbed_object = Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
             fabbed_object = Human.post_process(fabbed_object, "inject air to inflate the object") # ? -> probably human does this, based on the video
             results += Protractor.measure_angle(fabbed_object,"overall bend")
@@ -44,7 +44,7 @@ def effect_of_incision_number():
     D = 14
 
     results = Measurements.empty()
-    for num_incisions in [6,12]:
+    for num_incisions in Parallel([6,12]):
         linefile = SvgEditor.design(vars = {'A':A, 'B':B, 'C':C, 'D':D, 'num_incisions':num_incisions})
         fabbed_object = Laser.fab(linefile)
         fabbed_object = Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
@@ -59,11 +59,11 @@ def effect_of_interplate_distance_vertical():
     airbag_size = (45, 28)
 
     results = Measurements.empty()
-    for distance in [0,30]:
+    for distance in Parallel([0,30]):
         linefile = SvgEditor.design(vars = {'outer size': outer_size, 'airbag size': airbag_size, 'distance': distance})
         instruction("place polycarbonate in the laser bed with spacing %d".format(distance))
         fabbed_object = Laser.fab(linefile)
-        for repetition in range(5):
+        for repetition in Parallel(range(5)):
             fabbed_object = Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
             fabbed_object = Human.post_process(fabbed_object, "inject air to inflate the object") # ? -> probably human does this, based on the video
             results += Protractor.measure_angle(fabbed_object,"overall bend")
@@ -72,4 +72,4 @@ def effect_of_interplate_distance_vertical():
     summarize(results.get_data())
 
 if __name__ == "__main__":
-    print(effect_of_interplate_distance_vertical())
+    print(effect_of_b_horizontal())
