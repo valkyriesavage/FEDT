@@ -3,6 +3,7 @@ from typing import Iterator, TypeVar
 import control
 from instruction import note
 
+include_last = 0.0001
 
 class Parallel:
 

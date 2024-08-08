@@ -1,5 +1,5 @@
 from instruction import instruction
-from iterators import Parallel, Series, shuffle
+from iterators import Parallel, Series, Infinite, shuffle
 from measurement import Measurements
 from fabricate import RealWorldObject
 from decorator import fedt_experiment
@@ -18,14 +18,15 @@ def my_experiment1():
     offsets = shuffle(list(range(1, 5)))
     for (i, focal_offset_height_mm) in Parallel(enumerate(offsets)):
         fabbed_objects.append(
-            RealWorldObject(
-                i, {"focal_offset_height_mm": focal_offset_height_mm}))
+            Laser.fab(
+                LineFile(f"{i}.svg"),
+                focal_height_mm = focal_offset_height_mm,
+                material="wood"))
     results = Measurements.empty()
     for fabbed_object in Series(fabbed_objects):
         results += Multimeter.measure_resistance(fabbed_object)
     data = results.get_data()
     return summarize(data)
-
 
 @fedt_experiment
 def my_experiment2():

@@ -5,6 +5,7 @@ from numpy import arange
 from control import Execute, Evaluate
 import control
 from instruction import instruction
+from iterators import Parallel, Series, Infinite, include_last
 from measurement import Measurements
 from fabricate import RealWorldObject
 from decorator import fedt_experiment
@@ -24,14 +25,14 @@ def test_materials():
 
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
     fabbed_objects: list[RealWorldObject] = []
-    for material in materials:
-        for coating in coatings:
+    for material in Parallel(materials):
+        for coating in Parallel(coatings):
             instruction(f"get a piece of {material} with coating {coating}")
             fabbed_objects.append(Laser.fab(line_file, material=material, coating=coating))
             # not completely sure how to capture what they did here... it seems like
             # they did some experimentation, but it's not really documented?
     results = Measurements.empty()
-    for fabbed_object in fabbed_objects:
+    for fabbed_object in Parallel(fabbed_objects):
         results += Multimeter.measure_resistance(fabbed_object)
     data = results.get_data()
     return summarize(data)
@@ -39,13 +40,12 @@ def test_materials():
 @fedt_experiment
 def test_height_vs_focal_point():
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
-    instruction("Check that wood is in the bed.")
     fabbed_objects: list[RealWorldObject] = []
-    for focal_height_mm in range(0, 5):
+    for focal_height_mm in Parallel(range(0, 5+include_last)):
         fabbed_objects.append(
             Laser.fab(line_file, focal_height_mm=focal_height_mm))
     results = Measurements.empty()
-    for fabbed_object in fabbed_objects:
+    for fabbed_object in Parallel(fabbed_objects):
         results += Multimeter.measure_resistance(fabbed_object)
     data = results.get_data()
     return summarize(data)
@@ -54,13 +54,10 @@ def test_height_vs_focal_point():
 @fedt_experiment
 def test_optimal_number_of_scans():
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
-    instruction("Check that wood is in the bed.")
     results = Measurements.empty()
     resistance = None
-    best_result = math.inf
-    num_scans = 0
-    while(True):
-        num_scans += num_scans
+    best_result = None
+    for num_scans in Series(range(1,20)):
         fabbed_object = Laser.fab(line_file, num_scans=num_scans)
         resistance = Multimeter.measure_resistance(fabbed_object)
         results += resistance
@@ -77,18 +74,17 @@ def test_optimal_number_of_scans():
 
 @fedt_experiment
 def test_laser_power_and_speed():
-    speeds = arange(20,81,10)
-    powers = arange(10,51,5)
-    setting_names = Laser.prep_cam(speeds, powers)
+    speeds = arange(20,80+include_last,10)
+    powers = arange(10,50+include_last,5)
+    setting_names = Laser.prep_cam(cut_speeds=speeds, cut_powers=powers)
 
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
-    instruction("Check that wood is in the bed.")
     results = Measurements.empty()
 
-    for cut_speed in speeds:
-      for cut_power in powers:
-          for repetition in range(4):
-            fabbed_object = Laser.fab(line_file, setting_names, cut_speed, cut_power, color_to_setting=Laser.GREEN)
+    for cut_speed in Parallel(speeds):
+      for cut_power in Parallel(powers):
+          for repetition in Parallel(range(4)):
+            fabbed_object = Laser.fab(line_file, setting_names, cut_speed, cut_power, color_to_setting=Laser.SvgColor.GREEN)
             resistance = Multimeter.measure_resistance(fabbed_object)
             results += resistance
     summarize(results.get_data())
@@ -96,14 +92,13 @@ def test_laser_power_and_speed():
 @fedt_experiment
 def test_grain_direction():
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
-    instruction("Check that wood is in the bed.")
     fabbed_objects: list[RealWorldObject] = []
-    for orientation in ["orthogonal","along grain"]:
+    for orientation in Parallel(["orthogonal","along grain"]):
         instruction("orient the wood {}".format(orientation))
         fabbed_objects.append(
             Laser.fab(line_file, orientation=orientation))
     results = Measurements.empty()
-    for fabbed_object in fabbed_objects:
+    for fabbed_object in Parallel(fabbed_objects):
         results += Multimeter.measure_resistance(fabbed_object)
     data = results.get_data()
     return summarize(data)
@@ -112,17 +107,18 @@ def test_grain_direction():
 def test_change_over_time():
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
     fabbed_objects = []
-    for post_process_condition in ['varnished','unvarnished']:
-        for repetition in range(1, 4):
+    for post_process_condition in Parallel(['varnished','unvarnished']):
+        for repetition in Parallel(range(4)):
             fabbed_object = Laser.fab(line_file)
             fabbed_objects.append(Human.post_process(fabbed_object, post_process_condition))
     results = Measurements.empty()
-    for wait_months in range(1, 6):
+    for wait_months in Series(range(1, 6)):
         fabbed_objects = Environment.wait_up_to_time_multiple(fabbed_objects, num_months=wait_months)
         for fabbed_object in fabbed_objects:
             results += Multimeter.measure_resistance(fabbed_object)
     summarize(results.get_data())
 
 if __name__ == "__main__":
-    control.MODE = Execute()
-    print(test_change_over_time())
+    #control.MODE = Execute()
+    Laser.default_laser_settings[Laser.MATERIAL] = 'wood'
+    print(test_laser_power_and_speed())

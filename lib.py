@@ -77,24 +77,11 @@ class Laser:
         return "{}.{}.{}.{}.{}".format(material,thickness,cut_power,cut_speed,frequency)
 
     @staticmethod
-    def prep_cam(CAM_variables):
-        cut_powers=[Laser.default_laser_settings[Laser.CUT_POWER]]
-        cut_speeds=[Laser.default_laser_settings[Laser.CUT_SPEED]]
-        frequencies=[Laser.default_laser_settings[Laser.CUT_FREQUENCY]]
-        materials=[Laser.default_laser_settings[Laser.MATERIAL]]
-        thicknesses=[Laser.default_laser_settings[Laser.THICKNESS]]
-
-        for variable in CAM_variables:
-            if variable[NAME] == Laser.CUT_POWER:
-                cut_powers = variable[TEST_VALUES]
-            if variable[NAME] == Laser.CUT_SPEED:
-                cut_speeds = variable[TEST_VALUES]
-            if variable[NAME] == Laser.CUT_FREQUENCY:
-                frequencies = variable[TEST_VALUES]
-            if variable[NAME] == Laser.MATERIAL:
-                materials = variable[TEST_VALUES]
-            if variable[NAME] == Laser.THICKNESS:
-                thicknesses = variable[TEST_VALUES]
+    def prep_cam(cut_powers=[default_laser_settings[CUT_POWER]],
+                    cut_speeds=[default_laser_settings[CUT_SPEED]],
+                    frequencies=[default_laser_settings[CUT_FREQUENCY]],
+                    materials=[default_laser_settings[MATERIAL]],
+                    thicknesses=[default_laser_settings[THICKNESS]]):
 
         # the vcsettings file cannot be added from commandline...
         # so we need to do something like... build a huge one and ask the user to open manually to import.
@@ -123,18 +110,20 @@ class Laser:
             for cut_power in cut_powers:
                 for cut_speed in cut_speeds:
                     for frequency in frequencies:
-                        xmlstr = template_string.format(cut_power=cut_power,
-                                                        cut_speed=cut_speed,
-                                                        frequency=frequency)
-                        cut_setting_fname = "fedt_{}.xml".format(hash("{}.{}.{}".format(cut_power,cut_speed,frequency)))
-                        generated_setting_names[Laser.generate_setting_key(material,thickness,cut_power,cut_speed,frequency)] = cut_setting_fname
-                        with open(cut_setting_fname, "w+") as f:
-                            f.write(xmlstr)
-                        myzip.write(cut_setting_fname, "profiles/{}".format(cut_setting_fname))            
                         for material in materials:
                             for thickness in thicknesses:
-                                myzip.write(cut_setting_fname, "laserprofiles/Epilog_32_Helix/{}/{}/{}".format(material,thickness,cut_setting_fname))
-                        os.remove(cut_setting_fname)
+                                xmlstr = template_string.format(cut_power=cut_power,
+                                                                cut_speed=cut_speed,
+                                                                frequency=frequency)
+                                cut_setting_fname = "fedt_{}.xml".format(hash("{}.{}.{}".format(cut_power,cut_speed,frequency)))
+                                generated_setting_names[Laser.generate_setting_key(material,thickness,cut_power,cut_speed,frequency)] = cut_setting_fname
+                                with open(cut_setting_fname, "w+") as f:
+                                    f.write(xmlstr)
+                                myzip.write(cut_setting_fname, "profiles/{}".format(cut_setting_fname))            
+                                for material in materials:
+                                    for thickness in thicknesses:
+                                        myzip.write(cut_setting_fname, "laserprofiles/Epilog_32_Helix/{}/{}/{}".format(material,thickness,cut_setting_fname))
+                                os.remove(cut_setting_fname)
             
         temp_vcsettings = temp_zf.replace('.zip','.vcsettings')
         os.rename(temp_zf, temp_vcsettings)
@@ -256,6 +245,8 @@ class Laser:
             **kwargs
             ) -> RealWorldObject:
     
+        instruction(f"Ensure {material} is in the bed.")
+
         from control import MODE, Execute
         if isinstance(MODE, Execute):
             # figure out if they set up a mapping request
@@ -267,13 +258,15 @@ class Laser:
             Laser.do_fab(line_file,
                             mapping_file=mapping_file,
                             focal_height_mm=focal_height_mm)
-        instruction("Run the laser cutter.")
+        
+        all_settings = {}
+        all_settings.update(kwargs)
+        all_settings.update(explicit_args)
+        instruction(f"Run the laser cutter and cut file {line_file.svg_location} with settings {all_settings}")
 
         stored_values = {"line_file": line_file}
-        if explicit_args:
-            stored_values.update(explicit_args)
-        if kwargs:
-            stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
+        stored_values.update(explicit_args)
+        stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
 
         fabbed = fabricate(stored_values)
 
