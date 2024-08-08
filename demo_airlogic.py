@@ -1,4 +1,7 @@
+from numpy import arange
+
 from instruction import instruction
+from iterators import Parallel, Series, include_last
 from measurement import Measurements
 from design import VolumeFile
 from decorator import fedt_experiment
@@ -17,9 +20,9 @@ def airflow_gatetypes():
     all_widget_files = logic_gate_files + input_files
 
     results = Measurements.empty()
-    for stl in all_widget_files:
+    for stl in Parallel(all_widget_files):
         fabbed_object = Printer.slice_and_print(VolumeFile(stl))
-        for input_massflow in ['5e^-5','9.5e^-5','14e^-5','18.5e^-5']:
+        for input_massflow in Series(['5e^-5','9.5e^-5','14e^-5','18.5e^-5']):
             instruction(f"set the air compressor to {input_massflow} and connect the object")
             results += Anemometer.measure_airflow(fabbed_object, f"input massflow at {input_massflow}")
     
@@ -34,11 +37,11 @@ def or_orientations():
     or_gate = VolumeFile('or.stl')
 
     results = Measurements.empty()
-    for print_angle in range(0,90,22.5):
-        for repetition in range(4):
+    for print_angle in Parallel(arange(0,90+include_last,22.5)):
+        for repetition in Parallel(range(4)):
             rotated_gate = StlEditor.rotate(or_gate, print_angle)
             fabbed_object = Printer.slice_and_print(rotated_gate)
-            for input_massflow in ['5e^-5','9.5e^-5','14e^-5','18.5e^-5']:
+            for input_massflow in Series(['5e^-5','9.5e^-5','14e^-5','18.5e^-5']):
                 instruction(f"set the air compressor to {input_massflow} and connect the object")
                 results += Anemometer.measure_airflow(fabbed_object, f"input massflow at {input_massflow}")
 
@@ -49,10 +52,10 @@ def or_bendradius():
     or_gate = VolumeFile('or.stl')
 
     results = Measurements.empty()
-    for bend_radius in range(0,20,5):
+    for bend_radius in Parallel(range(0,20,5)):
         gate_with_bend = StlEditor.add_bent_path(or_gate, bend_radius)
         fabbed_object = Printer.slice_and_print(gate_with_bend)
-        for input_massflow in ['5e^-5','9.5e^-5','14e^-5','18.5e^-5']:
+        for input_massflow in Series(['5e^-5','9.5e^-5','14e^-5','18.5e^-5']):
                 instruction(f"set the air compressor to {input_massflow} and connect the object")
                 results += Anemometer.measure_airflow(fabbed_object, f"input massflow at {input_massflow}")
 
@@ -67,7 +70,7 @@ def output_airneeds():
 
     mins = Measurements.empty()
     maxs = Measurements.empty()
-    for widget in output_widgets:
+    for widget in Parallel(output_widgets):
         fabbed_object = Printer.slice_and_print(VolumeFile(widget))
         instruction(f"connect object #{fabbed_object.uid} to the air compressor", header=True)
         instruction(f"increase the air pressure by {epsilon} at a time until the object starts to work")
@@ -79,4 +82,4 @@ def output_airneeds():
     summarize(maxs.get_data())
 
 if __name__ == "__main__":
-    print(or_bendradius())
+    print(or_orientations())
