@@ -1,12 +1,11 @@
 from numpy import arange
 
 from instruction import instruction
+from iterators import Series, Parallel, include_last
 from measurement import Measurements
 from design import VolumeFile
 from decorator import fedt_experiment
 from lib import *
-
-include_last = .001
 
 def summarize(data):
     return "Oh wow, great data!"
@@ -25,9 +24,9 @@ def cross_section_ratios():
     stl = StlEditor.cube((4,4,60))
     results = Measurements.empty()
 
-    for bending_direction in ['d7','d8&d6','d1&d5','d3','d2&d4']:
-        for cross_section_ratio in arange(1,8+include_last):
-            for repetition in range(1,3):
+    for bending_direction in Parallel(['d7','d8&d6','d1&d5','d3','d2&d4']):
+        for cross_section_ratio in Parallel(arange(1,8+include_last)):
+            for repetition in Parallel(range(3)):
                 gcode = Slicer.slice(stl,
                                      direction = bending_direction,
                                      cross_section_ratio = cross_section_ratio)
@@ -44,9 +43,9 @@ def bend_vs_thickness():
 
     results = Measurements.empty()
 
-    for thickness in arange(1,6+include_last):
+    for thickness in Parallel(arange(1,6+include_last)):
         stl = StlEditor.cube((thickness,thickness,60))
-        for bending_direction in ['diagonal','orthogonal']:
+        for bending_direction in Parallel(['diagonal','orthogonal']):
                 gcode = Slicer.slice(stl,
                                      direction = bending_direction)
                 fabbed_object = Printer.print(gcode)
