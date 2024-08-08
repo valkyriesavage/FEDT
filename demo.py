@@ -33,14 +33,15 @@ def my_experiment2():
     instruction("Check that wood is in the bed.")
     results = Measurements.empty()
     fabbed_objects = []
-    for (i, focal_offset_height_mm) in Parallel(enumerate(range(1, 5))):
-        fabbed_object = RealWorldObject(
-            i, {"focal_offset_height_mm": focal_offset_height_mm})
-        fabbed_objects.append(fabbed_object)
-        results += Multimeter.measure_resistance(fabbed_object)
+    for repetition in Parallel(range(4)):
+        for ripetition in Parallel(range(4)):
+            for ropetition in Parallel(range(4)):
+                fabbed_object = RealWorldObject(random.randint(0,100),{"woo":"yeah"})
+                fabbed_objects.append(fabbed_object)
+                results += Multimeter.measure_resistance(fabbed_object)
     data = results.get_data()
     return summarize(data)
 
 
 if __name__ == "__main__":
-    print(my_experiment1())
+    print(my_experiment2())
