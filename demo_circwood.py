@@ -57,7 +57,7 @@ def test_optimal_number_of_scans():
     results = Measurements.empty()
     resistance = None
     best_result = None
-    for num_scans in Series(range(1,20)):
+    for num_scans in Infinite(range(1,20)):
         fabbed_object = Laser.fab(line_file, num_scans=num_scans)
         resistance = Multimeter.measure_resistance(fabbed_object)
         results += resistance
@@ -121,4 +121,4 @@ def test_change_over_time():
 if __name__ == "__main__":
     #control.MODE = Execute()
     Laser.default_laser_settings[Laser.MATERIAL] = 'wood'
-    print(test_laser_power_and_speed())
+    print(test_optimal_number_of_scans())
