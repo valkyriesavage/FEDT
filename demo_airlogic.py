@@ -53,7 +53,7 @@ def or_bendradius():
 
     results = Measurements.empty()
     for bend_radius in Parallel(range(0,20,5)):
-        gate_with_bend = StlEditor.add_bent_path(or_gate, bend_radius)
+        gate_with_bend = StlEditor.modify_feature_by_hand(or_gate, "bent inlet", bend_radius)
         fabbed_object = Printer.slice_and_print(gate_with_bend)
         for input_massflow in Series(['5e^-5','9.5e^-5','14e^-5','18.5e^-5']):
                 instruction(f"set the air compressor to {input_massflow} and connect the object")
@@ -82,4 +82,4 @@ def output_airneeds():
     summarize(maxs.get_data())
 
 if __name__ == "__main__":
-    print(or_orientations())
+    print(or_bendradius())

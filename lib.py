@@ -616,23 +616,16 @@ class StlEditor:
         instruction(f'rotate the object {volume_file.stl_location} {angle} degrees')
         from control import MODE, Execute
         stl_location = volume_file.stl_location
+        versions = []
+        if VERSIONS in volume_file.metadata:
+            versions = volume_file.metadata[VERSIONS]
+            versions.append(volume_file)
+        new_obj = design(volume_file.metadata)
         if isinstance(MODE, Execute):
             stl_location = input("what is the location of the rotated stl?")
-            volume_file.stl_location = stl_location
-        volume_file.metadata.update({'rotation angle':angle})
-        return volume_file
-            
-    @staticmethod
-    def add_bent_path(volume_file: VolumeFile,
-                        bend_radius: float=0) -> VolumeFile:
-        instruction(f'add a bent path of radius {bend_radius} to the object {volume_file.stl_location}')
-        from control import MODE, Execute
-        stl_location = volume_file.stl_location
-        if isinstance(MODE, Execute):
-            stl_location = input("what is the location of the stl with the bent path added?")
-            volume_file.stl_location = stl_location
-        volume_file.metadata.update({'input bend radius':bend_radius})
-        return volume_file
+        new_obj.stl_location = stl_location
+        new_obj.metadata.update({VERSIONS: versions, "rotation angle": angle})
+        return new_obj
 
     @staticmethod
     def modify_feature_by_hand(volume_file:VolumeFile,
@@ -641,29 +634,28 @@ class StlEditor:
         instruction(f'modify the file {volume_file.stl_location} to have feature {feature_name} with value {feature_value}')
         from control import MODE, Execute
         stl_location = volume_file.stl_location
+        versions = []
+        if VERSIONS in volume_file.metadata:
+            versions = volume_file.metadata[VERSIONS]
+            versions.append(volume_file)
+        new_obj = design(volume_file.metadata)
+        new_obj.metadata.update({VERSIONS: versions, feature_name: feature_value})
         if isinstance(MODE, Execute):
             stl_location = input(f"what is the location of the modified stl with {feature_name} value {feature_value}?")
-            volume_file.stl_location = stl_location
-        volume_file.metadata.update({feature_name: feature_value})
-        return volume_file
+        new_obj.stl_location = stl_location
+        return new_obj
     
     @staticmethod
-    def sample_convex(volume_file: VolumeFile) -> LineFile:
-        instruction(f'extract an svg profile of the convex parts of {volume_file.stl_location}')
+    def extract_2D_profile(volume_file: VolumeFile,
+                        feature_name: str) -> LineFile:
+        instruction(f'extract an svg profile from {volume_file.stl_location} of {feature_name}')
         from control import MODE, Execute
         svg_location = ''
         if isinstance(MODE, Execute):
             svg_location = input("what is the location of the svg profile?")
-        return LineFile(svg_location)
-    
-    @staticmethod
-    def sample_concave(volume_file: VolumeFile) -> LineFile:
-        instruction(f'extract an svg profile of the concave parts of {volume_file.stl_location}')
-        from control import MODE, Execute
-        svg_location = ''
-        if isinstance(MODE, Execute):
-            svg_location = input("what is the location of the svg profile?")
-        return LineFile(svg_location)
+        extracted = LineFile(svg_location)
+        extracted.metadata.update({"source": volume_file})
+        return extracted
 
     @staticmethod
     def __str__():
