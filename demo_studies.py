@@ -80,4 +80,4 @@ def test_user_assembly_time():
     summarize(timings.get_data())
 
 if __name__ == "__main__":
-    print(test_print_shrinkage())
+    print(test_force_at_break())

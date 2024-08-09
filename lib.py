@@ -2,7 +2,6 @@ from datetime import date
 from typing import List
 import datetime
 from dateutil.relativedelta import relativedelta
-import drawsvg as draw
 import os
 import random
 import subprocess
@@ -290,6 +289,7 @@ class Laser:
         return str(self)
 
 class SvgEditor:
+
     laser_bed = Laser.default_laser_settings[Laser.LASER_BED]
 
     @staticmethod
@@ -335,6 +335,8 @@ class SvgEditor:
         svg_fullpath = svg_location
         from control import MODE, Execute
         if isinstance(MODE, Execute):
+            import drawsvg as draw
+
             if geometry_function is None:
                 geometry_function = SvgEditor.draw_circle
 
