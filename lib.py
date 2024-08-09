@@ -356,7 +356,7 @@ class SvgEditor:
         if explicit_args:
             stored_values.update(explicit_args)
         if kwargs:
-            stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
+            stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
 
         virtual_object = LineFile(stored_values)
         virtual_object.svg_location = svg_fullpath
@@ -799,14 +799,14 @@ class ForceGauge:
         name="force",
         description="The force being exerted on (by?) the object.",
         procedure="""
-            Mount the object in the force gauge cage.
+            Mount the object in the force gauge setup.
             Stick the force gauge probe on top of the object.
             """,
         units="kg",
         feature="n/a")
 
     @staticmethod
-    def measure_force(obj: RealWorldObject) -> Measurements:
+    def measure_force(obj: RealWorldObject, feature: str=force.feature) -> Measurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(ForceGauge.force.procedure)
         return Measurements.single(obj, ForceGauge.force)
@@ -927,7 +927,7 @@ class User:
 
     @staticmethod
     def do(obj: RealWorldObject, instr: str, user_id: int):
-        instruction(instr)
+        instruction(f"User #{user_id} does {instr}")
         USER_DID = f"user {user_id} did"
         if USER_DID in obj.metadata:
             instr = obj.metadata[USER_DID] + ", then " + instr
