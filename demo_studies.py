@@ -39,12 +39,14 @@ def test_force_at_break():
 
     breakage_points = Measurements.empty()
 
-    for rect_length in shuffle(range(50,100,10)):
+    for rect_length in shuffle(Parallel(range(50,100,10))):
         svg = SvgEditor.build_geometry(draw_rect, CAD_vars={'rect_length':rect_length})
         #svg = SvgEditor.design(vars={'rect_length':rect_length})
         for material in Parallel(['wood','acrylic']):
             fabbed_object = Laser.fab(svg, material=material)
-            breakage_points += ForceGauge.measure_force(fabbed_object,"maximum force exerted before object breaks")
+            instruction("place the object with 1cm overlapping a shelf at each end and the remainder suspended")
+            instruction("place weights on the object until it breaks")
+            breakage_points += Scale.measure_weight(fabbed_object,"weight placed at break")
     
     summarize(breakage_points.get_data())
 
@@ -68,7 +70,7 @@ def test_user_assembly_time():
 
     timings = Measurements.empty()
 
-    for user in shuffle(Parallel(range(12))):
+    for user in shuffle(Parallel(range(6))):
         simple_assembly = Printer.slice_and_print(simple)
         complex_assembly = Printer.slice_and_print(complex)
         for assembly in Series([simple_assembly, complex_assembly]):
@@ -78,4 +80,4 @@ def test_user_assembly_time():
     summarize(timings.get_data())
 
 if __name__ == "__main__":
-    print(test_paint_layers())
+    print(test_print_shrinkage())

@@ -716,7 +716,7 @@ class Stopwatch:
     def measure_time(obj: RealWorldObject, instr: str) -> Measurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Stopwatch.elapsed_time.procedure.format(instr))
-        return Measurements.single(obj, Stopwatch.elapsed_time)
+        return Measurements.single(obj, Stopwatch.elapsed_time.set_feature(instr))
 
 class Timestamper:
     timestamp = Measurement(
@@ -750,10 +750,7 @@ class Calipers:
                      dimension: str=length.feature) -> Measurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Calipers.length.procedure.format(dimension))
-        measurement = Calipers.length
-        if measurement.feature != dimension:
-            measurement = measurement.set_feature(dimension)
-        return Measurements.single(obj, measurement)
+        return Measurements.single(obj, Calipers.length.set_feature(dimension))
     
 class Protractor:
     angle = Measurement(
@@ -771,10 +768,7 @@ class Protractor:
                       dimension: str=angle.feature) -> Measurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Protractor.angle.procedure.format(dimension))
-        measurement = Protractor.angle
-        if measurement.feature != dimension:
-            measurement = measurement.set_feature(dimension)
-        return Measurements.single(obj, measurement)
+        return Measurements.single(obj, Protractor.angle.set_feature(dimension))
 
 class Scanner:
     geometry_scan = Measurement(
