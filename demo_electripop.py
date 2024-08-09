@@ -4,7 +4,7 @@ from numpy import arange
 
 from instruction import instruction
 from iterators import Series, Parallel, Infinite, include_last
-from measurement import Measurements
+from measurement import BatchMeasurements
 from fabricate import RealWorldObject
 from decorator import fedt_experiment
 from lib import *
@@ -27,8 +27,8 @@ def optimize_simulation():
 
     test_files = [LineFile(fname) for fname in ['compound_slits.svg', 'nested_flaps.svg', 'dragonfly.svg']]
 
-    ground_truths = Measurements.empty()
-    simmed = Measurements.empty()
+    ground_truths = BatchMeasurements.empty()
+    simmed = BatchMeasurements.empty()
 
     for f in Parallel(test_files):
         fabbed_object = Laser.fab(f) # not 100% clear what machine was used. they also mention vinyl cutters and scissors
@@ -40,8 +40,8 @@ def optimize_simulation():
                                           'file': CustomSimulator.runsimulation(weight_of_be_exp,weight_of_ee_exp)})
                 simmed += Scanner.scan(sim)
         
-    summarize(ground_truths.get_data())
-    summarize(simmed.get_data())
+    summarize(ground_truths.get_all_data())
+    summarize(simmed.get_all_data())
 
 @fedt_experiment
 def electrical_inflation():
@@ -55,12 +55,12 @@ def physical_inflation():
 
     fabbed_objects = [Laser.fab(LineFile(fname)) for fname in ['snowman.svg','christmas_tree.svg']]
     
-    elapsed_times = Measurements.empty()
+    elapsed_times = BatchMeasurements.empty()
     for obj in Parallel(fabbed_objects):
         # were there repeitions? were there other objects? they mention "remarkably consistent", and imply that some others were tested
         elapsed_times += Stopwatch.measure_time(obj, "inflate to full")
     
-    summarize(elapsed_times.get_data())
+    summarize(elapsed_times.get_all_data())
     
 
 @fedt_experiment
@@ -68,27 +68,27 @@ def electrical_deflation():
     configure_for_electripop()
     snowman = Laser.fab(LineFile('snowman.svg'))
 
-    current_measures = Measurements.empty()
+    current_measures = BatchMeasurements.empty()
     instruction('connect a 1kOhm resistor to the plate')
     for time_elapsing in Infinite(range(10000)):
         current = Multimeter.measure_current(snowman)
         timestamp = Timestamper.get_ts(snowman)
         current_measures += current
         current_measures += timestamp
-        if current.get_data() == 0: # TODO how to do this in FEDT?
+        if current.get_all_data() == 0: # TODO how to do this in FEDT?
             # we are done
             break
 
-    summarize(current_measures.get_data())
+    summarize(current_measures.get_all_data())
 
 @fedt_experiment
 def physical_deflation():
     # not 100% convinced this is an experiment, although it _is_ a measurement/characterization
     configure_for_electripop()
     snowman = Laser.fab(LineFile('snowman.svg'))
-    elapsed_times = Measurements.empty()
+    elapsed_times = BatchMeasurements.empty()
     elapsed_times += Stopwatch.measure_time(snowman, "deflate fully")
-    summarize(elapsed_times.get_data())
+    summarize(elapsed_times.get_all_data())
 
 @fedt_experiment
 def volumetric_change():
@@ -96,19 +96,19 @@ def volumetric_change():
     configure_for_electripop()
     snowman_virt = LineFile('snowman.svg')
     snowman_phys = Laser.fab(snowman_virt)
-    volumes = Measurements.empty()
+    volumes = BatchMeasurements.empty()
     volumes += Scanner.scan(snowman_phys)
     volumes += Scanner.scan(snowman_virt)
-    summarize(volumes.get_data())
+    summarize(volumes.get_all_data())
 
 @fedt_experiment
 def fabrication_time():
     # not 100% convinced this is an experiment, although it _is_ a measurement/characterization
     configure_for_electripop()
     snowman = LineFile('snowman.svg')
-    elapsed_times = Measurements.empty()
+    elapsed_times = BatchMeasurements.empty()
     elapsed_times += Stopwatch.measure_time(snowman, "fabricate on the laser")
-    summarize(elapsed_times.get_data())
+    summarize(elapsed_times.get_all_data())
 
 @fedt_experiment
 def geometric_accuracy():
@@ -116,9 +116,9 @@ def geometric_accuracy():
 
     test_files = [LineFile(fname) for fname in ['rose.svg', 'snowman.svg', 'christmas_tree.svg']]
 
-    ground_truths = Measurements.empty()
-    simmed = Measurements.empty()
-    elapsed_times = Measurements.empty()
+    ground_truths = BatchMeasurements.empty()
+    simmed = BatchMeasurements.empty()
+    elapsed_times = BatchMeasurements.empty()
 
     for f in Parallel(test_files):
         fabbed_object = Laser.fab(f) # not 100% clear what machine was used. they also mention vinyl cutters and scissors
@@ -128,9 +128,9 @@ def geometric_accuracy():
             simmed += Scanner.scan(sim)
             elapsed_times += Stopwatch.measure_time(sim, "converge simulation")
         
-    summarize(ground_truths.get_data())
-    summarize(simmed.get_data())
-    summarize(elapsed_times.get_data())
+    summarize(ground_truths.get_all_data())
+    summarize(simmed.get_all_data())
+    summarize(elapsed_times.get_all_data())
 
 @fedt_experiment
 def user_experience():

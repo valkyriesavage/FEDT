@@ -5,12 +5,11 @@ from dateutil.relativedelta import relativedelta
 import os
 import random
 import subprocess
-import time
 from zipfile import ZipFile
 
 from decision import decision
 from instruction import instruction
-from measurement import Measurement, Measurements
+from measurement import Measurement, BatchMeasurements
 from fabricate import fabricate, RealWorldObject
 from design import design, VirtualWorldObject, LineFile, VolumeFile, GCodeFile
 from decorator import explicit_checker
@@ -689,16 +688,16 @@ class Multimeter:
         feature="whole object")
 
     @staticmethod
-    def measure_resistance(obj: RealWorldObject) -> Measurements:
+    def measure_resistance(obj: RealWorldObject) -> BatchMeasurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Multimeter.resistance.procedure)
-        return Measurements.single(obj, Multimeter.resistance)
+        return BatchMeasurements.single(obj, Multimeter.resistance)
     
     @staticmethod
-    def measure_current(obj: RealWorldObject) -> Measurements:
+    def measure_current(obj: RealWorldObject) -> BatchMeasurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Multimeter.current.procedure)
-        return Measurements.single(obj, Multimeter.current)
+        return BatchMeasurements.single(obj, Multimeter.current)
 
     @staticmethod
     def lower_resistance(meas1: Measurement, meas2: Measurement):
@@ -711,14 +710,14 @@ class Stopwatch:
         procedure="""
             Start the timer, do {}, stop the timer.
             """,
-        units="s",
+        units="seconds",
         feature="n/a")
 
     @staticmethod
-    def measure_time(obj: RealWorldObject, instr: str) -> Measurements:
+    def measure_time(obj: RealWorldObject, instr: str) -> BatchMeasurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Stopwatch.elapsed_time.procedure.format(instr))
-        return Measurements.single(obj, Stopwatch.elapsed_time.set_feature(instr))
+        return BatchMeasurements.single(obj, Stopwatch.elapsed_time.set_feature(instr))
 
 class Timestamper:
     timestamp = Measurement(
@@ -731,10 +730,10 @@ class Timestamper:
         feature="n/a")
 
     @staticmethod
-    def get_ts(obj: RealWorldObject) -> Measurements:
+    def get_ts(obj: RealWorldObject) -> BatchMeasurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Timestamper.timestamp.procedure)
-        return Measurements.single(obj, Timestamper.timestamp)
+        return BatchMeasurements.single(obj, Timestamper.timestamp)
 
 class Calipers:
     length = Measurement(
@@ -749,10 +748,10 @@ class Calipers:
 
     @staticmethod
     def measure_size(obj: RealWorldObject,
-                     dimension: str=length.feature) -> Measurements:
+                     dimension: str=length.feature) -> BatchMeasurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Calipers.length.procedure.format(dimension))
-        return Measurements.single(obj, Calipers.length.set_feature(dimension))
+        return BatchMeasurements.single(obj, Calipers.length.set_feature(dimension))
     
 class Protractor:
     angle = Measurement(
@@ -767,10 +766,10 @@ class Protractor:
 
     @staticmethod
     def measure_angle(obj: RealWorldObject,
-                      dimension: str=angle.feature) -> Measurements:
+                      dimension: str=angle.feature) -> BatchMeasurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Protractor.angle.procedure.format(dimension))
-        return Measurements.single(obj, Protractor.angle.set_feature(dimension))
+        return BatchMeasurements.single(obj, Protractor.angle.set_feature(dimension))
 
 class Scanner:
     geometry_scan = Measurement(
@@ -785,10 +784,10 @@ class Scanner:
         feature="full object")
 
     @staticmethod
-    def scan(obj: RealWorldObject) -> Measurements:
+    def scan(obj: RealWorldObject) -> BatchMeasurements:
         instruction(f"Scan object #{obj.uid}.", header=True)
         instruction(Scanner.geometry_scan.procedure)
-        return Measurements.single(obj, Scanner.geometry_scan)
+        return BatchMeasurements.single(obj, Scanner.geometry_scan)
 
 class ForceGauge:
     force = Measurement(
@@ -802,10 +801,10 @@ class ForceGauge:
         feature="n/a")
 
     @staticmethod
-    def measure_force(obj: RealWorldObject, feature: str=force.feature) -> Measurements:
+    def measure_force(obj: RealWorldObject, feature: str=force.feature) -> BatchMeasurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(ForceGauge.force.procedure)
-        return Measurements.single(obj, ForceGauge.force)
+        return BatchMeasurements.single(obj, ForceGauge.force)
     
 class Anemometer:
     airflow = Measurement(
@@ -818,10 +817,10 @@ class Anemometer:
         feature="output outlet")
 
     @staticmethod
-    def measure_airflow(obj: RealWorldObject, feature: str=airflow.feature) -> Measurements:
+    def measure_airflow(obj: RealWorldObject, feature: str=airflow.feature) -> BatchMeasurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Anemometer.airflow.procedure)
-        return Measurements.single(obj, Anemometer.airflow.set_feature(feature))
+        return BatchMeasurements.single(obj, Anemometer.airflow.set_feature(feature))
 
 class Camera:
     image = Measurement(
@@ -834,10 +833,10 @@ class Camera:
         feature="whole object")
 
     @staticmethod
-    def take_picture(obj: RealWorldObject, feature: str=image.feature) -> Measurements:
+    def take_picture(obj: RealWorldObject, feature: str=image.feature) -> BatchMeasurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Camera.image.procedure.format(feature))
-        return Measurements.single(obj, Camera.image.set_feature(feature))
+        return BatchMeasurements.single(obj, Camera.image.set_feature(feature))
 
 class PressureSensor:
     pressure = Measurement(
@@ -850,10 +849,10 @@ class PressureSensor:
         feature="output outlet")
 
     @staticmethod
-    def measure_pressure(obj: RealWorldObject, feature: str=pressure.feature) -> Measurements:
+    def measure_pressure(obj: RealWorldObject, feature: str=pressure.feature) -> BatchMeasurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(PressureSensor.pressure.procedure)
-        return Measurements.single(obj, PressureSensor.pressure.set_feature(feature))
+        return BatchMeasurements.single(obj, PressureSensor.pressure.set_feature(feature))
 
 class Scale:
     weight = Measurement(
@@ -866,10 +865,10 @@ class Scale:
         feature="whole object")
 
     @staticmethod
-    def measure_weight(obj: RealWorldObject, feature: str=weight.feature) -> Measurements:
+    def measure_weight(obj: RealWorldObject, feature: str=weight.feature) -> BatchMeasurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
         instruction(Scale.weight.procedure)
-        return Measurements.single(obj, Scale.weight.set_feature(feature))
+        return BatchMeasurements.single(obj, Scale.weight.set_feature(feature))
 
 class Human:
     # so multifunctional!
@@ -923,8 +922,9 @@ class User:
 
     @staticmethod
     def do(obj: RealWorldObject, instr: str, user_id: int):
-        instruction(f"User #{user_id} does {instr}")
-        USER_DID = f"user {user_id} did"
+        instr = f"User #{user_id} does {instr}"
+        instruction(instr)
+        USER_DID = f"user did"
         if USER_DID in obj.metadata:
             instr = obj.metadata[USER_DID] + ", then " + instr
         obj.metadata.update({USER_DID: instr})

@@ -2,7 +2,7 @@ from numpy import arange
 
 from instruction import instruction
 from iterators import Series, Parallel, include_last
-from measurement import Measurements
+from measurement import BatchMeasurements
 from design import VolumeFile
 from decorator import fedt_experiment
 from lib import *
@@ -15,8 +15,8 @@ def summarize(data):
 def resin_types():
     stl = VolumeFile('bellows_1mm.stl')
 
-    compression_results = Measurements.empty()
-    tension_results = Measurements.empty()
+    compression_results = BatchMeasurements.empty()
+    tension_results = BatchMeasurements.empty()
     for resin in Parallel(['standard','tenacious','f39/f69']):
         fabbed_object = Printer.slice_and_print(stl, material=resin)
         instruction(f"compress object #{fabbed_object.uid} as much as possible (?)") # with what? how much?
@@ -24,14 +24,14 @@ def resin_types():
         instruction(f"extend object #{fabbed_object.uid} as much as possible (?)") # with what? how much?
         tension_results += Calipers.measure_size(fabbed_object,"height after stretching")
     
-    summarize(compression_results.get_data())
-    summarize(tension_results.get_data())
+    summarize(compression_results.get_all_data())
+    summarize(tension_results.get_all_data())
 
 
 @fedt_experiment
 def bend_vs_thickness():
 
-    bend_results = Measurements.empty()
+    bend_results = BatchMeasurements.empty()
 
     for thickness in Parallel(arange(1,5.5+include_last,.5)):
         stl = StlEditor.cube((20,30,thickness))
@@ -41,12 +41,12 @@ def bend_vs_thickness():
 
     # were these measurements repeated? were the prints repeated? there are error bars but I'm not sure what from
 
-    summarize(bend_results.get_data())
+    summarize(bend_results.get_all_data())
 
 @fedt_experiment
 def min_wall_thickness():
 
-    pressure_results = Measurements.empty()
+    pressure_results = BatchMeasurements.empty()
 
     base_stl = VolumeFile("wall_thickness_test.stl")
     for orientation in Parallel([0,90]):
@@ -55,7 +55,7 @@ def min_wall_thickness():
             fabbed_object = Printer.slice_and_print(stl)
             pressure_results += PressureSensor.measure_pressure(fabbed_object,"pressure at rupture")
 
-    summarize(pressure_results.get_data())
+    summarize(pressure_results.get_all_data())
 
 @fedt_experiment
 def min_wall_spacing():
@@ -65,7 +65,7 @@ def min_wall_spacing():
 @fedt_experiment
 def min_thin_wall_area():
 
-    expansion_results = Measurements.empty()
+    expansion_results = BatchMeasurements.empty()
 
     for edge_length in Parallel(arange(6,15+include_last)):
         stl_loc = Human.do_and_respond(f"create an STL with edge length {edge_length}, thin wall 0.7mm, other walls 5mm",
@@ -75,12 +75,12 @@ def min_thin_wall_area():
         instruction("pump 20psi into the fabricated object")
         expansion_results += Calipers.measure_size(fabbed_object,"vertical expansion height")
 
-    summarize(expansion_results.get_data())
+    summarize(expansion_results.get_all_data())
  
 @fedt_experiment
 def pneumatic_vs_hydraulic():
     # this reads more like a demonstration than an experiment; not sure how to classify it
-    expansion_results = Measurements.empty()
+    expansion_results = BatchMeasurements.empty()
 
     stl = VolumeFile("single_actuator_single_generator.stl")
     for fill in Parallel(['water','air']):
@@ -88,7 +88,7 @@ def pneumatic_vs_hydraulic():
         filled_object = Human.post_process(fabbed_object,f"fill object with {fill}")
         expansion_results += Calipers.measure_size(filled_object,"displacement of tip")
 
-    summarize(expansion_results.get_data())
+    summarize(expansion_results.get_all_data())
 
 @fedt_experiment
 def lasting():
@@ -99,8 +99,8 @@ def lasting():
     for repetition in Parallel(range(48)):
         fabbed_objects.append(Printer.print(gcode))
 
-    pre_weights = Measurements.empty()
-    post_weights = Measurements.empty()
+    pre_weights = BatchMeasurements.empty()
+    post_weights = BatchMeasurements.empty()
 
     cubes_per_day = 3
     for day in Series(range(16)):
@@ -111,7 +111,7 @@ def lasting():
             leaked_cube = Human.post_process(cube, f"cut open the cube and let the fluid leak out")
             post_weights += Scale.measure_weight(leaked_cube)
 
-    summarize([pre_weights.get_data(),post_weights.get_data()])
+    summarize([pre_weights.get_all_data(),post_weights.get_all_data()])
 
 if __name__ == "__main__":
     print(lasting())

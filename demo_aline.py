@@ -2,7 +2,7 @@ from numpy import arange
 
 from instruction import instruction
 from iterators import Series, Parallel, include_last
-from measurement import Measurements
+from measurement import BatchMeasurements
 from design import VolumeFile
 from decorator import fedt_experiment
 from lib import *
@@ -22,7 +22,7 @@ def cross_section_ratios():
     configure_for_aline()
 
     stl = StlEditor.cube((4,4,60))
-    results = Measurements.empty()
+    results = BatchMeasurements.empty()
 
     for bending_direction in Parallel(['d7','d8&d6','d1&d5','d3','d2&d4']):
         for cross_section_ratio in Parallel(arange(1,8+include_last)):
@@ -34,14 +34,14 @@ def cross_section_ratios():
                 actuated_object = Human.post_process(fabbed_object, "trigger the object in hot water")
                 results += Protractor.measure_angle(actuated_object, "triggered angle")
     
-    summarize(results.get_data())
+    summarize(results.get_all_data())
 
 
 @fedt_experiment
 def bend_vs_thickness():
     configure_for_aline()
 
-    results = Measurements.empty()
+    results = BatchMeasurements.empty()
 
     for thickness in Parallel(arange(1,6+include_last)):
         stl = StlEditor.cube((thickness,thickness,60))
@@ -52,7 +52,7 @@ def bend_vs_thickness():
                 actuated_object = Human.post_process(fabbed_object, "trigger the object in hot water")
                 results += Protractor.measure_angle(actuated_object, "triggered angle")
 
-    summarize(results.get_data())
+    summarize(results.get_all_data())
 
 if __name__ == "__main__":
     print(cross_section_ratios())

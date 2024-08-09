@@ -4,7 +4,7 @@ from numpy import arange
 
 from instruction import instruction
 from iterators import Series, Parallel, include_last
-from measurement import Measurements
+from measurement import BatchMeasurements
 from fabricate import RealWorldObject
 from decorator import fedt_experiment
 from lib import *
@@ -18,7 +18,7 @@ def summarize(data):
 def test_density_and_materials():
 
     # test impact of ruffle density and materials on compression
-    results = Measurements.empty()
+    results = BatchMeasurements.empty()
     for ruffle_design in Parallel(['default', 'wide', 'dense']):
         ruffle_file = SvgEditor.design(ruffle_design)
         for material in Parallel(['flipchart', 'office paper', 'plastic']):
@@ -37,11 +37,11 @@ def test_density_and_materials():
                 fabbed_object = Human.post_process(fabbed_object, "remove all loads")
                 results += Calipers.measure_size(fabbed_object,'height at unload in {load_direction}')
 
-    summarize(results.get_data())
+    summarize(results.get_all_data())
 
 @fedt_experiment
 def design_versus_stiffness():
-    results = Measurements.empty()
+    results = BatchMeasurements.empty()
     tab_conditions_files = [("cut tabs", LineFile("default_ruffle_cuttabs.svg")),
                             ("no tabs + tape", LineFile("default_ruffle_notabs.svg"))]
     loads = [0,10,20,50,100,200]
@@ -62,7 +62,7 @@ def design_versus_stiffness():
             fabbed_object = Human.post_process(fabbed_object, "remove all loads")
             results += Calipers.measure_size(fabbed_object,'height at unload in {load_direction}')
 
-    summarize(results.get_data())
+    summarize(results.get_all_data())
 
 if __name__ == "__main__":
     print(design_versus_stiffness())

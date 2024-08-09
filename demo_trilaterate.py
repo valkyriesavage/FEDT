@@ -3,7 +3,7 @@ import random
 from numpy import arange
 
 from instruction import instruction
-from measurement import Measurements
+from measurement import BatchMeasurements
 from design import VolumeFile
 from decorator import fedt_experiment
 from lib import *
@@ -24,9 +24,9 @@ class CustomCapacitanceSystem:
         feature=f"electrode {i}") for i in range(7)]
 
     @staticmethod
-    def measure_capacitances(obj: RealWorldObject) -> Measurements:
+    def measure_capacitances(obj: RealWorldObject) -> BatchMeasurements:
         instruction(f"Measure object #{obj.uid}.", header=True)
-        return Measurements.multiple(obj, set(CustomCapacitanceSystem.capacitances))
+        return BatchMeasurements.multiple(obj, set(CustomCapacitanceSystem.capacitances))
 
 PYRAMID = Printer.slice_and_print(VolumeFile("pyramid.stl"))
 
@@ -42,8 +42,8 @@ def placement_response():
     electrodes = list(range(7))
 
     fabbed_object = PYRAMID
-    raw_results = Measurements.empty()
-    test_values = Measurements.empty()
+    raw_results = BatchMeasurements.empty()
+    test_values = BatchMeasurements.empty()
     for participant in range(10):
         for repetition in range(1): # not sure how many random touches were required
             User.do(fabbed_object, f"touch electrode #{random.choice(electrodes)}", participant)
@@ -52,16 +52,16 @@ def placement_response():
             raw_results += CustomCapacitanceSystem.measure_capacitances(fabbed_object)
             test_values += CustomCapacitanceSystem.measure_capacitances(fabbed_object)
 
-    summarize(raw_results.get_data())
+    summarize(raw_results.get_all_data())
     # some processing to the test values...
-    summarize(test_values.get_data())
+    summarize(test_values.get_all_data())
 
 @fedt_experiment
 def force_response():
     fabbed_object = PYRAMID
 
-    ground_truth = Measurements.empty()
-    test_values = Measurements.empty()
+    ground_truth = BatchMeasurements.empty()
+    test_values = BatchMeasurements.empty()
 
     forces = list(arange(10,90+include_last,20))
 
@@ -73,9 +73,9 @@ def force_response():
             User.do(fabbed_object, f"touch with force {force}", participant)
             test_values += CustomCapacitanceSystem.measure_capacitances(fabbed_object)
 
-    summarize(ground_truth.get_data())
+    summarize(ground_truth.get_all_data())
     # some processing to the test_values...
-    summarize(test_values.get_data())
+    summarize(test_values.get_all_data())
 
 
 if __name__ == "__main__":

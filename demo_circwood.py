@@ -2,11 +2,11 @@ import math
 
 from numpy import arange
 
-from control import Execute, Evaluate
 import control
+from control import Execute, Evaluate
 from instruction import instruction
 from iterators import Parallel, Series, Infinite, include_last
-from measurement import Measurements
+from measurement import BatchMeasurements
 from fabricate import RealWorldObject
 from decorator import fedt_experiment
 from lib import *
@@ -31,10 +31,10 @@ def test_materials():
             fabbed_objects.append(Laser.fab(line_file, material=material, coating=coating))
             # not completely sure how to capture what they did here... it seems like
             # they did some experimentation, but it's not really documented?
-    results = Measurements.empty()
+    results = BatchMeasurements.empty()
     for fabbed_object in Parallel(fabbed_objects):
         results += Multimeter.measure_resistance(fabbed_object)
-    data = results.get_data()
+    data = results.get_all_data()
     return summarize(data)
 
 @fedt_experiment
@@ -44,17 +44,17 @@ def test_height_vs_focal_point():
     for focal_height_mm in Parallel(range(0, 5+include_last)):
         fabbed_objects.append(
             Laser.fab(line_file, focal_height_mm=focal_height_mm))
-    results = Measurements.empty()
+    results = BatchMeasurements.empty()
     for fabbed_object in Parallel(fabbed_objects):
         results += Multimeter.measure_resistance(fabbed_object)
-    data = results.get_data()
+    data = results.get_all_data()
     return summarize(data)
 
 
 @fedt_experiment
 def test_optimal_number_of_scans():
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
-    results = Measurements.empty()
+    results = BatchMeasurements.empty()
     resistance = None
     best_result = None
     for num_scans in Infinite(range(1,20)):
@@ -69,7 +69,7 @@ def test_optimal_number_of_scans():
         else:
             # we are getting worse
             break
-    data = results.get_data()
+    data = results.get_all_data()
     return summarize(data)
 
 @fedt_experiment
@@ -79,7 +79,7 @@ def test_laser_power_and_speed():
     setting_names = Laser.prep_cam(cut_speeds=speeds, cut_powers=powers)
 
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
-    results = Measurements.empty()
+    results = BatchMeasurements.empty()
 
     for cut_speed in Parallel(speeds):
       for cut_power in Parallel(powers):
@@ -87,7 +87,7 @@ def test_laser_power_and_speed():
             fabbed_object = Laser.fab(line_file, setting_names, cut_speed, cut_power, color_to_setting=Laser.SvgColor.GREEN)
             resistance = Multimeter.measure_resistance(fabbed_object)
             results += resistance
-    summarize(results.get_data())
+    summarize(results.get_all_data())
 
 @fedt_experiment
 def test_grain_direction():
@@ -97,10 +97,10 @@ def test_grain_direction():
         instruction("orient the wood {}".format(orientation))
         fabbed_objects.append(
             Laser.fab(line_file, orientation=orientation))
-    results = Measurements.empty()
+    results = BatchMeasurements.empty()
     for fabbed_object in Parallel(fabbed_objects):
         results += Multimeter.measure_resistance(fabbed_object)
-    data = results.get_data()
+    data = results.get_all_data()
     return summarize(data)
 
 @fedt_experiment
@@ -111,12 +111,12 @@ def test_change_over_time():
         for repetition in Parallel(range(4)):
             fabbed_object = Laser.fab(line_file)
             fabbed_objects.append(Human.post_process(fabbed_object, post_process_condition))
-    results = Measurements.empty()
+    results = BatchMeasurements.empty()
     for wait_months in Series(range(1, 6)):
         fabbed_objects = Environment.wait_up_to_time_multiple(fabbed_objects, num_months=wait_months)
         for fabbed_object in fabbed_objects:
             results += Multimeter.measure_resistance(fabbed_object)
-    summarize(results.get_data())
+    summarize(results.get_all_data())
 
 if __name__ == "__main__":
     #control.MODE = Execute()

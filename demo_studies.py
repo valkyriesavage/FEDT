@@ -1,6 +1,6 @@
 from instruction import instruction
 from iterators import Parallel, Series, Infinite, shuffle
-from measurement import Measurements
+from measurement import BatchMeasurements, ImmediateMeasurements
 from fabricate import RealWorldObject
 from decorator import fedt_experiment
 from lib import *
@@ -16,7 +16,7 @@ def test_print_shrinkage():
 
     cube = VolumeFile("cube.stl")
 
-    shrinkage_measurements = Measurements.empty()
+    shrinkage_measurements = BatchMeasurements.empty()
 
     for infill_pattern in Parallel(['trihexagon','line','rectilinear']):
         for repetition in Parallel(range(5)):
@@ -25,7 +25,7 @@ def test_print_shrinkage():
             shrinkage_measurements += Calipers.measure_size(fabbed_object, "y-axis")
             shrinkage_measurements += Calipers.measure_size(fabbed_object, "z-axis")
     
-    summarize(shrinkage_measurements.get_data())
+    summarize(shrinkage_measurements.get_all_data())
 
 @fedt_experiment
 def test_force_at_break():
@@ -37,7 +37,7 @@ def test_force_at_break():
 
     Laser.default_laser_settings[Laser.MATERIAL] = 'wood' # TODO: why doesn't this work?
 
-    breakage_points = Measurements.empty()
+    breakage_points = BatchMeasurements.empty()
 
     for rect_length in shuffle(Parallel(range(50,100,10))):
         svg = SvgEditor.build_geometry(draw_rect, CAD_vars={'rect_length':rect_length})
@@ -48,27 +48,27 @@ def test_force_at_break():
             instruction("place weights on the object until it breaks")
             breakage_points += Scale.measure_weight(fabbed_object,"weight placed at break")
     
-    summarize(breakage_points.get_data())
+    summarize(breakage_points.get_all_data())
 
 @fedt_experiment
 def test_paint_layers():
     flower = Laser.fab(LineFile('flower.svg'), material='delrin')
 
-    photos = Measurements.empty()
-    for coats_of_paint in Series(range(1,20)):#while Infinite():#coats_of_paint += 1): # TODO implement properly with infinite
+    photos = ImmediateMeasurements.empty()
+    for coats_of_paint in Series(range(1,20)):#while Infinite(coats_of_paint += 1): # TODO implement properly with infinite
         photos += Camera.take_picture(flower) # TODO use the now measurement
         if Human.is_reasonable(flower):
             break
         flower = Human.post_process(flower, f"add a {coats_of_paint}th coat of paint")
 
-    summarize(photos.get_data())
+    summarize(photos.dump_to_csv())
 
 @fedt_experiment
 def test_user_assembly_time():
     simple = VolumeFile("simple_assembly.stl")
     complex = VolumeFile("complex_assembly.stl")
 
-    timings = Measurements.empty()
+    timings = ImmediateMeasurements.empty()
 
     for user in shuffle(Parallel(range(6))):
         simple_assembly = Printer.slice_and_print(simple)
@@ -77,7 +77,7 @@ def test_user_assembly_time():
             assembly = User.do(assembly, "solve the assembly", user)
             timings += Stopwatch.measure_time(assembly, "time to solve the assembly") # TODO use the now measurement
 
-    summarize(timings.get_data())
+    summarize(timings.dump_to_csv())
 
 if __name__ == "__main__":
-    print(test_force_at_break())
+    print(test_paint_layers())

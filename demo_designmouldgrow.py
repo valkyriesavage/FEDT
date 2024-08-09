@@ -1,9 +1,8 @@
 from numpy import arange
 
 from instruction import instruction
-from iterators import Series, Parallel, include_last
-from measurement import Measurements
-from fabricate import RealWorldObject
+from iterators import Series, Parallel
+from measurement import BatchMeasurements
 from decorator import fedt_experiment
 from lib import *
 
@@ -25,9 +24,14 @@ class CustomModellingTool:
         return VolumeFile(stl_location)
 
 @fedt_experiment
+def mushroom_types():
+    pass
+    # there was no digital fabrication element in this experiment, so I skipped implementing it
+
+@fedt_experiment
 def geometric_features():
-    shrinkage_results = Measurements.empty()
-    scanning_results = Measurements.empty()
+    shrinkage_results = BatchMeasurements.empty()
+    scanning_results = BatchMeasurements.empty()
     comparison_results = []
 
     geometries = [VolumeFile(x) for x in ['ramps.stl', 'circular.stl', 'patterns.stl']]
@@ -49,8 +53,8 @@ def geometric_features():
     
     # several derivative measurement operations are ignored here for simplicity; e.g., the extraction of 2D profiles from the scans
 
-    shrinkage_results = shrinkage_results.get_data()
-    scanning_results = scanning_results.get_data()
+    shrinkage_results = shrinkage_results.get_all_data()
+    scanning_results = scanning_results.get_all_data()
 			
     summarize(shrinkage_results)
     summarize(scanning_results)
@@ -61,8 +65,8 @@ def mechanical_and_shrinkage_features():
     target_cube = StlEditor.cube((30,60,16))
     scaled_mould = StlEditor.cube((30, 60, 16), scale=1/.92)
 
-    shrinkage_results = Measurements.empty()
-    mechanical_results = Measurements.empty()
+    shrinkage_results = BatchMeasurements.empty()
+    mechanical_results = BatchMeasurements.empty()
     mould = Printer.slice_and_print(scaled_mould)
     for myco_material in Series(['30% coffee inclusions', 'no inclusions']): # I can't tell if this was series or parallel
         for repetition in Series(range(4)):
@@ -77,15 +81,15 @@ def mechanical_and_shrinkage_features():
                     fabbed_object = Human.post_process(fabbed_object, "compress the object to " + str(depth)) # not clear who/what does the compressing?
                     mechanical_results += ForceGauge.measure_force(fabbed_object)           
     
-    summarize(shrinkage_results.get_data())
-    summarize(mechanical_results.get_data())
+    summarize(shrinkage_results.get_all_data())
+    summarize(mechanical_results.get_all_data())
 
 @fedt_experiment
 def test_software_tool():
     target_sphere = StlEditor.sphere(20)
     software_generated_mould = CustomModellingTool.sphere(20)
 
-    results = Measurements.empty()
+    results = BatchMeasurements.empty()
     mould = Printer.slice_and_print(software_generated_mould)
     myco_material = "30% coffee inclusions"
     for repetition in Parallel(range(3)):
@@ -99,7 +103,7 @@ def test_software_tool():
         for z_axis_point in measurement_points:
             results += Calipers.measure_size(fabbed_object, f"{z_axis_point} degrees along the z axis")
                 
-    summarize(results.get_data())
+    summarize(results.get_all_data())
 
 
 if __name__ == "__main__":

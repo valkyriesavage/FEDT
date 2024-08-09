@@ -1,4 +1,4 @@
-import csv, time
+import csv, os, time
 
 from design import VirtualWorldObject
 from fabricate import RealWorldObject
@@ -22,7 +22,7 @@ class Measurement:
         return self
 
     def __repr__(self):
-        return self.name + ":" + self.feature
+        return self.name + ":" + self.feature + " (" + self.units + ")"
     
     def __hash__(self):
          return hash(self.name + self.feature)
@@ -37,32 +37,32 @@ class Measurement:
 
 
 @dataclass
-class Measurements:
+class BatchMeasurements:
     objects: set[RealWorldObject]
     measurements: set[Measurement]
 
     @staticmethod
-    def single(obj: RealWorldObject, meas: Measurement) -> "Measurements":
-        return Measurements(set([obj]), set([meas]))
+    def single(obj: RealWorldObject, meas: Measurement) -> "BatchMeasurements":
+        return BatchMeasurements(set([obj]), set([meas]))
     
     @staticmethod
-    def multiple(obj: RealWorldObject, meases: set[Measurement]) -> "Measurements":
-        return Measurements(set([obj]), meases)
+    def multiple(obj: RealWorldObject, meases: set[Measurement]) -> "BatchMeasurements":
+        return BatchMeasurements(set([obj]), meases)
 
     @staticmethod
-    def empty() -> "Measurements":
-        return Measurements(set(), set())
+    def empty() -> "BatchMeasurements":
+        return BatchMeasurements(set(), set())
 
-    def __add__(self, other: "Measurements") -> "Measurements":
-        return Measurements(self.objects.union(other.objects),
+    def __add__(self, other: "BatchMeasurements") -> "BatchMeasurements":
+        return BatchMeasurements(self.objects.union(other.objects),
                             self.measurements.union(other.measurements))
 
     def instruction(self):
         return f"Fill out the measurements for objects {list(self.objects)} and measurements {list(self.measurements)}."
 
-    def get_data(self) -> dict[tuple[Measurement, RealWorldObject], float|str]:
+    def get_all_data(self) -> dict[tuple[Measurement, RealWorldObject], float|str]:
         if isinstance(MODE, Execute):
-            experiment_csv = "experiment-{}.csv".format(time.strftime("%Y%m%d-%H%M%S"))
+            experiment_csv = os.path.join("expt_csvs","experiment-{}.csv".format(time.strftime("%Y%m%d-%H%M%S")))
 
             csv_to_obj = {}
             csv_to_meas = {}
@@ -84,29 +84,28 @@ class Measurements:
                 variables = []
                 for metakey, metaval in obj.metadata.items():
                     if type(metaval) is RealWorldObject or type(metaval) is VirtualWorldObject:
-                        variables.extend(walk_metadata(metaval), ret_val=ret_val)
+                        variables.extend(walk_metadata(metaval, ret_val=ret_val))
                     else:
                         if ret_val:
-                            variables.extend(metaval)
+                            variables.append(metaval)
                         else:
-                            variables.extend(metakey)
+                            variables.append(metakey)
                 return variables
 
             # now let's make a key csv that actually maps the object UIDs to the things varied in them
-            object_variables = walk_metadata(self.objects[0]) # TODO : deal with what happens if they don't have the same # of vars??
+            object_variables = walk_metadata(self.objects[0]) # TODO : deal with what happens if they don't have the same # of vars?
 
             key_csv = experiment_csv.replace('.csv','_key.csv')
             with open(key_csv, 'w') as csvfile:
                 spamwriter = csv.writer(csvfile,delimiter=',')
                 spamwriter.writerow(['Label'] + list(object_variables))
-                for object in self.objects():
-                    spamwriter.writerow([object.uid] + walk_metadata(obj))
+                for obj in self.objects():
+                    spamwriter.writerow([object.uid] + walk_metadata(obj, ret_val=True))
 
             # now we have to ask them somehow to actually fill these in?
-            # TODO: something else here?
             input(f"add the data in {experiment_csv}. the key, if needed, is in {key_csv}.")
             
-            # now we need to strip all the answers back _out_
+            # now we need to strip all the answers back _out_ LOL
             recorded_values = {} # dict tuple[Measurement, RealWorldObject], float|str
             with open(experiment_csv, 'r') as csvfile:
                 spamreader = csv.DictReader(csvfile, delimiter=',')
@@ -123,3 +122,82 @@ class Measurements:
         else:
             FlowChart().add_instruction(self.instruction())
             return dict()
+
+class ImmediateMeasurements:
+    objects: list[RealWorldObject] = [] # rows
+    measurements: list[Measurement] = [] # cols
+    csv: str = None
+    data_points: dict[RealWorldObject,dict[Measurement,float|str]] = {}
+
+    @staticmethod
+    def empty() -> "ImmediateMeasurements":
+        return ImmediateMeasurements()
+
+    def set_up_csv(self):
+        self.csv = os.path.join("expt_csvs","experiment-{}.csv".format(time.strftime("%Y%m%d-%H%M%S")))
+    
+    def dump_to_csv(self):
+        if not self.csv:
+            self.set_up_csv()
+
+        if not isinstance(MODE, Execute):
+            FlowChart().add_note("the collected data will be exported to a csv. the 'key' csv linking labels to features will also be written.")
+            return
+
+        with open(self.csv, 'w+') as csvfile:
+            spamwriter = csv.DictWriter(csvfile, fieldnames=['Label'] + self.measurements)
+            spamwriter.writeheader()
+            spamwriter.writerows(self.data_points.values())
+
+        def walk_metadata(obj: RealWorldObject | VirtualWorldObject, ret_val=False):
+            variables = []
+            for metakey, metaval in obj.metadata.items():
+                if type(metaval) in [RealWorldObject, VirtualWorldObject] or \
+                        issubclass(type(metaval), VirtualWorldObject) or \
+                        issubclass(type(metaval), RealWorldObject):
+                    variables.extend(walk_metadata(metaval, ret_val=ret_val))
+                else:
+                    if ret_val:
+                        variables.append(metaval)
+                    else:
+                        variables.append(metakey)
+            return variables
+
+        # now let's make a key csv that actually maps the object UIDs to the things varied in them
+        object_variables = walk_metadata(self.objects[0]) # TODO : deal with what happens if they don't have the same # of vars?
+
+        key_csv = self.csv.replace('.csv','_key.csv')
+        with open(key_csv, 'w+') as csvfile:
+            spamwriter = csv.writer(csvfile,delimiter=',')
+            spamwriter.writerow(['Label'] + list(object_variables))
+            for obj in self.objects:
+                spamwriter.writerow([obj.uid] + walk_metadata(obj, ret_val=True))
+
+        print(f"all the data are in {self.csv}. the key for labelled objects is in {key_csv}.")
+
+    def do(self, obj: RealWorldObject, meas: Measurement) -> "ImmediateMeasurements":
+        if not meas in self.measurements:
+            self.measurements.append(meas)
+            for row in self.data_points.values():
+                row.update({meas: ''})
+                
+        if not obj in self.data_points.keys():
+            self.objects.append(obj)
+            obj_blank_dict = {"Label":obj.uid}
+            obj_blank_dict.update(dict([(meas,'') for meas in self.measurements]))
+            self.data_points[obj] = obj_blank_dict
+        
+        measured = ''
+        if isinstance(MODE, Execute):
+            measured = input(f"what is the value of {meas} for object #{obj.uid}?")
+            self.data_points[obj][meas] = measured
+        else:
+            FlowChart().add_instruction(f"measure {meas} for object #{obj.uid}")
+        return measured
+
+    def __add__(self, other: "BatchMeasurements") -> "ImmediateMeasurements":
+        self.do(other.objects.pop(), other.measurements.pop()) # TODO I.... don't like this :joy:
+        return self
+
+    def get_all_data(self) -> dict[tuple[Measurement, RealWorldObject], float|str]:
+        return self.data_points
