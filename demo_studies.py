@@ -56,7 +56,7 @@ def test_paint_layers():
 
     photos = ImmediateMeasurements.empty()
     for coats_of_paint in Series(range(1,20)):#while Infinite(coats_of_paint += 1): # TODO implement properly with infinite
-        photos += Camera.take_picture(flower) # TODO use the now measurement
+        photos += Camera.take_picture(flower)
         if Human.is_reasonable(flower):
             break
         flower = Human.post_process(flower, f"add a {coats_of_paint}th coat of paint")
@@ -75,7 +75,7 @@ def test_user_assembly_time():
         complex_assembly = Printer.slice_and_print(complex)
         for assembly in Series([simple_assembly, complex_assembly]):
             assembly = User.do(assembly, "solve the assembly", user)
-            timings += Stopwatch.measure_time(assembly, "time to solve the assembly") # TODO use the now measurement
+            timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
 
     summarize(timings.dump_to_csv())
 
