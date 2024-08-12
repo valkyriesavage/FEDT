@@ -2,6 +2,7 @@ from datetime import date
 from typing import List
 import datetime
 from dateutil.relativedelta import relativedelta
+import math
 import os
 import random
 import subprocess
@@ -391,7 +392,7 @@ class Slicer:
         TEMPERATURE: '290 C',
         NOZZLE: '0.4mm',
         LAYER_HEIGHT: '0.4mm',
-        INFILL_PATTERN: 'checkerboard',
+        INFILL_PATTERN: 'stars',
         INFILL_DENSITY: '50%',
         WALL_THICKNESS: '1.2mm',
         SPEED: '5000',
@@ -415,11 +416,25 @@ class Slicer:
 
     class PrusaSlicer:
         @staticmethod
-        def slice(volume_file: VolumeFile) -> GCodeFile:
+        def slice(volume_file: VolumeFile,
+                    temperature: str = super.default_slicer_settings[super.TEMPERATURE],
+                    nozzle: str = super.default_slicer_settings[super.NOZZLE],
+                    layer_height: str = super.default_slicer_settings[super.LAYER_HEIGHT],
+                    infill_pattern: str = super.default_slicer_settings[super.INFILL_PATTERN],
+                    infill_density: str = super.default_slicer_settings[super.INFILL_DENSITY],
+                    wall_thickness: str = super.default_slicer_settings[super.WALL_THICKNESS],
+                    material: str = super.default_slicer_settings[super.MATERIAL],
+                    **kwargs) -> GCodeFile:
             instruction(f"slice {volume_file.stl_location} in the slicing software")
             gcode_location = ''
-            # TODO : map argdict into real commandline calls for prusa, add function args for this
-            argdict = {}
+            argdict = {
+                'layer-height': layer_height,
+                'nozzle-diameter': nozzle,
+                'temperature': temperature,
+                'fill-pattern': infill_pattern,
+                'fill-density': infill_density,
+                'perimeters': math.floor(wall_thickness/nozzle)
+            }
 
             from control import MODE, Execute
             if isinstance(MODE, Execute):
@@ -428,6 +443,7 @@ class Slicer:
                 for keyval in argdict.items():
                     slice_command.extend(list(keyval))
                 slice_command.extend(['--export-gcode', volume_file])
+                slice_command.extend(['--output-filename-format', 'expt_stls/FEDT_[timestamp]_[input_filename_base].gcode'])
                 results = subprocess.check_output(slice_command)
             
                 # the last line from Prusa Slicer is "Slicing result exported to ..."
@@ -494,9 +510,7 @@ class Printer:
 
     @staticmethod
     def print(gcode: GCodeFile) -> RealWorldObject:
-        # TODO implement me!
-        obj = fabricate(gcode.metadata, "print the object")
-        return obj
+        input(f"load {gcode.gcode_location} onto the printer and hit print. enter when finished.")
     
     @staticmethod
     @explicit_checker
@@ -516,9 +530,17 @@ class Printer:
 
         from control import MODE, Execute
 
-        gcode = slicer.slice(volume_file)
         if isinstance(MODE, Execute):
-            # actually call the printer
+            gcode = slicer.slice(volume_file,
+                        printer=printer,
+                        temperature=temperature,
+                        nozzle=nozzle,
+                        layer_height=layer_height,
+                        infill_pattern=infill_pattern,
+                        infill_density=infill_density,
+                        wall_thickness=wall_thickness,
+                        material=material,
+                        **kwargs)
             Printer.print(gcode)
         instruction("Slice the file.")
         instruction("Run the printer.")
