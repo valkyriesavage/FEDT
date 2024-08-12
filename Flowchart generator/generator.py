@@ -261,5 +261,14 @@ xml_root = ET.fromstring(xml_content)
 # Build the flowchart
 flowchart = build_flowchart(xml_root)
 
-# Save and display the flowchart
-flowchart.render('flowchart-output', format='png', cleanup=True)
+# Save and display the flowchart, it saves in the same directory in normal quality
+# flowchart.render('flowchart-output', format='png', cleanup=True)
+
+# If wanted a higher resolution chart use this
+# Render the graph with higher resolution
+output_path = 'flowchart_hd.png'  # Save to the current directory
+flowchart.attr(dpi='1200')  # Set the DPI for higher resolution
+flowchart.render(output_path, format='png', cleanup=True)
+
+# Added a print statement after done
+print(f"Flow chart generated and saved as '{output_path}' with higher quality")
