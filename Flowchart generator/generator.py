@@ -266,7 +266,7 @@ flowchart = build_flowchart(xml_root)
 
 # If wanted a higher resolution chart use this
 # Render the graph with higher resolution
-output_path = 'flowchart_hd.png'  # Save to the current directory
+output_path = 'flowchart_hd'  # Save to the current directory
 flowchart.attr(dpi='1200')  # Set the DPI for higher resolution
 flowchart.render(output_path, format='png', cleanup=True)
 
