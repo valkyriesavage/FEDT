@@ -84,4 +84,5 @@ def test_user_assembly_time():
     summarize(timings.dump_to_csv())
 
 if __name__ == "__main__":
-    print(test_force_at_break())
+    from flowchart_render import render_flowchart
+    render_flowchart(test_user_assembly_time)

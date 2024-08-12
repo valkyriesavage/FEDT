@@ -413,85 +413,6 @@ class Slicer:
         gcode_file.metadata.update(kwargs)
         gcode_file.gcode_location = gcode_location
         return gcode_file
-
-    class PrusaSlicer:
-        @staticmethod
-        def slice(volume_file: VolumeFile,
-                    temperature: str = super.default_slicer_settings[super.TEMPERATURE],
-                    nozzle: str = super.default_slicer_settings[super.NOZZLE],
-                    layer_height: str = super.default_slicer_settings[super.LAYER_HEIGHT],
-                    infill_pattern: str = super.default_slicer_settings[super.INFILL_PATTERN],
-                    infill_density: str = super.default_slicer_settings[super.INFILL_DENSITY],
-                    wall_thickness: str = super.default_slicer_settings[super.WALL_THICKNESS],
-                    material: str = super.default_slicer_settings[super.MATERIAL],
-                    **kwargs) -> GCodeFile:
-            instruction(f"slice {volume_file.stl_location} in the slicing software")
-            gcode_location = ''
-            argdict = {
-                'layer-height': layer_height,
-                'nozzle-diameter': nozzle,
-                'temperature': temperature,
-                'fill-pattern': infill_pattern,
-                'fill-density': infill_density,
-                'perimeters': math.floor(wall_thickness/nozzle)
-            }
-
-            from control import MODE, Execute
-            if isinstance(MODE, Execute):
-                slice_command = [PRUSA_SLICER_LOCATION,
-                                '--load', PRUSA_CONFIG_LOCATION]
-                for keyval in argdict.items():
-                    slice_command.extend(list(keyval))
-                slice_command.extend(['--export-gcode', volume_file])
-                slice_command.extend(['--output-filename-format', 'expt_stls/FEDT_[timestamp]_[input_filename_base].gcode'])
-                results = subprocess.check_output(slice_command)
-            
-                # the last line from Prusa Slicer is "Slicing result exported to ..."
-                last_line = results.decode('utf-8').strip().split("\n")[-1]
-                gcode_location = last_line.split(" exported to ")[1]
-
-            design_bake = {VolumeFile.VOLUME_FILE: volume_file}
-            design_bake.update(argdict)
-            gcode = design(design_bake)
-            gcode.gcode_location = gcode_location
-
-            if isinstance(MODE, Execute):
-                print(f"gcode has been generated, and is available at {gcode_location}")
-
-            return gcode
-        
-        def __str__():
-            setup = '''We used Prusa Slicer'''
-
-    class BambuSlicer:
-        @staticmethod
-        def slice(volume_file: VolumeFile) -> GCodeFile:
-            argdict = {}
-            gcode_location = ''
-            # TODO prep_cam(argdict)
-            # there is some kind of processing that needs to happen here to encode the arguments into files
-            # because Bambu does not take commandline arguments
-
-            from control import MODE, Execute
-            if isinstance(MODE, Execute):
-                slice_command = [BAMBU_SLICER_LOCATION,
-                                '--debug 2',
-                                '--load-settings "{BAMBU_MACHINE_SETTINGS_LOCATION};{BAMBU_PROCESS_SETTINGS_LOCATION}"',
-                                volume_file]
-                gcode_location = subprocess.check_output(slice_command)
-
-            design_bake = {VolumeFile.VOLUME_FILE: volume_file}
-            design_bake.update(argdict)
-            gcode = design(design_bake)
-            gcode.gcode_location = gcode_location
-
-            if isinstance(MODE, Execute):
-                print(f"gcode has been generated, and is available at {gcode_location}")
-
-            return gcode
-        
-        def __str__():
-            setup = '''We used Bambu Slicer'''
         
     def __str__():
         setup = '''We used a slicer software'''
@@ -499,13 +420,92 @@ class Slicer:
     def __repr__(self):
         return str(self)
 
+class PrusaSlicer(Slicer):
+    @staticmethod
+    def slice(volume_file: VolumeFile,
+                temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
+                nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
+                layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
+                infill_pattern: str = Slicer.default_slicer_settings[Slicer.INFILL_PATTERN],
+                infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
+                wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
+                material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
+                **kwargs) -> GCodeFile:
+        instruction(f"slice {volume_file.stl_location} in the slicing software")
+        gcode_location = ''
+        argdict = {
+            'layer-height': layer_height,
+            'nozzle-diameter': nozzle,
+            'temperature': temperature,
+            'fill-pattern': infill_pattern,
+            'fill-density': infill_density,
+            'perimeters': math.floor(wall_thickness/nozzle)
+        }
+
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            slice_command = [PRUSA_SLICER_LOCATION,
+                            '--load', PRUSA_CONFIG_LOCATION]
+            for keyval in argdict.items():
+                slice_command.extend(list(keyval))
+            slice_command.extend(['--export-gcode', volume_file])
+            slice_command.extend(['--output-filename-format', 'expt_stls/FEDT_[timestamp]_[input_filename_base].gcode'])
+            results = subprocess.check_output(slice_command)
+        
+            # the last line from Prusa Slicer is "Slicing result exported to ..."
+            last_line = results.decode('utf-8').strip().split("\n")[-1]
+            gcode_location = last_line.split(" exported to ")[1]
+
+        design_bake = {VolumeFile.VOLUME_FILE: volume_file}
+        design_bake.update(argdict)
+        gcode = design(design_bake)
+        gcode.gcode_location = gcode_location
+
+        if isinstance(MODE, Execute):
+            print(f"gcode has been generated, and is available at {gcode_location}")
+
+        return gcode
+    
+    def __str__():
+        setup = '''We used Prusa Slicer'''
+
+class BambuSlicer(Slicer):
+    @staticmethod
+    def slice(volume_file: VolumeFile) -> GCodeFile:
+        argdict = {}
+        gcode_location = ''
+        # TODO prep_cam(argdict)
+        # there is some kind of processing that needs to happen here to encode the arguments into files
+        # because Bambu does not take commandline arguments
+
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            slice_command = [BAMBU_SLICER_LOCATION,
+                            '--debug 2',
+                            '--load-settings "{BAMBU_MACHINE_SETTINGS_LOCATION};{BAMBU_PROCESS_SETTINGS_LOCATION}"',
+                            volume_file]
+            gcode_location = subprocess.check_output(slice_command)
+
+        design_bake = {VolumeFile.VOLUME_FILE: volume_file}
+        design_bake.update(argdict)
+        gcode = design(design_bake)
+        gcode.gcode_location = gcode_location
+
+        if isinstance(MODE, Execute):
+            print(f"gcode has been generated, and is available at {gcode_location}")
+
+        return gcode
+    
+    def __str__():
+        setup = '''We used Bambu Slicer'''
+
 class Printer:
     PRINTER = 'printer'
     SLICER = 'slicer'
 
     default_printer_settings = {
         PRINTER: 'Ultimaker 3',
-        SLICER: Slicer.PrusaSlicer
+        SLICER: PrusaSlicer
     }
 
     @staticmethod
@@ -529,6 +529,8 @@ class Printer:
                         ) -> RealWorldObject:
 
         from control import MODE, Execute
+
+        gcode = ''
 
         if isinstance(MODE, Execute):
             gcode = slicer.slice(volume_file,
