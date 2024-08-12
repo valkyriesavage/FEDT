@@ -18,9 +18,6 @@ class Parallel:
 
     def kind(self):
         return "parallel"
-    
-    def __str__(self):
-        return "the parallel conditions"
 
 
 class Series:
@@ -36,9 +33,6 @@ class Series:
 
     def kind(self):
         return "series"
-    
-    def __str__(self):
-        return "the serial conditions"
 
 
 class Infinite:
@@ -54,9 +48,6 @@ class Infinite:
 
     def kind(self):
         return "infinite"
-    
-    def __str__(self):
-        return "the infinite conditions"
 
 
 A = TypeVar("A")

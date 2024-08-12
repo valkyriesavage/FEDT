@@ -125,9 +125,9 @@ def render_flowchart(capture_function = None):
     flowchart = build_flowchart(xml_root)
 
     # Save the flowchart
-    fname = f'expt_flowcharts/{capture_function.__name__}_flowchart.png'
+    fname = f'expt_flowcharts/{capture_function.__name__}_flowchart'
     flowchart.render(fname, format='png', cleanup=True)
 
     # Display the flowchart
-    Img=Image.open('flowchart-output.png')
-    Img.show()
+    im=Image.open(fname + '.png')
+    im.show()

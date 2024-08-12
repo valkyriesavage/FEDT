@@ -74,7 +74,7 @@ def test_user_assembly_time():
 
     timings = ImmediateMeasurements.empty()
 
-    for user in shuffle(Parallel(range(6))):
+    for user in Parallel(shuffle(range(6))):
         simple_assembly = Printer.slice_and_print(simple)
         complex_assembly = Printer.slice_and_print(complex)
         for assembly in Series([simple_assembly, complex_assembly]):
