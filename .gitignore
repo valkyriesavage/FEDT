@@ -9,3 +9,6 @@
 __pycache__
 .ipynb_checkpoints/*
 expt_svgs/*
+expt_stls/*
+expt_pngs/*
+expt_csvs/*
