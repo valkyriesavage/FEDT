@@ -389,12 +389,12 @@ class Slicer:
 
     default_slicer_settings = {
         MATERIAL: 'PLA',
-        TEMPERATURE: '290 C',
-        NOZZLE: '0.4mm',
-        LAYER_HEIGHT: '0.4mm',
+        TEMPERATURE: '290',
+        NOZZLE: '0.4',
+        LAYER_HEIGHT: '0.4',
         INFILL_PATTERN: 'stars',
         INFILL_DENSITY: '50%',
-        WALL_THICKNESS: '1.2mm',
+        WALL_THICKNESS: '1.2',
         SPEED: '5000',
         BED_HEAT: '60'
     }
@@ -434,12 +434,12 @@ class PrusaSlicer(Slicer):
         instruction(f"slice {volume_file.stl_location} in the slicing software")
         gcode_location = ''
         argdict = {
-            'layer-height': layer_height,
-            'nozzle-diameter': nozzle,
-            'temperature': temperature,
-            'fill-pattern': infill_pattern,
-            'fill-density': infill_density,
-            'perimeters': math.floor(wall_thickness/nozzle)
+            '--layer-height': layer_height,
+            '--nozzle-diameter': nozzle,
+            '--temperature': temperature,
+            '--fill-pattern': infill_pattern,
+            '--fill-density': infill_density,
+            '--perimeters': str(math.floor(float(wall_thickness.strip('mm'))/float(nozzle.strip('mm'))))
         }
 
         from control import MODE, Execute
@@ -448,8 +448,8 @@ class PrusaSlicer(Slicer):
                             '--load', PRUSA_CONFIG_LOCATION]
             for keyval in argdict.items():
                 slice_command.extend(list(keyval))
-            slice_command.extend(['--export-gcode', volume_file])
-            slice_command.extend(['--output-filename-format', 'expt_stls/FEDT_[timestamp]_[input_filename_base].gcode'])
+            slice_command.extend(['--export-gcode', volume_file.stl_location])
+            slice_command.extend(['--output-filename-format', 'FEDT_[timestamp]_[input_filename_base].gcode'])
             results = subprocess.check_output(slice_command)
         
             # the last line from Prusa Slicer is "Slicing result exported to ..."

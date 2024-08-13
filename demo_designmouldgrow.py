@@ -17,7 +17,7 @@ class CustomModellingTool:
     # call the custom modelling tool that they created
     @staticmethod
     def sphere(radius: float=10.) -> VolumeFile:
-        instruction(f"use the custom tool to make a sphere with radius {radius}")
+        instruction(f"use the custom tool to model a sphere with radius {radius}")
         from control import MODE, Execute
         stl_location = ''
         if isinstance(MODE, Execute):
@@ -33,7 +33,6 @@ def mushroom_types():
 def geometric_features():
     shrinkage_results = BatchMeasurements.empty()
     scanning_results = BatchMeasurements.empty()
-    comparison_results = []
 
     geometries = [VolumeFile(x) for x in ['ramps.stl', 'circular.stl', 'patterns.stl']]
 
@@ -71,7 +70,7 @@ def mechanical_and_shrinkage_features():
     mould = Printer.slice_and_print(scaled_mould)
     for myco_material in Series(['30% coffee inclusions', 'no inclusions']): # I can't tell if this was series or parallel
         for repetition in Series(range(4)):
-            fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
+            fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material} ({repetition}th copy from this mould)")
             Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
             shrinkage_results += Calipers.measure_size(fabbed_object, "x-axis")
             shrinkage_results += Calipers.measure_size(fabbed_object, "y-axis")
@@ -79,7 +78,7 @@ def mechanical_and_shrinkage_features():
             for repetition_mechanical in Series(range(5)):
                 for depth in Series(arange(0,5,.5)):
                     instruction("ensure fabbed object is appropriately arranged on testing stand")
-                    fabbed_object = Human.post_process(fabbed_object, "compress the object to " + str(depth)) # not clear who/what does the compressing?
+                    fabbed_object = Human.post_process(fabbed_object, f"compress the object to {str(depth)} ({repetition_mechanical}th time)") # not clear who/what does the compressing?
                     mechanical_results += ForceGauge.measure_force(fabbed_object)           
     
     summarize(shrinkage_results.get_all_data())

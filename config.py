@@ -13,5 +13,5 @@ BAMBU_MACHINE_SETTINGS_LOCATION = '/Users/vwn277/projects/fedtlike/FEDT/machine.
 BAMBU_PROCESS_SETTINGS_LOCATION = '/Users/vwn277/projects/fedtlike/FEDT/process.json'
 
 
-PRUSA_SLICER_LOCATION = '/Applications/PrusaSlicer.app/Contents/MacOS/PrusaSlicer'
+PRUSA_SLICER_LOCATION = '/Applications/Original Prusa Drivers/PrusaSlicer.app/Contents/MacOS/PrusaSlicer'
 PRUSA_CONFIG_LOCATION = '/Users/vwn277/projects/fedtlike/FEDT/config.ini'

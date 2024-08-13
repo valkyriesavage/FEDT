@@ -5,7 +5,6 @@ from fabricate import RealWorldObject
 from dataclasses import dataclass
 from typing import Callable
 from flowchart import FlowChart
-from control import MODE, Execute
 
 
 @dataclass(eq=True, frozen=True)
@@ -61,7 +60,9 @@ class BatchMeasurements:
         return f"Fill out the measurements for objects {list(self.objects)} and measurements {list(self.measurements)}."
 
     def get_all_data(self) -> dict[tuple[Measurement, RealWorldObject], float|str]:
+        from control import MODE, Execute
         if isinstance(MODE, Execute):
+            print("now it's time to get data!")
             experiment_csv = os.path.join("expt_csvs","experiment-{}.csv".format(time.strftime("%Y%m%d-%H%M%S")))
 
             csv_to_obj = {}
@@ -75,10 +76,10 @@ class BatchMeasurements:
             csv_to_obj = dict((obj.uid,obj) for obj in self.objects)
 
             with open(experiment_csv, 'w') as csvfile:
-                spamwriter = csv.writer(csvfile, delimeter=',')
+                spamwriter = csv.writer(csvfile)
                 spamwriter.writerow(columns)
                 for obj in rows:
-                    spamwriter.writerow([obj] + [',']*(len(columns)-1))
+                    spamwriter.writerow([obj] + ['']*(len(columns)-1))
 
             def walk_metadata(obj: RealWorldObject | VirtualWorldObject, ret_val=False):
                 variables = []
@@ -93,17 +94,18 @@ class BatchMeasurements:
                 return variables
 
             # now let's make a key csv that actually maps the object UIDs to the things varied in them
-            object_variables = walk_metadata(self.objects[0]) # TODO : deal with what happens if they don't have the same # of vars?
+
+            object_variables = walk_metadata(list(self.objects)[-1]) # TODO : deal with what happens if they don't have the same # of vars?
 
             key_csv = experiment_csv.replace('.csv','_key.csv')
             with open(key_csv, 'w') as csvfile:
                 spamwriter = csv.writer(csvfile,delimiter=',')
                 spamwriter.writerow(['Label'] + list(object_variables))
-                for obj in self.objects():
-                    spamwriter.writerow([object.uid] + walk_metadata(obj, ret_val=True))
+                for obj in self.objects:
+                    spamwriter.writerow([obj.uid] + walk_metadata(obj, ret_val=True))
 
             # now we have to ask them somehow to actually fill these in?
-            input(f"add the data in {experiment_csv}. the key, if needed, is in {key_csv}.")
+            input(f"Add the data in {experiment_csv}. The key, if needed, is in {key_csv}. Enter when finished.")
             
             # now we need to strip all the answers back _out_ LOL
             recorded_values = {} # dict tuple[Measurement, RealWorldObject], float|str
@@ -139,7 +141,7 @@ class ImmediateMeasurements:
     def dump_to_csv(self):
         if not self.csv:
             self.set_up_csv()
-
+        from control import MODE, Execute
         if not isinstance(MODE, Execute):
             FlowChart().add_note("the collected data will be exported to a csv. the 'key' csv linking labels to features will also be written.")
             return
@@ -188,6 +190,7 @@ class ImmediateMeasurements:
             self.data_points[obj] = obj_blank_dict
         
         measured = ''
+        from control import MODE, Execute
         if isinstance(MODE, Execute):
             measured = input(f"what is the value of {meas} for object #{obj.uid}?")
             self.data_points[obj][meas] = measured

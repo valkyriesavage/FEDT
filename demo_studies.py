@@ -1,3 +1,5 @@
+import control
+from control import Execute, Evaluate
 from instruction import instruction
 from iterators import Parallel, Series, Infinite, shuffle
 from measurement import BatchMeasurements, ImmediateMeasurements
@@ -15,11 +17,11 @@ def summarize(data):
 @fedt_experiment
 def test_print_shrinkage():
 
-    cube = VolumeFile("cube.stl")
+    cube = VolumeFile("expt_stls/cube.stl")
 
     shrinkage_measurements = BatchMeasurements.empty()
 
-    for infill_pattern in Parallel(['trihexagon','line','rectilinear']):
+    for infill_pattern in Parallel(['concentric','line','rectilinear']):
         for repetition in Parallel(range(5)):
             fabbed_object = Printer.slice_and_print(cube,
                                                     infill_pattern=infill_pattern,
@@ -87,4 +89,5 @@ def test_user_assembly_time():
     summarize(timings.dump_to_csv())
 
 if __name__ == "__main__":
-    render_flowchart(test_user_assembly_time)
+    control.MODE = Execute()
+    test_print_shrinkage()
