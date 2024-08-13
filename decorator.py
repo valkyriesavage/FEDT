@@ -145,6 +145,7 @@ def fedt_experiment(f):
     new_code = compile(new_ast, f.__code__.co_filename, "exec")
     new_f = types.FunctionType(new_code.co_consts[0], f.__globals__)
 
+    @wraps(f)
     def new_new_f(*args, **kwargs):
         new_f(*args, **kwargs)
         instructions = FlowChart().node
