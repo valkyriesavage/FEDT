@@ -29,7 +29,7 @@ class UseVariables(ast.NodeTransformer):
         return self.generic_visit(node)
 
 
-class WrapFor(ast.NodeTransformer):
+class FixLoops(ast.NodeTransformer):
 
     def visit_For(self, node):
 
@@ -75,11 +75,7 @@ class WrapFor(ast.NodeTransformer):
             flowchart_call("exit_loop")
         ]
 
-
-# TODO : Harry, help!
-class WrapIf(ast.NodeTransformer):
-
-    def visit_If(self, node):
+    def visit_While(self, node):
 
         def flowchart_call(fname):
             return ast.Expr(
@@ -88,60 +84,105 @@ class WrapIf(ast.NodeTransformer):
                         ast.Call(ast.Name("FlowChart", ast.Load()), [], []),
                         fname, ast.Load()), [], []))
 
-        def instruction_call():
-            return ast.Expr(
-                ast.Call(ast.Name("instruction", ast.Load()),
-                         [ast.Constant("If for TODO"),
-                          ast.Constant(True)], []))
-
-        for n in node.body:
-            self.generic_visit(n)
-
-        return [
-            ast.ImportFrom("flowchart", [ast.alias("FlowChart")], 0),
-            flowchart_call("enter_if"),
-            ast.For(node.target, node.iter, [instruction_call()] + node.body +
-                    [flowchart_call("end_body")], node.orelse,
-                    node.type_comment),
-            flowchart_call("exit_if")
-        ]
-
-
-# TODO : Harry, help!
-class WrapElse(ast.NodeTransformer):
-
-    def visit_Else(self, node):
-
-        def flowchart_call(fname):
+        def enter_loop_call(cond):
+            arg = ast.Constant(cond)
             return ast.Expr(
                 ast.Call(
                     ast.Attribute(
                         ast.Call(ast.Name("FlowChart", ast.Load()), [], []),
-                        fname, ast.Load()), [], []))
+                        "enter_loop", ast.Load()), [arg], []))
 
-        def instruction_call():
-            return ast.Expr(
-                ast.Call(ast.Name("instruction", ast.Load()),
-                         [ast.Constant("Else for TODO"),
-                          ast.Constant(True)], []))
+        def break_if_not_exec():
+            return [
+                ast.ImportFrom("control",
+                               [ast.alias("MODE"),
+                                ast.alias("Execute")], 0),
+                ast.If(
+                    ast.Compare(
+                        ast.Name("MODE", ast.Load()), [ast.NotEq()],
+                        [ast.Call(ast.Name("Execute", ast.Load()), [], [])]),
+                    [ast.Break()], [])
+            ]
 
         for n in node.body:
             self.generic_visit(n)
 
         return [
             ast.ImportFrom("flowchart", [ast.alias("FlowChart")], 0),
-            flowchart_call("enter_else"),
-            ast.For(node.target, node.iter, [instruction_call()] + node.body +
-                    [flowchart_call("end_body")], node.orelse,
-                    node.type_comment),
-            flowchart_call("exit_else")
+            enter_loop_call(ast.unparse(node.test)),
+            ast.While(
+                node.test,
+                node.body + [flowchart_call("end_body")] + break_if_not_exec(),
+                node.orelse),
+            flowchart_call("exit_loop")
         ]
+
+
+# # TODO : Harry, help!
+# class WrapIf(ast.NodeTransformer):
+
+#     def visit_If(self, node):
+
+#         def flowchart_call(fname):
+#             return ast.Expr(
+#                 ast.Call(
+#                     ast.Attribute(
+#                         ast.Call(ast.Name("FlowChart", ast.Load()), [], []),
+#                         fname, ast.Load()), [], []))
+
+#         def instruction_call():
+#             return ast.Expr(
+#                 ast.Call(ast.Name("instruction", ast.Load()),
+#                          [ast.Constant("If for TODO"),
+#                           ast.Constant(True)], []))
+
+#         for n in node.body:
+#             self.generic_visit(n)
+
+#         return [
+#             ast.ImportFrom("flowchart", [ast.alias("FlowChart")], 0),
+#             flowchart_call("enter_if"),
+#             ast.For(node.target, node.iter, [instruction_call()] + node.body +
+#                     [flowchart_call("end_body")], node.orelse,
+#                     node.type_comment),
+#             flowchart_call("exit_if")
+#         ]
+
+# # TODO : Harry, help!
+# class WrapElse(ast.NodeTransformer):
+
+#     def visit_Else(self, node):
+
+#         def flowchart_call(fname):
+#             return ast.Expr(
+#                 ast.Call(
+#                     ast.Attribute(
+#                         ast.Call(ast.Name("FlowChart", ast.Load()), [], []),
+#                         fname, ast.Load()), [], []))
+
+#         def instruction_call():
+#             return ast.Expr(
+#                 ast.Call(ast.Name("instruction", ast.Load()),
+#                          [ast.Constant("Else for TODO"),
+#                           ast.Constant(True)], []))
+
+#         for n in node.body:
+#             self.generic_visit(n)
+
+#         return [
+#             ast.ImportFrom("flowchart", [ast.alias("FlowChart")], 0),
+#             flowchart_call("enter_else"),
+#             ast.For(node.target, node.iter, [instruction_call()] + node.body +
+#                     [flowchart_call("end_body")], node.orelse,
+#                     node.type_comment),
+#             flowchart_call("exit_else")
+#         ]
 
 
 def fedt_experiment(f):
     source = inspect.getsource(f)
     tree = ast.parse(source)
-    new_ast = ast.fix_missing_locations(WrapFor().visit(tree))
+    new_ast = ast.fix_missing_locations(FixLoops().visit(tree))
     new_code = compile(new_ast, f.__code__.co_filename, "exec")
     new_f = types.FunctionType(new_code.co_consts[0], f.__globals__)
 

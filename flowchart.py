@@ -72,10 +72,11 @@ class Series(Node):
 
 @dataclass
 class Infinite(Node):
+    cond: str
     nodes: list[Node]
 
     def toXML(self) -> str:
-        return f"<loop>{''.join(map(lambda x: f'<loop-item>{x.toXML()}</loop-item>', self.nodes))}</loop>"
+        return f"<loop condition=\"{self.cond}\">{''.join(map(lambda x: f'<loop-item>{x.toXML()}</loop-item>', self.nodes))}</loop>"
 
 
 @dataclass
@@ -104,7 +105,7 @@ class FlowChart:
     node: Node = Empty()
     temp_node = Empty()
     temp_nodes: list[Node] = []
-    in_loop: Union[Literal["parallel"], Literal["series"], Literal["infinite"],
+    in_loop: Union[Literal["parallel"], Literal["series"], str,
                    None] = None
     in_if: bool = False
     in_else: bool = False
@@ -138,8 +139,9 @@ class FlowChart:
         else:
             self.node = Seq(self.node, Decis(x))
 
-    def enter_loop(self, kind: Union[Literal["series"], Literal["parallel"], Literal["infinite"]]):
+    def enter_loop(self, kind: Union[Literal["series"], Literal["parallel"], str]):
         self.in_loop = kind
+
 
     def enter_if(self):
         self.in_if = True
@@ -157,8 +159,9 @@ class FlowChart:
                 loop = Series(self.temp_nodes)
             case "parallel":
                 loop = Par(self.temp_nodes)
-            case "infinite":
-                loop = Infinite(self.temp_nodes)
+            case cond:
+                if isinstance(cond, str):
+                    loop = Infinite(cond, self.temp_nodes)
         self.node = Seq(self.node, loop)
         self.temp_nodes = []
         self.in_loop = None
