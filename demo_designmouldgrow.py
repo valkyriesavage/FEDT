@@ -1,5 +1,6 @@
 from numpy import arange
 
+from flowchart_render import render_flowchart
 from instruction import instruction
 from iterators import Series, Parallel
 from measurement import BatchMeasurements
@@ -39,14 +40,14 @@ def geometric_features():
     for geometry_file in Parallel(geometries):
         mould = Printer.slice_and_print(geometry_file)
         for myco_material in Series(['30% coffee inclusions', 'no inclusions']):
-            fabbed_object = Human.mould_mycomaterial(mould, myco_material)
+            fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
             Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
             shrinkage_results += Calipers.measure_size(fabbed_object, "important dimension")
             if geometry_file.stl_location != 'ramps.stl':
                 scan = Scanner.scan(fabbed_object)
                 scanning_results += scan
             if geometry_file.stl_location == 'circular.stl':
-                oneoff_object = Human.mould_mycomaterial(mould, 'no inclusions')
+                oneoff_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
                 oneoff_object = Human.post_process(oneoff_object, 'glycerine treatment')
                 shrinkage_results += Calipers.measure_size(oneoff_object, "important dimension")
                 scanning_results += Scanner.scan(oneoff_object)
@@ -70,13 +71,13 @@ def mechanical_and_shrinkage_features():
     mould = Printer.slice_and_print(scaled_mould)
     for myco_material in Series(['30% coffee inclusions', 'no inclusions']): # I can't tell if this was series or parallel
         for repetition in Series(range(4)):
-            fabbed_object = Human.mould_mycomaterial(mould, myco_material)
+            fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
             Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
             shrinkage_results += Calipers.measure_size(fabbed_object, "x-axis")
             shrinkage_results += Calipers.measure_size(fabbed_object, "y-axis")
             shrinkage_results += Calipers.measure_size(fabbed_object, "z-axis")
             for repetition_mechanical in Series(range(5)):
-                for depth in arange(0,5,.5):
+                for depth in Series(arange(0,5,.5)):
                     instruction("ensure fabbed object is appropriately arranged on testing stand")
                     fabbed_object = Human.post_process(fabbed_object, "compress the object to " + str(depth)) # not clear who/what does the compressing?
                     mechanical_results += ForceGauge.measure_force(fabbed_object)           
@@ -93,7 +94,8 @@ def test_software_tool():
     mould = Printer.slice_and_print(software_generated_mould)
     myco_material = "30% coffee inclusions"
     for repetition in Parallel(range(3)):
-        fabbed_object = Human.mould_mycomaterial(mould, myco_material)
+        fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
+        fabbed_object.metadata.update({'repetition':repetition})
         Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
         measurement_points = range(0,90,45)
         for x_axis_point in measurement_points:
@@ -107,4 +109,4 @@ def test_software_tool():
 
 
 if __name__ == "__main__":
-    print(mechanical_and_shrinkage_features())
+    render_flowchart(mechanical_and_shrinkage_features)

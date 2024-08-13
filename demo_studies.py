@@ -2,6 +2,7 @@ from instruction import instruction
 from iterators import Parallel, Series, Infinite, shuffle
 from measurement import BatchMeasurements, ImmediateMeasurements
 from fabricate import RealWorldObject
+from flowchart_render import render_flowchart
 from decorator import fedt_experiment
 from lib import *
 from itertools import tee
@@ -20,7 +21,9 @@ def test_print_shrinkage():
 
     for infill_pattern in Parallel(['trihexagon','line','rectilinear']):
         for repetition in Parallel(range(5)):
-            fabbed_object = Printer.slice_and_print(cube, infill_pattern=infill_pattern)
+            fabbed_object = Printer.slice_and_print(cube,
+                                                    infill_pattern=infill_pattern,
+                                                    repetition=repetition)
             shrinkage_measurements += Calipers.measure_size(fabbed_object, "x-axis")
             shrinkage_measurements += Calipers.measure_size(fabbed_object, "y-axis")
             shrinkage_measurements += Calipers.measure_size(fabbed_object, "z-axis")
@@ -41,7 +44,7 @@ def test_force_at_break():
 
     breakage_points = BatchMeasurements.empty()
 
-    for rect_length in shuffle(Parallel(range(50,100,10))):
+    for rect_length in Parallel(range(50,100,10)):
         svg = SvgEditor.build_geometry(draw_rect, CAD_vars={'rect_length':rect_length})
         #svg = SvgEditor.design(vars={'rect_length':rect_length})
         print(Laser.default_laser_settings)
@@ -77,12 +80,11 @@ def test_user_assembly_time():
     for user in Parallel(shuffle(range(6))):
         simple_assembly = Printer.slice_and_print(simple)
         complex_assembly = Printer.slice_and_print(complex)
-        for assembly in Series([simple_assembly, complex_assembly]):
+        for assembly in Series([simple_assembly, complex_assembly]): # TODO would be nice to have counterbalancing
             assembly = User.do(assembly, "solve the assembly", user)
             timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
 
     summarize(timings.dump_to_csv())
 
 if __name__ == "__main__":
-    from flowchart_render import render_flowchart
     render_flowchart(test_user_assembly_time)

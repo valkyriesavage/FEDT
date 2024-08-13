@@ -261,13 +261,13 @@ class Laser:
         all_settings = {}
         all_settings.update(kwargs)
         all_settings.update(explicit_args)
-        instruction(f"Run the laser cutter and cut file {line_file.svg_location} with settings {all_settings}")
 
         stored_values = {"line_file": line_file}
         stored_values.update(explicit_args)
         stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
 
         fabbed = fabricate(stored_values)
+        instruction(f"Run the laser cutter and cut file {line_file.svg_location} with settings {all_settings}, creating object #{fabbed.uid}")
 
         if isinstance(MODE, Execute):
             print(f"object number {fabbed.uid} has been fabricated!")
@@ -544,8 +544,6 @@ class Printer:
                         material=material,
                         **kwargs)
             Printer.print(gcode)
-        instruction("Slice the file.")
-        instruction("Run the printer.")
 
         stored_values = {GCodeFile.GCODE_FILE: gcode}
         if explicit_args:
@@ -554,6 +552,8 @@ class Printer:
             stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
 
         fabbed =  fabricate(stored_values)
+        instruction("Slice the file.")
+        instruction(f"Run the printer, creating object #{fabbed.uid}")
 
         if isinstance(MODE, Execute):
             print(f"object #{fabbed.uid} has been fabricated!")
@@ -909,21 +909,15 @@ class Human:
     @staticmethod
     def post_process(obj: RealWorldObject,
                      action: str) -> RealWorldObject:
-        instruction("do " + action + f" to object #{obj.uid}")
+        instruction(f"do {action} to object #{obj.uid}")
         versions = []
         if VERSIONS in obj.metadata:
             versions = obj.metadata[VERSIONS]
             versions.append(obj)
         new_obj = fabricate(obj.metadata)
+        instruction(f"(this creates a new version of #{obj.uid}, which we call object #{new_obj.uid})")
         new_obj.metadata.update({VERSIONS: versions, "post-process": action})
         return new_obj
-    
-    @staticmethod
-    def mould_mycomaterial(obj: RealWorldObject,
-                            type: str) -> RealWorldObject:
-        instruction(f"mould {type} mycomaterial from mould #{obj.uid}")
-        obj.metadata.update({"mycomaterial":type})
-        return obj
     
     @staticmethod
     def is_reasonable(obj: RealWorldObject):
@@ -936,7 +930,7 @@ class Human:
     @staticmethod
     def __str__():
         # TODO how to track which ones?
-        setup = '''We manually performed some steps. ???? HOW TO TRACK WHICH ONES ????'''
+        setup = '''We manually performed some steps.'''
         return setup
 
     def __repr__(self):

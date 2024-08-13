@@ -84,7 +84,9 @@ def test_laser_power_and_speed():
     for cut_speed in Parallel(speeds):
       for cut_power in Parallel(powers):
           for repetition in Parallel(range(4)):
-            fabbed_object = Laser.fab(line_file, setting_names, cut_speed, cut_power, color_to_setting=Laser.SvgColor.GREEN)
+            fabbed_object = Laser.fab(line_file, setting_names, cut_speed, cut_power,
+                                      color_to_setting=Laser.SvgColor.GREEN,
+                                      repetition=repetition)
             resistance = Multimeter.measure_resistance(fabbed_object)
             results += resistance
     summarize(results.get_all_data())
@@ -109,7 +111,7 @@ def test_change_over_time():
     fabbed_objects = []
     for post_process_condition in Parallel(['varnished','unvarnished']):
         for repetition in Parallel(range(4)):
-            fabbed_object = Laser.fab(line_file)
+            fabbed_object = Laser.fab(line_file, repetition=repetition)
             fabbed_objects.append(Human.post_process(fabbed_object, post_process_condition))
     results = BatchMeasurements.empty()
     for wait_months in Series(range(1, 6)):
