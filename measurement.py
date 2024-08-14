@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Callable
 from flowchart import FlowChart
 
+from control import MODE, Execute
 
 @dataclass(eq=True, frozen=True)
 class Measurement:

@@ -240,6 +240,7 @@ class Laser:
             color_to_setting: SvgColor = SvgColor.GREEN,
             focal_height_mm: int = default_laser_settings[FOCAL_HEIGHT_MM],
             mapping_file: str = None,
+            default_settings: dict = None,
             explicit_args = None,
             **kwargs
             ) -> RealWorldObject:
@@ -364,7 +365,7 @@ class SvgEditor:
         virtual_object.svg_location = svg_fullpath
 
         if isinstance(MODE, Execute):
-            print(f"svg has been generated, and is available at {svg_location}")
+            print(f"svg has been generated, and is available at {svg_fullpath}")
 
         return virtual_object
     
@@ -606,7 +607,7 @@ class StlEditor:
         versions = []
         if VERSIONS in stl.metadata:
             versions = stl.metadata[VERSIONS]
-            versions.append(stl)
+        versions.append(stl)
         new_obj = design(stl.metadata)
         new_obj.stl_location = stl_location
         new_obj.metadata.update({VERSIONS: versions, HAND_EDIT: specification})
@@ -627,11 +628,10 @@ class StlEditor:
     @staticmethod
     def extract_profile(volume_file: VolumeFile,
                         location: tuple=(0,0,0,0,0,0)) -> LineFile:
-        instruction(f'extract an svg profile of {volume_file.stl_location} at location {location}')
+        instruction(f'extract an svg profile of {volume_file.stl_location} at location {location}',who=Human)
         from control import MODE, Execute
         svg_location = ''
         if isinstance(MODE, Execute):
-            print(f'extract an svg profile of {volume_file.stl_location} at location {location}')
             svg_location = input("what is the location of the svg profile?")
         return LineFile(svg_location)
     
@@ -656,7 +656,7 @@ class StlEditor:
     def modify_feature_by_hand(volume_file:VolumeFile,
                                feature_name: str,
                                feature_value: str|float) -> VolumeFile:
-        instruction(f'modify the file {volume_file.stl_location} to have feature {feature_name} with value {feature_value}')
+        instruction(f'modify the file {volume_file.stl_location} to have feature {feature_name} with value {feature_value}', who=Human)
         from control import MODE, Execute
         stl_location = volume_file.stl_location
         versions = []
@@ -673,7 +673,7 @@ class StlEditor:
     @staticmethod
     def extract_2D_profile(volume_file: VolumeFile,
                         feature_name: str) -> LineFile:
-        instruction(f'extract an svg profile from {volume_file.stl_location} of {feature_name}')
+        instruction(f'extract an svg profile from {volume_file.stl_location} of {feature_name}', who=Human)
         from control import MODE, Execute
         svg_location = ''
         if isinstance(MODE, Execute):
@@ -941,7 +941,7 @@ class User:
     @staticmethod
     def do(obj: RealWorldObject, instr: str, user_id: int):
         instr = f"User #{user_id} does {instr}"
-        instruction(instr)
+        instruction(instr, who=Human)
         USER_DID = f"user did"
         if USER_DID in obj.metadata:
             instr = obj.metadata[USER_DID] + ", then " + instr

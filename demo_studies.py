@@ -40,22 +40,16 @@ def test_force_at_break():
         d.append(draw.Rectangle(-40, -10, length, 20,
                 fill='none', stroke_width=1, stroke='red'))
 
-    print(Laser.default_laser_settings)
-    Laser.default_laser_settings[Laser.MATERIAL] = 'wood' # TODO: why doesn't this work?
-    print(Laser.default_laser_settings)
-
     breakage_points = BatchMeasurements.empty()
 
     for rect_length in Parallel(range(50,100,10)):
         svg = SvgEditor.build_geometry(draw_rect, CAD_vars={'rect_length':rect_length})
         #svg = SvgEditor.design(vars={'rect_length':rect_length})
-        print(Laser.default_laser_settings)
         for material in Parallel(['wood','acrylic']):
-            fabbed_object = Laser.fab(svg)#, material=material)
-            print(Laser.default_laser_settings)
+            fabbed_object = Laser.fab(svg, material=material)
             instruction("place the object with 1cm overlapping a shelf at each end and the remainder suspended")
             instruction("place weights on the object until it breaks")
-            breakage_points += Scale.measure_weight(fabbed_object,"weight placed at break")
+            breakage_points += Scale.measure_weight(fabbed_object,"total weight placed at break")
     
     summarize(breakage_points.get_all_data())
 
@@ -101,5 +95,7 @@ def test_user_assembly_time():
     summarize(timings.dump_to_csv())
 
 if __name__ == "__main__":
-    control.MODE = Execute()
-    test_print_shrinkage()
+    from control import MODE, Execute
+    #control.MODE = Execute()
+    test_user_assembly_time()
+    render_flowchart(test_user_assembly_time)

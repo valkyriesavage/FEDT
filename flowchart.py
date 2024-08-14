@@ -28,13 +28,18 @@ class Seq(Node):
 @dataclass
 class Instr(Node):
     instr: str
+    other: dict = None
 
     def toXML(self) -> str:
         return f"<instruction>{self.instr}</instruction>"
+    
+    def toLatex(self) -> str:
+        return str(self.other)
 
 @dataclass
 class Note(Node):
     instr: str
+    other: dict = None
 
     def toXML(self) -> str:
         return f"<note>{self.instr}</note>"
@@ -50,6 +55,7 @@ class Decis(Node):
 @dataclass
 class Header(Node):
     header: str
+    other: dict = None
 
     def toXML(self) -> str:
         return f"<header>{self.header}</header>"
@@ -118,14 +124,14 @@ class FlowChart:
         self.in_if = False
         self.in_else = False
 
-    def add_instruction(self, x: str, header=False):
+    def add_instruction(self, x: str, header=False, **kwargs):
         if self.in_loop:
             self.temp_node = Seq(self.temp_node,
                                  Instr(x) if not header else Header(x))
         else:
             self.node = Seq(self.node, Instr(x))
 
-    def add_note(self, x: str):
+    def add_note(self, x: str, **kwargs):
         if self.in_loop:
             self.temp_node = Seq(self.temp_node,
                                  Note(x))
