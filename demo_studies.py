@@ -79,13 +79,25 @@ def test_user_assembly_time():
 
     timings = ImmediateMeasurements.empty()
 
-    for user in Parallel(shuffle(range(6))):
+    # HG: For now I implemented this counterbalancing manually --- we can provide library functions,
+    # but this is all really just Python so we could also advertise the flexibility to define your
+    # own strategies as a feature...
+    treatments = shuffle(["simple_first"] * 3 + ["complex_first"] * 3)
+
+    for (user, treatment) in Parallel(enumerate(treatments)):
         simple_assembly = Printer.slice_and_print(simple)
         complex_assembly = Printer.slice_and_print(complex)
-        for assembly in Series([simple_assembly, complex_assembly]): # TODO would be nice to have counterbalancing
-            assembly = User.do(assembly, "solve the assembly", user)
+        if treatment == "simple_first":
+            assembly = User.do(simple_assembly, "solve the assembly", user)
             timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
-
+            assembly = User.do(complex_assembly, "solve the assembly", user)
+            timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
+        else:
+            assembly = User.do(complex_assembly, "solve the assembly", user)
+            timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
+            assembly = User.do(simple_assembly, "solve the assembly", user)
+            timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
+            
     summarize(timings.dump_to_csv())
 
 if __name__ == "__main__":
