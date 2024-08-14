@@ -58,9 +58,12 @@ def test_paint_layers():
     flower = Laser.fab(LineFile('flower.svg'), material='delrin')
 
     photos = ImmediateMeasurements.empty()
+    is_reasonable = False
     for coats_of_paint in Series(range(1,20)):#while Infinite(coats_of_paint += 1): # TODO implement properly with infinite
         photos += Camera.take_picture(flower)
-        if Human.is_reasonable(flower):
+        flower = Human.is_reasonable(flower)
+        is_reasonable = flower.metadata['human reasonableness check']
+        if is_reasonable:
             break
         flower = Human.post_process(flower, f"add a {coats_of_paint}th coat of paint")
 
@@ -73,9 +76,6 @@ def test_user_assembly_time():
 
     timings = ImmediateMeasurements.empty()
 
-    # HG: For now I implemented this counterbalancing manually --- we can provide library functions,
-    # but this is all really just Python so we could also advertise the flexibility to define your
-    # own strategies as a feature...
     treatments = shuffle(["simple_first"] * 3 + ["complex_first"] * 3)
 
     for (user, treatment) in Parallel(enumerate(treatments)):
@@ -97,5 +97,5 @@ def test_user_assembly_time():
 if __name__ == "__main__":
     from control import MODE, Execute
     #control.MODE = Execute()
-    test_user_assembly_time()
-    render_flowchart(test_user_assembly_time)
+    #test_user_assembly_time()
+    render_flowchart(test_force_at_break)

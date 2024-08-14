@@ -366,6 +366,8 @@ class SvgEditor:
 
         if isinstance(MODE, Execute):
             print(f"svg has been generated, and is available at {svg_fullpath}")
+        else:
+            instruction(f"generate svg file with function {geometry_function.__name__} {CAD_vars} {kwargs}")
 
         return virtual_object
     
@@ -553,7 +555,10 @@ class Printer:
             stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
 
         fabbed =  fabricate(stored_values)
-        instruction("Slice the file.")
+        if volume_file.stl_location == '':
+            instruction("Slice the file.")
+        else:
+            instruction(f"Slice {volume_file.stl_location}.")
         instruction(f"Run the printer, creating object #{fabbed.uid}")
 
         if isinstance(MODE, Execute):
