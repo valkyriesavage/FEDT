@@ -1,13 +1,11 @@
 import control
 from control import Execute, Evaluate
 from instruction import instruction
-from iterators import Parallel, Series, Infinite, shuffle
+from iterators import Parallel, Series, shuffle
 from measurement import BatchMeasurements, ImmediateMeasurements
-from fabricate import RealWorldObject
 from flowchart_render import render_flowchart
 from decorator import fedt_experiment
 from lib import *
-from itertools import tee
 
 
 def summarize(data):
@@ -43,8 +41,8 @@ def test_force_at_break():
     breakage_points = BatchMeasurements.empty()
 
     for rect_length in Parallel(range(50,100,10)):
-        svg = SvgEditor.build_geometry(draw_rect, CAD_vars={'rect_length':rect_length})
-        #svg = SvgEditor.design(vars={'rect_length':rect_length})
+        #svg = SvgEditor.build_geometry(draw_rect, CAD_vars={'rect_length':rect_length})
+        svg = SvgEditor.design(vars={'rect_length':rect_length})
         for material in Parallel(['wood','acrylic']):
             fabbed_object = Laser.fab(svg, material=material)
             instruction("place the object with 1cm overlapping a shelf at each end and the remainder suspended")
@@ -59,12 +57,14 @@ def test_paint_layers():
 
     photos = ImmediateMeasurements.empty()
     is_reasonable = False
-    for coats_of_paint in Series(range(1,20)):#while Infinite(coats_of_paint += 1): # TODO implement properly with infinite
-        photos += Camera.take_picture(flower)
+    coats_of_paint = 0
+    while not is_reasonable: # TODO implement properly with while
         flower = Human.is_reasonable(flower)
+        photos += Camera.take_picture(flower)
         is_reasonable = flower.metadata['human reasonableness check']
         if is_reasonable:
             break
+        coats_of_paint = coats_of_paint + 1
         flower = Human.post_process(flower, f"add a {coats_of_paint}th coat of paint")
 
     summarize(photos.dump_to_csv())
@@ -98,4 +98,4 @@ if __name__ == "__main__":
     from control import MODE, Execute
     #control.MODE = Execute()
     #test_user_assembly_time()
-    render_flowchart(test_force_at_break)
+    render_flowchart(test_paint_layers)

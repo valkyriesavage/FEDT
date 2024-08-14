@@ -57,7 +57,7 @@ def test_optimal_number_of_scans():
     results = BatchMeasurements.empty()
     resistance = None
     best_result = None
-    for num_scans in Infinite(0): # TODO fix this
+    for num_scans in Infinite(0): # TODO implement with while
         fabbed_object = Laser.fab(line_file, num_scans=num_scans)
         resistance = Multimeter.measure_resistance(fabbed_object)
         results += resistance
