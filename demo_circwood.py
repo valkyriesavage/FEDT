@@ -6,8 +6,9 @@ import control
 from control import Execute, Evaluate
 from instruction import instruction
 from iterators import Parallel, Series, Infinite, include_last
-from measurement import BatchMeasurements
+from measurement import BatchMeasurements, ImmediateMeasurements
 from fabricate import RealWorldObject
+from flowchart_render import render_flowchart
 from decorator import fedt_experiment
 from lib import *
 
@@ -29,8 +30,8 @@ def test_materials():
         for coating in Parallel(coatings):
             instruction(f"get a piece of {material} with coating {coating}")
             fabbed_objects.append(Laser.fab(line_file, material=material, coating=coating))
-            # not completely sure how to capture what they did here... it seems like
-            # they did some experimentation, but it's not really documented?
+            # not completely sure how to capture what was done here... it seems like
+            # there was some experimentation, but it's not really documented
     results = BatchMeasurements.empty()
     for fabbed_object in Parallel(fabbed_objects):
         results += Multimeter.measure_resistance(fabbed_object)
@@ -54,22 +55,23 @@ def test_height_vs_focal_point():
 @fedt_experiment
 def test_optimal_number_of_scans():
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
-    results = BatchMeasurements.empty()
+    results = ImmediateMeasurements.empty()
     resistance = None
     best_result = None
-    for num_scans in Infinite(0): # TODO implement with while
+    for num_scans in Series(range(20)): # TODO implement with while
         fabbed_object = Laser.fab(line_file, num_scans=num_scans)
-        resistance = Multimeter.measure_resistance(fabbed_object)
-        results += resistance
+        resistance = results.do_measure(fabbed_object, Multimeter.resistance)
+        if resistance:
+            resistance = float(resistance)
         if not best_result:
             best_result = resistance
-        if Multimeter.lower_resistance(resistance, best_result):
+        if resistance < best_result:
             # we are getting better
             best_result = resistance
         else:
             # we are getting worse
             break
-    data = results.get_all_data()
+    data = results.dump_to_csv()
     return summarize(data)
 
 @fedt_experiment
@@ -123,4 +125,4 @@ def test_change_over_time():
 if __name__ == "__main__":
     #control.MODE = Execute()
     Laser.default_laser_settings[Laser.MATERIAL] = 'wood'
-    print(test_optimal_number_of_scans())
+    render_flowchart(test_optimal_number_of_scans)

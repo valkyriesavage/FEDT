@@ -3,6 +3,7 @@ from control import Execute, Evaluate
 from instruction import instruction
 from iterators import Parallel, Series, shuffle
 from measurement import BatchMeasurements, ImmediateMeasurements
+from flowchart import FlowChart
 from flowchart_render import render_flowchart
 from decorator import fedt_experiment
 from lib import *
@@ -60,7 +61,7 @@ def test_paint_layers():
     coats_of_paint = 0
     while not is_reasonable: # TODO implement properly with while
         flower = Human.is_reasonable(flower)
-        photos += Camera.take_picture(flower)
+        photos.do_measure(flower, Camera.image)
         is_reasonable = flower.metadata['human reasonableness check']
         if is_reasonable:
             break
@@ -95,7 +96,13 @@ def test_user_assembly_time():
     summarize(timings.dump_to_csv())
 
 if __name__ == "__main__":
-    from control import MODE, Execute
+    # create a flowchart
+    #render_flowchart(test_paint_layers)
+
+    # run an experiment
+    #from control import MODE, Execute
     #control.MODE = Execute()
-    #test_user_assembly_time()
-    render_flowchart(test_paint_layers)
+    test_user_assembly_time()
+
+    # render a LaTeX description
+    print(FlowChart().to_latex())

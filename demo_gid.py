@@ -7,6 +7,7 @@ from iterators import Series, Parallel, include_last
 from measurement import BatchMeasurements
 from design import VolumeFile
 from decorator import fedt_experiment
+from flowchart_render import render_flowchart
 from lib import *
 
 def summarize(data):
@@ -75,10 +76,10 @@ def random_param_set():
     infill_pattern = random.choice(['trihexagon','triangular','grid'])
     infill_rotation_range = None
     if infill_pattern in ['trihexagon', 'triangular']:
-        infill_rotation_range = arange(0,60+include_last,1) # or was it arange(0,6+include_last,1) ?
+        infill_rotation_range = arange(0,60,1)
     else: # if it's grid
-        infill_rotation_range = arange(0,90+include_last,1)
-    return (random.choice(arange(0,180+include_last,5)), # bottom angle
+        infill_rotation_range = arange(0,90,1)
+    return (random.choice(arange(0,180,5)), # bottom angle
             random.choice(arange(0.35,0.6+include_last,.05)), # bottom width
             infill_pattern, # infill pattern
             random.choice(infill_rotation_range), # infill rotation
@@ -106,7 +107,6 @@ def cross_validation():
         fabbed_object = Human.post_process(fabbed_object, "hold a light above the object") # I'm assuming this happened
         all_object_results += Camera.take_picture(fabbed_object, "bottom")
 
-    # some kind of identification post-processing happens (not mocked)
     summarize(all_object_results.get_all_data())
 
 @fedt_experiment
@@ -115,7 +115,7 @@ def materials_lighting_thicknesses():
     filament_colors = ['red', 'yellow', 'blue', 'orange', 'green', 'purple', 'black', 'white']
     bottom_line_angles = list(arange(0,180+include_last,(180-0)/6)) # evenly spaced for 6 types of prints?
     bottom_line_widths = list(arange(0.35,0.6+include_last,(.6-.35)/6)) # evenly spaced for 6 types of prints? : doesn't conform to table
-    light_intensities = arange(0,500+include_last,10) # unclear what step size was used
+    light_intensities = arange(0,500+include_last,10) # unclear what step size was used, or if discrete values were used?
 
     lighted_photos = BatchMeasurements.empty()
 
@@ -196,4 +196,4 @@ def camera_angle():
 
 
 if __name__ == "__main__":
-    print(find_bottom_spacings())
+    render_flowchart(cross_validation)

@@ -178,7 +178,7 @@ class ImmediateMeasurements:
 
         print(f"all the data are in {self.csv}. the key for labelled objects is in {key_csv}.")
 
-    def do(self, obj: RealWorldObject, meas: Measurement) -> "ImmediateMeasurements":
+    def do_measure(self, obj: RealWorldObject, meas: Measurement) -> "ImmediateMeasurements":
         if not meas in self.measurements:
             self.measurements.append(meas)
             for row in self.data_points.values():
@@ -200,7 +200,7 @@ class ImmediateMeasurements:
         return measured
 
     def __add__(self, other: "BatchMeasurements") -> "ImmediateMeasurements":
-        self.do(other.objects.pop(), other.measurements.pop()) # TODO I.... don't like this :joy:
+        self.do_measure(other.objects.pop(), other.measurements.pop()) # TODO I.... don't like this :joy:
         return self
 
     def get_all_data(self) -> dict[tuple[Measurement, RealWorldObject], float|str]:
