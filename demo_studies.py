@@ -92,6 +92,8 @@ def test_user_assembly_time():
             timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
             assembly = User.do(simple_assembly, "solve the assembly", user)
             timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
+
+    #print(FlowChart().to_latex())
             
     summarize(timings.dump_to_csv())
 
@@ -102,7 +104,7 @@ if __name__ == "__main__":
     # run an experiment
     #from control import MODE, Execute
     #control.MODE = Execute()
-    test_user_assembly_time()
+    print(test_user_assembly_time())
 
     # render a LaTeX description
-    print(FlowChart().to_latex())
+    #print(FlowChart().to_latex())

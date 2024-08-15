@@ -8,7 +8,7 @@ import random
 import subprocess
 from zipfile import ZipFile
 
-from decision import decision
+from flowchart import SUBJECT, VERB, OBJECT, SETTINGS, FABBED_SOMETHING
 from instruction import instruction
 from measurement import Measurement, BatchMeasurements
 from fabricate import fabricate, RealWorldObject
@@ -259,23 +259,32 @@ class Laser:
                             mapping_file=mapping_file,
                             focal_height_mm=focal_height_mm)
         
-        all_settings = {}
-        all_settings.update(kwargs)
-        all_settings.update(explicit_args)
+        user_chosen_settings = {}
+        user_chosen_settings.update(kwargs)
+        user_chosen_settings.update(explicit_args)
+
+        all_settings = dict(Laser.default_laser_settings)
+        all_settings.update(dict(user_chosen_settings))
 
         stored_values = {"line_file": line_file}
         stored_values.update(explicit_args)
         stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
 
         fabbed = fabricate(stored_values)
-        instruction(f"Run the laser cutter and cut file {line_file.svg_location} with settings {all_settings}, creating object #{fabbed.uid}")
+        instruction(f"Run the laser cutter and cut file {line_file.svg_location} with settings {user_chosen_settings}, creating object #{fabbed.uid}",
+                    latex_details = {SUBJECT: Laser,
+                                        VERB: 'cut',
+                                        OBJECT: line_file,
+                                        SETTINGS: all_settings,
+                                        FABBED_SOMETHING: True}) # TODO confirm this is correct
 
         if isinstance(MODE, Execute):
             print(f"object number {fabbed.uid} has been fabricated!")
 
         return fabbed
-    
-    def __str__():
+
+    @staticmethod    
+    def describe():
         setup = '''We used a {machine} with bed size {bedsize} and Visicut. Our default settings were {defaults}.'''.format(
                 **{
                     'machine': str(Laser.default_laser_settings[Laser.LASERDEVICE]),
@@ -286,9 +295,6 @@ class Laser:
                 })
         return setup
 
-    def __repr__(self):
-        return str(self)
-
 class SvgEditor:
 
     laser_bed = Laser.default_laser_settings[Laser.LASER_BED]
@@ -296,11 +302,19 @@ class SvgEditor:
     @staticmethod
     def design(specification: str=None, vars: dict=None) -> LineFile:
         if specification:
-            instruction(f"Design an svg file like {specification}")
+            instruction(f"Design an svg file like {specification}",
+                    latex_details = {SUBJECT: "Authors",
+                                        VERB: 'designed a line file',
+                                        SETTINGS: specification})
         elif vars:
-            instruction(f"Design an svg file like {vars}")
+            instruction(f"Design an svg file like {vars}",
+                    latex_details = {SUBJECT: "Authors",
+                                        VERB: 'designed a line file',
+                                        SETTINGS: vars})
         else:
-            instruction("Get the svg file from the website.")
+            instruction("Get the svg file from the website.",
+                    latex_details = {SUBJECT: "Authors",
+                                        VERB: 'used a premade SVG'})
         location = "...."
         from control import MODE, Execute
         if isinstance(MODE, Execute):
@@ -367,17 +381,17 @@ class SvgEditor:
         if isinstance(MODE, Execute):
             print(f"svg has been generated, and is available at {svg_fullpath}")
         else:
-            instruction(f"generate svg file with function {geometry_function.__name__} {CAD_vars} {kwargs}")
+            instruction(f"generate svg file with function {geometry_function.__name__} {CAD_vars} {kwargs}",
+                            latex_details = {SUBJECT: SvgEditor,
+                                                VERB: 'generated a line file',
+                                                SETTINGS: stored_values})
 
         return virtual_object
     
     @staticmethod
-    def __str__():
+    def describe():
         setup = '''We used drawsvg to create our geometries.'''
         return setup
-
-    def __repr__(self):
-        return str(self)
 
 class Slicer:
     MATERIAL = 'material'
@@ -406,7 +420,12 @@ class Slicer:
     def slice(volume_file: VolumeFile,
               **kwargs) -> GCodeFile:
 
-        instruction(f"slice {volume_file.stl_location} in the slicing software with settings {kwargs}")
+        instruction(f"slice {volume_file.stl_location} in the slicing software with settings {kwargs}",
+                    latex_details = {SUBJECT: Slicer,
+                                        VERB: 'sliced',
+                                        OBJECT: volume_file,
+                                        SETTINGS: kwargs,
+                                        FABBED_SOMETHING: False})
         from control import MODE, Execute
         gcode_location = ''
         if isinstance(MODE, Execute):
@@ -416,12 +435,10 @@ class Slicer:
         gcode_file.metadata.update(kwargs)
         gcode_file.gcode_location = gcode_location
         return gcode_file
-        
-    def __str__():
-        setup = '''We used a slicer software'''
 
-    def __repr__(self):
-        return str(self)
+    @staticmethod
+    def describe():
+        return '''A slicer software'''
 
 class PrusaSlicer(Slicer):
     @staticmethod
@@ -434,7 +451,6 @@ class PrusaSlicer(Slicer):
                 wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
                 material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
                 **kwargs) -> GCodeFile:
-        instruction(f"slice {volume_file.stl_location} in the slicing software")
         gcode_location = ''
         argdict = {
             '--layer-height': layer_height,
@@ -468,9 +484,10 @@ class PrusaSlicer(Slicer):
             print(f"gcode has been generated, and is available at {gcode_location}")
 
         return gcode
-    
-    def __str__():
-        setup = '''We used Prusa Slicer'''
+
+    @staticmethod      
+    def describe():
+        return '''Prusa Slicer'''
 
 class BambuSlicer(Slicer):
     @staticmethod
@@ -498,9 +515,10 @@ class BambuSlicer(Slicer):
             print(f"gcode has been generated, and is available at {gcode_location}")
 
         return gcode
-    
-    def __str__():
-        setup = '''We used Bambu Slicer'''
+
+    @staticmethod
+    def describe():
+        return '''Bambu Slicer'''
 
 class Printer:
     PRINTER = 'printer'
@@ -535,17 +553,17 @@ class Printer:
 
         gcode = ''
 
+        gcode = slicer.slice(volume_file,
+                    printer=printer,
+                    temperature=temperature,
+                    nozzle=nozzle,
+                    layer_height=layer_height,
+                    infill_pattern=infill_pattern,
+                    infill_density=infill_density,
+                    wall_thickness=wall_thickness,
+                    material=material,
+                    **kwargs)
         if isinstance(MODE, Execute):
-            gcode = slicer.slice(volume_file,
-                        printer=printer,
-                        temperature=temperature,
-                        nozzle=nozzle,
-                        layer_height=layer_height,
-                        infill_pattern=infill_pattern,
-                        infill_density=infill_density,
-                        wall_thickness=wall_thickness,
-                        material=material,
-                        **kwargs)
             Printer.print(gcode)
 
         stored_values = {GCodeFile.GCODE_FILE: gcode}
@@ -556,18 +574,32 @@ class Printer:
 
         fabbed =  fabricate(stored_values)
         if volume_file.stl_location == '':
-            instruction("Slice the file.")
+            instruction("Slice the file.",
+                        latex_details = {SUBJECT: "Authors",
+                                            VERB: 'sliced',
+                                            OBJECT: volume_file,
+                                            SETTINGS: stored_values})
         else:
-            instruction(f"Slice {volume_file.stl_location}.")
-        instruction(f"Run the printer, creating object #{fabbed.uid}")
+            instruction(f"Slice {volume_file.stl_location}.",
+                        latex_details = {SUBJECT: "Authors",
+                                            VERB: 'sliced',
+                                            OBJECT: volume_file,
+                                            SETTINGS: stored_values})
+        instruction(f"Run the printer, creating object #{fabbed.uid}",
+                            latex_details = {SUBJECT: Printer,
+                                                VERB: 'printed',
+                                                OBJECT: volume_file,
+                                                SETTINGS: stored_values,
+                                                FABBED_SOMETHING: True})
 
         if isinstance(MODE, Execute):
             print(f"object #{fabbed.uid} has been fabricated!")
         
         return fabbed
     
-    def __str__():
-        setup = '''We used a {machine}, which we controlled through {slicer}. Our default settings were {defaults}.'''.format(
+    @staticmethod  
+    def describe():
+        setup = '''We used a {machine}. Our default settings were {defaults}.'''.format(
                 **{
                     'machine': str(Printer.default_printer_settings[Printer.PRINTER]),
                     'bedsize': str(Printer.default_printer_settings[Printer.SLICER]),
@@ -575,9 +607,6 @@ class Printer:
                                                                                  Slicer.default_slicer_settings.values())])
                 })
         return setup
-
-    def __repr__(self):
-        return str(self)
 
 class StlEditor:
 
@@ -688,12 +717,9 @@ class StlEditor:
         return extracted
 
     @staticmethod
-    def __str__():
+    def describe():
         setup = '''We used FreeCAD to manipulate our STL files.'''
         return setup
-
-    def __repr__(self):
-        return str(self)
 
 class Multimeter:
     resistance = Measurement(
@@ -926,20 +952,18 @@ class Human:
     
     @staticmethod
     def is_reasonable(obj: RealWorldObject):
-        if decision(f"does object #{obj.uid} look reasonable?"):
-            obj.metadata.update({"human reasonableness check": True}) # TODO no idea how to encode this
+        if Human.do_and_respond(f"check if object #{obj.uid} looks reasonable",
+                                "does it look reasonable?"):
+            obj.metadata.update({"human reasonableness check": True})
         else:
             obj.metadata.update({"human reasonableness check": False})
         return obj
 
     @staticmethod
-    def __str__():
+    def describe():
         # TODO how to track which ones?
         setup = '''We manually performed some steps.'''
         return setup
-
-    def __repr__(self):
-        return str(self)
 
 class User:
 
@@ -954,12 +978,9 @@ class User:
         return obj
 
     @staticmethod
-    def __str__():
+    def describe():
         setup = '''Users did some interactions with the object.'''
         return setup
-
-    def __repr__(self):
-        return str(self)
 
 class Environment:
     # this is not the way I would prefer to write this...
@@ -1001,9 +1022,6 @@ class Environment:
         return fabbed_object
 
     @staticmethod
-    def __str__():
+    def describe():
         setup = '''We allowed nature to take its course.'''
         return setup
-
-    def __repr__(self):
-        return str(self)

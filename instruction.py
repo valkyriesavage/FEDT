@@ -9,19 +9,8 @@ def instruction(s: str, header=False, **kwargs):
         input(f"{s} Press enter when done.")
 
 
-def note(s: str, header=False):
+def note(s: str, header=False, **kwargs):
     if isinstance(MODE, Evaluate):
-        FlowChart().add_instruction(s, header)
+        FlowChart().add_instruction(s, header, **kwargs)
     elif isinstance(MODE, Execute):
         print(s)  # TODO: Checkbox or something
-
-
-# class FEDTLoopEnder:
-
-# class FEDTLoop:
-
-#     def __enter__(self):
-#         FEDTLoopBody
-
-#     def __exit__(self, *args):
-#         pass

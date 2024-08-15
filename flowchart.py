@@ -1,9 +1,14 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal, Union
 
+LATEX_DETAILS = 'latex_details'
+SUBJECT = 'subject'
+VERB = 'verb'
+OBJECT = 'object'
+SETTINGS = 'settings'
+FABBED_SOMETHING = 'fabricated'
 
 class Node:
-
     def toXML(self) -> str:
         ...
 
@@ -17,6 +22,9 @@ class Empty(Node):
 
     def toXML(self) -> str:
         return ""
+    
+    def toLatex(self) -> str:
+        return ''
 
 
 @dataclass
@@ -34,27 +42,39 @@ class Seq(Node):
 @dataclass
 class Instr(Node):
     instr: str
-    other: dict = None
+
+    def __init__(self, instr, **kwargs):
+        self.instr = instr
+        if LATEX_DETAILS in kwargs:
+            self.other = kwargs[LATEX_DETAILS]
 
     def toXML(self) -> str:
         return f"<instruction>{self.instr}</instruction>"
     
     def toLatex(self) -> str:
-        return str(self.other)
+        if hasattr(self,'other'):
+            return f"{self.other[SUBJECT].describe()} did {self.other[VERB]} with settings {self.other[SETTINGS]}"
+        return ''
 
 @dataclass
 class Note(Node):
     instr: str
-    other: dict = None
+
+    def __init__(self, instr, other=None, **kwargs):
+        self.instr = instr
 
     def toXML(self) -> str:
         return f"<note>{self.instr}</note>"
+    
+    def toLatex(self) -> str:
+        if hasattr(self,'other'):
+            return f"{self.other[SUBJECT].describe()} did {self.other[VERB]} with settings {self.other[SETTINGS]}"
+        return ''
 
 
 @dataclass
 class Header(Node):
     header: str
-    other: dict = None
 
     def toXML(self) -> str:
         return f"<header>{self.header}</header>"
@@ -69,8 +89,7 @@ class Par(Node):
 
     def toXML(self) -> str:
         return f"<in-parallel>{''.join(map(lambda x: f'<par-item>{x.toXML()}</par-item>', self.nodes))}</in-parallel>"
-    
-        
+  
     def toLatex(self) -> str:
         return f"In no particular order, we tested {' '.join([x.toLatex() for x in self.nodes])}"
 
@@ -119,16 +138,16 @@ class FlowChart:
     def add_instruction(self, x: str, header=False, **kwargs):
         if self.in_loop:
             self.temp_node = Seq(self.temp_node,
-                                 Instr(x) if not header else Header(x))
+                                 Instr(x, **kwargs) if not header else Header(x))
         else:
-            self.node = Seq(self.node, Instr(x))
+            self.node = Seq(self.node, Instr(x, **kwargs))
 
     def add_note(self, x: str, **kwargs):
         if self.in_loop:
             self.temp_node = Seq(self.temp_node,
-                                 Note(x))
+                                 Note(x, **kwargs))
         else:
-            self.node = Seq(self.node, Instr(x))
+            self.node = Seq(self.node, Note(x, **kwargs))
 
     def enter_loop(self, kind: Union[Literal["series"], Literal["parallel"], str]):
         self.in_loop = kind
