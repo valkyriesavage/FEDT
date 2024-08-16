@@ -21,7 +21,7 @@ class VirtualWorldObject:
         return self.uid
 
     def __repr__(self) -> str:
-        return str(self.uid)
+        return "Virtual" + str(self.uid)
     
 @dataclass
 class LineFile(VirtualWorldObject):
@@ -32,6 +32,12 @@ class LineFile(VirtualWorldObject):
         super().__init__({'svg_location':svg_location})
         self.svg_location = svg_location
 
+    def __hash__(self):
+        return self.uid
+
+    def __repr__(self) -> str:
+        return "Virtual" + str(self.uid)
+
 @dataclass
 class VolumeFile(VirtualWorldObject):
     VOLUME_FILE = 'volume file'
@@ -40,6 +46,12 @@ class VolumeFile(VirtualWorldObject):
     def __init__(self, stl_location):
         super().__init__({'stl_location':stl_location})
         self.stl_location = stl_location
+
+    def __hash__(self):
+        return self.uid
+
+    def __repr__(self) -> str:
+        return "Virtual" + str(self.uid)
 
 @dataclass
 class GCodeFile(VirtualWorldObject):
@@ -50,6 +62,11 @@ class GCodeFile(VirtualWorldObject):
         super().__init__({'gcode_location':gcode_location})
         self.gcode_location = gcode_location
 
+    def __hash__(self):
+        return self.uid
+
+    def __repr__(self) -> str:
+        return "Virtual" + str(self.uid)
 
 def design(metadata: dict[str, object],
               instr: str | None = None) -> VirtualWorldObject:

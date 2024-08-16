@@ -15,7 +15,7 @@ class RealWorldObject:
         return self.uid
 
     def __repr__(self) -> str:
-        return str(self.uid)
+        return "RealWorld" + str(self.uid)
 
 
 def fabricate(metadata: dict[str, object],

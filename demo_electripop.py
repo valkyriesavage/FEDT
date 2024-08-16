@@ -4,7 +4,7 @@ from numpy import arange
 
 from instruction import instruction
 from iterators import Series, Parallel, Infinite, include_last
-from measurement import BatchMeasurements
+from measurement import BatchMeasurements, ImmediateMeasurements
 from decorator import fedt_experiment
 from fabricate import RealWorldObject
 from flowchart_render import render_flowchart
@@ -69,22 +69,19 @@ def electrical_deflation():
     configure_for_electripop()
     snowman = Laser.fab(LineFile('snowman.svg'))
 
-    current_measures = BatchMeasurements.empty()
+    current_measures = ImmediateMeasurements.empty()
     instruction('connect a 1kOhm resistor to the plate')
-    for time_elapsing in Infinite(range(10000)):
-        current = Multimeter.measure_current(snowman)
-        timestamp = Timestamper.get_ts(snowman)
-        current_measures += current
-        current_measures += timestamp
-        if current.get_all_data() == 0: # TODO how to do this in FEDT?
-            # we are done
-            break
+    current = 9999999999
+    while current > 0:
+        current = current_measures.do_measure(snowman, Multimeter.current)
+        current = float(current) if current else 99999999
+        current_measures += Timestamper.get_ts(snowman)
 
-    summarize(current_measures.get_all_data())
+    summarize(current_measures.dump_to_csv())
 
 @fedt_experiment
 def physical_deflation():
-    # not 100% convinced this is an experiment, although it _is_ a measurement/characterization
+    # discuss whether this is an experiment, or a measurement/characterization
     configure_for_electripop()
     snowman = Laser.fab(LineFile('snowman.svg'))
     elapsed_times = BatchMeasurements.empty()
@@ -93,8 +90,9 @@ def physical_deflation():
 
 @fedt_experiment
 def volumetric_change():
-    # not 100% convinced this is an experiment, although it _is_ a measurement/characterization
+    # discuss whether this is an experiment, or a measurement/characterization
     configure_for_electripop()
+    instruction("set up the snowman linefile and programmatically inflate it")
     snowman_virt = LineFile('snowman.svg')
     snowman_phys = Laser.fab(snowman_virt)
     volumes = BatchMeasurements.empty()
@@ -104,7 +102,7 @@ def volumetric_change():
 
 @fedt_experiment
 def fabrication_time():
-    # not 100% convinced this is an experiment, although it _is_ a measurement/characterization
+    # discuss whether this is an experiment, or a measurement/characterization
     configure_for_electripop()
     snowman = LineFile('snowman.svg')
     elapsed_times = BatchMeasurements.empty()
@@ -139,9 +137,9 @@ def user_experience():
     pass
 
 if __name__ == "__main__":
-    render_flowchart(optimize_simulation)
+    # render_flowchart(optimize_simulation)
     # render_flowchart(electrical_inflation)
-    # render_flowchart(physical_inflation)
+    render_flowchart(physical_inflation)
     # render_flowchart(electrical_deflation)
     # render_flowchart(physical_deflation)
     # render_flowchart(volumetric_change)
