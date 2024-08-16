@@ -182,7 +182,6 @@ def fedt_experiment(f):
     source = inspect.getsource(f)
     tree = ast.parse(source)
     new_ast = ast.fix_missing_locations(FixLoops().visit(tree))
-    print(ast.unparse(new_ast))
     new_code = compile(new_ast, f.__code__.co_filename, "exec")
     new_f = types.FunctionType(new_code.co_consts[0], f.__globals__)
 

@@ -101,6 +101,7 @@ if __name__ == "__main__":
     # run an experiment
     # from control import MODE, Execute
     # control.MODE = Execute()
+    # test_paint_layers()
     # test_force_at_break()
 
     # render a LaTeX description
