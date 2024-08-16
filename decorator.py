@@ -94,12 +94,11 @@ class FixLoops(ast.NodeTransformer):
 
         def break_if_not_exec():
             return [
-                ast.ImportFrom("control",
-                               [ast.alias("MODE"),
-                                ast.alias("Execute")], 0),
+                ast.Import([ast.alias("control")]),
                 ast.If(
                     ast.Compare(
-                        ast.Name("MODE", ast.Load()), [ast.NotEq()],
+                        ast.Attribute(ast.Name("control", ast.Load()), "MODE",
+                                      ast.Load()), [ast.NotEq()],
                         [ast.Call(ast.Name("Execute", ast.Load()), [], [])]),
                     [ast.Break()], [])
             ]
@@ -183,6 +182,7 @@ def fedt_experiment(f):
     source = inspect.getsource(f)
     tree = ast.parse(source)
     new_ast = ast.fix_missing_locations(FixLoops().visit(tree))
+    print(ast.unparse(new_ast))
     new_code = compile(new_ast, f.__code__.co_filename, "exec")
     new_f = types.FunctionType(new_code.co_consts[0], f.__globals__)
 
