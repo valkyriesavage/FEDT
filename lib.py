@@ -654,17 +654,19 @@ class StlEditor:
     def cube(size: tuple=(1,1,1),
              scale: float=1.) -> VolumeFile:
         # TODO import freecad and all that jazz
+        note(f"creating a cube with size {size}, scale {scale}")
         return VolumeFile("")
     
     @staticmethod
     def sphere(radius: float=10.) -> VolumeFile:
         # TODO import freecad and all that jazz
+        note(f"creating a sphere with radius {radius}")
         return VolumeFile("")
 
     @staticmethod
     def extract_profile(volume_file: VolumeFile,
                         location: tuple=(0,0,0,0,0,0)) -> LineFile:
-        instruction(f'extract an svg profile of {volume_file.stl_location} at location {location}',who=Human)
+        instruction(f'extract an svg profile of {volume_file.stl_location} at location {location}')
         from control import MODE, Execute
         svg_location = ''
         if isinstance(MODE, Execute):
@@ -692,7 +694,7 @@ class StlEditor:
     def modify_feature_by_hand(volume_file:VolumeFile,
                                feature_name: str,
                                feature_value: str|float) -> VolumeFile:
-        instruction(f'modify the file {volume_file.stl_location} to have feature {feature_name} with value {feature_value}', who=Human)
+        instruction(f'modify the file {volume_file.stl_location} to have feature {feature_name} with value {feature_value}')
         from control import MODE, Execute
         stl_location = volume_file.stl_location
         versions = []
@@ -709,7 +711,7 @@ class StlEditor:
     @staticmethod
     def extract_2D_profile(volume_file: VolumeFile,
                         feature_name: str) -> LineFile:
-        instruction(f'extract an svg profile from {volume_file.stl_location} of {feature_name}', who=Human)
+        instruction(f'extract an svg profile from {volume_file.stl_location} of {feature_name}')
         from control import MODE, Execute
         svg_location = ''
         if isinstance(MODE, Execute):

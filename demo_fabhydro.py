@@ -5,6 +5,7 @@ from iterators import Series, Parallel, include_last
 from measurement import BatchMeasurements
 from design import VolumeFile
 from decorator import fedt_experiment
+from flowchart_render import render_flowchart
 from lib import *
 
 def summarize(data):
@@ -52,7 +53,8 @@ def min_wall_thickness():
     for orientation in Parallel([0,90]):
         stl = StlEditor.rotate(base_stl, orientation)
         for repetition in Parallel(range(3)):
-            fabbed_object = Printer.slice_and_print(stl)
+            fabbed_object = Printer.slice_and_print(stl, repeitition=repetition)
+            instruction(f"inflate object #{fabbed_object.uid} until it ruptures")
             pressure_results += PressureSensor.measure_pressure(fabbed_object,"pressure at rupture")
 
     summarize(pressure_results.get_all_data())
@@ -64,7 +66,6 @@ def min_wall_spacing():
 
 @fedt_experiment
 def min_thin_wall_area():
-
     expansion_results = BatchMeasurements.empty()
 
     for edge_length in Parallel(arange(6,15+include_last)):
@@ -92,12 +93,10 @@ def pneumatic_vs_hydraulic():
 
 @fedt_experiment
 def lasting():
-
     stl = VolumeFile("side_11mm_wall_1mm.stl")
-    gcode = Slicer.slice(stl)
     fabbed_objects = []
     for repetition in Parallel(range(48)):
-        fabbed_objects.append(Printer.print(gcode))
+        fabbed_objects.append(Printer.slice_and_print(stl, repetition=repetition))
 
     pre_weights = BatchMeasurements.empty()
     post_weights = BatchMeasurements.empty()
@@ -114,4 +113,11 @@ def lasting():
     summarize([pre_weights.get_all_data(),post_weights.get_all_data()])
 
 if __name__ == "__main__":
-    print(lasting())
+    # render_flowchart(resin_types)
+    # render_flowchart(bend_vs_thickness)
+    # render_flowchart(min_wall_thickness)
+    # render_flowchart(min_wall_spacing)
+    # render_flowchart(min_thin_wall_area)
+    # render_flowchart(pneumatic_vs_hydraulic)
+    # render_flowchart(lasting) # crashes
+    # print(lasting())
