@@ -27,7 +27,7 @@ class Empty(Node):
 
     def toXML(self) -> str:
         return ""
-    
+
     def toLatex(self) -> str:
         return ''
 
@@ -39,7 +39,7 @@ class Seq(Node):
 
     def toXML(self) -> str:
         return self.prev.toXML() + "\n" + self.next.toXML()
-    
+
     def toLatex(self) -> str:
         return self.prev.toLatex() + "\n" + self.next.toLatex()
 
@@ -57,7 +57,7 @@ class Instr(Node):
 
     def toXML(self) -> str:
         return f"<instruction>{self.instr}</instruction>"
-    
+
     def toLatex(self) -> str:
         if hasattr(self,"latexable"):
             return f"{self.latexable[SUBJECT]} did {self.latexable[VERB]} to {self.latexable[OBJECT]} with additional settings {self.latexable[SETTINGS]}"
@@ -76,7 +76,7 @@ class Note(Node):
 
     def toXML(self) -> str:
         return f"<note>{self.instr}</note>"
-    
+
     def toLatex(self) -> str:
         if hasattr(self,"latexable"):
             return f"{self.latexable[SUBJECT]} did {self.latexable[VERB]} with settings {self.latexable[SETTINGS]}"
@@ -89,10 +89,10 @@ class Header(Node):
 
     def toXML(self) -> str:
         return f"<header>{self.header}</header>"
-    
+
     def toLatex(self) -> str:
         return ''
-    
+
     def FindFabbedCount(self) -> int:
         return 0
 
@@ -109,7 +109,7 @@ class Par(Node):
         if not hasattr(base_case, "other"):
             # hmmm... we are a bit in trouble.
             pass
-    
+
     def toLatex(self) -> str:
         return f"In no particular order, we tested {' '.join([x.toLatex() for x in self.nodes])}"
 
@@ -120,7 +120,7 @@ class Series(Node):
 
     def toXML(self) -> str:
         return f"<in-series>{''.join(map(lambda x: f'<series-item>{x.toXML()}</series-item>', self.nodes))}</in-series>"
-    
+
     def toLatex(self) -> str:
         return f"In sequence, we tested {' '.join([x.toLatex() for x in self.nodes])}"
 
@@ -130,8 +130,8 @@ class Infinite(Node):
     nodes: list[Node]
 
     def toXML(self) -> str:
-        return f"<loop condition=\"{self.cond}\">{''.join(map(lambda x: f'<loop-item>{x.toXML()}</loop-item>', self.nodes))}</loop>" 
-    
+        return f"<loop condition=\"{self.cond}\">{''.join(map(lambda x: f'<loop-item>{x.toXML()}</loop-item>', self.nodes))}</loop>"
+
     def toLatex(self) -> str:
         return f"Until the condition was met, we tested {' '.join([x.toLatex() for x in self.nodes])}"
 
@@ -144,58 +144,56 @@ class FlowChart:
         return cls.instance
 
     node: Node = Empty()
-    temp_node = Empty()
-    temp_nodes: list[Node] = []
-    in_loop: Union[Literal["parallel"], Literal["series"], str,
-                   None] = None
+    in_loop: list[Node] = []
 
     fabbed_objects: int = 0
 
     def reset(self):
         self.node = Empty()
-        self.temp_node = Empty()
-        self.temp_nodes = []
-        self.in_loop = None
+        self.in_loop = []
         self.fabbed_objects = 0
 
-    def add_instruction(self, x: str, header=False, fabbing=False, **kwargs):
-        if self.in_loop:
-            self.temp_node = Seq(self.temp_node,
-                                 Instr(x, **kwargs) if not header else Header(x))
+    def _append_node(self, node):
+        if len(self.in_loop) > 0:
+            self.in_loop[-1].nodes[-1] = Seq(self.in_loop[-1].nodes[-1], # type: ignore
+                                 node)
+            # (Safe because in_loop always has loops)
         else:
-            self.node = Seq(self.node, Instr(x, **kwargs))
+            self.node = Seq(self.node, node)
+
+
+    def add_instruction(self, x: str, header=False, fabbing=False, **kwargs):
+        self._append_node(Instr(x, **kwargs) if not header else Header(x))
         if fabbing:
             self.fabbed_objects += 1
 
     def add_note(self, x: str, fabbing=False, **kwargs):
-        if self.in_loop:
-            self.temp_node = Seq(self.temp_node,
-                                 Note(x, **kwargs))
-        else:
-            self.node = Seq(self.node, Note(x, **kwargs))
+        self._append_node(Note(x, **kwargs))
         if fabbing:
             self.fabbed_objects += 1
 
     def enter_loop(self, kind: Union[Literal["series"], Literal["parallel"], str]):
-        self.in_loop = kind
-
-    def end_body(self):
-        self.temp_nodes.append(self.temp_node)
-        self.temp_node = Empty()
-
-    def exit_loop(self):
-        match self.in_loop:
+        match kind:
             case "series":
-                loop = Series(self.temp_nodes)
+                loop = Series([Empty()])
             case "parallel":
-                loop = Par(self.temp_nodes)
+                loop = Par([Empty()])
             case cond:
                 if isinstance(cond, str):
-                    loop = Infinite(cond, self.temp_nodes)
-        self.node = Seq(self.node, loop)
-        self.temp_nodes = []
-        self.in_loop = None
-    
+                    loop = Infinite(cond, [Empty()])
+
+        self.in_loop.append(loop)
+
+    def end_body(self):
+        self.in_loop[-1].nodes.append(Empty()) # type: ignore
+        # (Safe because in_loop always has loops, and in_loop must have at least one element since
+        # we're in a body)
+
+    def exit_loop(self):
+        loop = self.in_loop[-1]
+        self.in_loop = self.in_loop[:-1]
+        self._append_node(loop)
+
     def to_latex(self):
         print(f"We fabricated {self.fabbed_objects} objects in total.")
         return self.node.toLatex()
