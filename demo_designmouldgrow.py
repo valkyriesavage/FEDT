@@ -108,4 +108,6 @@ def test_software_tool():
 
 
 if __name__ == "__main__":
+    # render_flowchart(geometric_features)
     render_flowchart(mechanical_and_shrinkage_features)
+    # render_flowchart(test_software_tool)
