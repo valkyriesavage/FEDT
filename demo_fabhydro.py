@@ -105,7 +105,7 @@ def lasting():
     for day in Series(range(16)):
         Environment.wait_up_to_time_multiple(fabbed_objects, num_days=day)
         cubes = fabbed_objects[day*cubes_per_day:(day+1)*cubes_per_day]
-        for cube in cubes:
+        for cube in Parallel(cubes):
             pre_weights += Scale.measure_weight(cube)
             leaked_cube = Human.post_process(cube, f"cut open the cube and let the fluid leak out")
             post_weights += Scale.measure_weight(leaked_cube)
@@ -113,11 +113,11 @@ def lasting():
     summarize([pre_weights.get_all_data(),post_weights.get_all_data()])
 
 if __name__ == "__main__":
-    render_flowchart(resin_types)
+    #render_flowchart(resin_types)
     # render_flowchart(bend_vs_thickness)
     # render_flowchart(min_wall_thickness)
     # render_flowchart(min_wall_spacing)
     # render_flowchart(min_thin_wall_area)
     # render_flowchart(pneumatic_vs_hydraulic)
     # render_flowchart(lasting) # crashes
-    # print(lasting())
+    #print(lasting())

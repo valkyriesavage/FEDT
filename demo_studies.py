@@ -59,12 +59,13 @@ def test_paint_layers():
     photos = ImmediateMeasurements.empty()
     is_reasonable = False
     coats_of_paint = 0
-    while not is_reasonable: # TODO implement properly with while
+    while not is_reasonable:
         flower = Human.is_reasonable(flower)
         photos += Camera.take_picture(flower)
         is_reasonable = flower.metadata["human reasonableness check"]
-        coats_of_paint = coats_of_paint + 1
-        flower = Human.post_process(flower, f"add a {coats_of_paint}th coat of paint")
+        if not is_reasonable:
+            coats_of_paint = coats_of_paint + 1
+            flower = Human.post_process(flower, f"add a {coats_of_paint}th coat of paint")
 
     summarize(photos.dump_to_csv())
 

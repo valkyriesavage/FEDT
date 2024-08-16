@@ -31,7 +31,7 @@ def test_materials():
             instruction(f"get a piece of {material} with coating {coating}")
             fabbed_objects.append(Laser.fab(line_file, material=material, coating=coating))
             # not completely sure how to capture what was done here... it seems like
-            # there was some experimentation, but it's not really documented
+            # there was some experimentation with settings, but I'm not clear on what it was
     results = BatchMeasurements.empty()
     for fabbed_object in Parallel(fabbed_objects):
         results += Multimeter.measure_resistance(fabbed_object)
@@ -41,12 +41,10 @@ def test_materials():
 @fedt_experiment
 def test_height_vs_focal_point():
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
-    fabbed_objects: list[RealWorldObject] = []
-    for focal_height_mm in Parallel(range(0, 5+include_last)):
-        fabbed_objects.append(
-            Laser.fab(line_file, focal_height_mm=focal_height_mm))
     results = BatchMeasurements.empty()
-    for fabbed_object in Parallel(fabbed_objects):
+
+    for focal_height_mm in Parallel(arange(0, 5+include_last)):
+        fabbed_object = Laser.fab(line_file, focal_height_mm=focal_height_mm)
         results += Multimeter.measure_resistance(fabbed_object)
     data = results.get_all_data()
     return summarize(data)
@@ -56,21 +54,18 @@ def test_height_vs_focal_point():
 def test_optimal_number_of_scans():
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
     results = ImmediateMeasurements.empty()
-    resistance = None
-    best_result = None
-    for num_scans in Series(range(20)): # TODO implement with while
+    resistance = 9999999999
+    best_result = resistance
+    num_scans = 0
+    while resistance == best_result:
+        num_scans = num_scans + 1
         fabbed_object = Laser.fab(line_file, num_scans=num_scans)
+        instruction("leave the material in the bed in between")
         resistance = results.do_measure(fabbed_object, Multimeter.resistance)
-        if resistance:
-            resistance = float(resistance)
-        if not best_result:
+        resistance = float(resistance) if resistance else best_result
+        if not best_result or resistance < best_result:
             best_result = resistance
-        if resistance < best_result:
-            # we are getting better
-            best_result = resistance
-        else:
-            # we are getting worse
-            break
+
     data = results.dump_to_csv()
     return summarize(data)
 
@@ -118,10 +113,14 @@ def test_change_over_time():
     results = BatchMeasurements.empty()
     for wait_months in Series(range(1, 6)):
         fabbed_objects = Environment.wait_up_to_time_multiple(fabbed_objects, num_months=wait_months)
-        for fabbed_object in fabbed_objects:
+        for fabbed_object in Parallel(fabbed_objects):
             results += Multimeter.measure_resistance(fabbed_object)
     summarize(results.get_all_data())
 
 if __name__ == "__main__":
-    #control.MODE = Execute()
-    render_flowchart(test_optimal_number_of_scans)
+    # render_flowchart(test_materials)
+    # render_flowchart(test_height_vs_focal_point)
+    # render_flowchart(test_optimal_number_of_scans)
+    # render_flowchart(test_laser_power_and_speed) # broken with too many loop depths
+    # render_flowchart(test_grain_direction)
+    render_flowchart(test_change_over_time)
