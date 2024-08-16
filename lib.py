@@ -301,7 +301,7 @@ class SvgEditor:
     laser_bed = Laser.default_laser_settings[Laser.LASER_BED]
 
     @staticmethod
-    def design(specification: str=None, vars: dict=None) -> LineFile:
+    def design(specification: str=None, vars: dict={}) -> LineFile:
         if specification:
             instruction(f"Design an svg file like {specification}",
                     latex_details = {SUBJECT: "Authors",

@@ -5,6 +5,7 @@ from iterators import Series, Parallel, include_last
 from measurement import BatchMeasurements
 from design import VolumeFile
 from decorator import fedt_experiment
+from flowchart_render import render_flowchart
 from lib import *
 
 def summarize(data):
@@ -27,10 +28,10 @@ def cross_section_ratios():
     for bending_direction in Parallel(['d7','d8&d6','d1&d5','d3','d2&d4']):
         for cross_section_ratio in Parallel(arange(1,8+include_last)):
             for repetition in Parallel(range(3)):
-                gcode = Slicer.slice(stl,
-                                     direction = bending_direction,
-                                     cross_section_ratio = cross_section_ratio)
-                fabbed_object = Printer.print(gcode)
+                fabbed_object = Printer.slice_and_print(stl,
+                                                        direction = bending_direction,
+                                                        cross_section_ratio = cross_section_ratio,
+                                                        repetition = repetition)
                 actuated_object = Human.post_process(fabbed_object, "trigger the object in hot water")
                 results += Protractor.measure_angle(actuated_object, "triggered angle")
     
@@ -46,13 +47,13 @@ def bend_vs_thickness():
     for thickness in Parallel(arange(1,6+include_last)):
         stl = StlEditor.cube((thickness,thickness,60))
         for bending_direction in Parallel(['diagonal','orthogonal']):
-                gcode = Slicer.slice(stl,
-                                     direction = bending_direction)
-                fabbed_object = Printer.print(gcode)
+                fabbed_object = Printer.slice_and_print(stl,
+                                                        direction = bending_direction)
                 actuated_object = Human.post_process(fabbed_object, "trigger the object in hot water")
                 results += Protractor.measure_angle(actuated_object, "triggered angle")
 
     summarize(results.get_all_data())
 
 if __name__ == "__main__":
-    print(cross_section_ratios())
+    render_flowchart(cross_section_ratios) # broken with too-deep loops
+    # render_flowchart(bend_vs_thickness)

@@ -199,5 +199,9 @@ def camera_angle():
 
 
 if __name__ == "__main__":
-    #render_flowchart(cross_validation)
-    print(cross_validation())
+    # render_flowchart(find_bottom_spacings) # broken due to too many loops
+    # render_flowchart(cross_validation)
+    # render_flowchart(materials_lighting_thicknesses) # broken due to too many loops
+    # render_flowchart(different_printers)
+    render_flowchart(camera_distance)
+    # render_flowchart(camera_angle) # crashes
