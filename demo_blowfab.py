@@ -6,6 +6,7 @@ from instruction import instruction
 from iterators import Series, Parallel, include_last
 from measurement import BatchMeasurements
 from fabricate import RealWorldObject
+from flowchart_render import render_flowchart
 from decorator import fedt_experiment
 from lib import *
 
@@ -61,7 +62,7 @@ def effect_of_interplate_distance_vertical():
     results = BatchMeasurements.empty()
     for distance in Parallel([0,30]):
         linefile = SvgEditor.design(vars = {'outer size': outer_size, 'airbag size': airbag_size, 'distance': distance})
-        instruction("place polycarbonate in the laser bed with spacing %d".format(distance))
+        instruction(f"place polycarbonate in the laser bed with spacing {distance}")
         fabbed_object = Laser.fab(linefile)
         for repetition in Parallel(range(5)):
             fabbed_object = Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
@@ -72,4 +73,6 @@ def effect_of_interplate_distance_vertical():
     summarize(results.get_all_data())
 
 if __name__ == "__main__":
-    print(effect_of_b_horizontal())
+    render_flowchart(effect_of_b_horizontal)
+    # render_flowchart(effect_of_incision_number)
+    # render_flowchart(effect_of_interplate_distance_vertical)
