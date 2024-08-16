@@ -9,7 +9,7 @@ import subprocess
 from zipfile import ZipFile
 
 from flowchart import SUBJECT, VERB, OBJECT, SETTINGS, FABBED_SOMETHING
-from instruction import instruction
+from instruction import instruction, note
 from measurement import Measurement, BatchMeasurements
 from fabricate import fabricate, RealWorldObject
 from design import design, VirtualWorldObject, LineFile, VolumeFile, GCodeFile
@@ -271,12 +271,13 @@ class Laser:
         stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
 
         fabbed = fabricate(stored_values)
-        instruction(f"Run the laser cutter and cut file {line_file.svg_location} with settings {user_chosen_settings}, creating object #{fabbed.uid}",
+        note(f"Run the laser cutter and cut file {line_file.svg_location} with settings {user_chosen_settings}, creating object #{fabbed.uid}",
+                    fabbing = True,
                     latex_details = {SUBJECT: Laser,
                                         VERB: 'cut',
                                         OBJECT: line_file,
                                         SETTINGS: all_settings,
-                                        FABBED_SOMETHING: True}) # TODO confirm this is correct
+                                        FABBED_SOMETHING: True})
 
         if isinstance(MODE, Execute):
             print(f"object number {fabbed.uid} has been fabricated!")
@@ -421,6 +422,7 @@ class Slicer:
               **kwargs) -> GCodeFile:
 
         instruction(f"slice {volume_file.stl_location} in the slicing software with settings {kwargs}",
+                    fabbing = True,
                     latex_details = {SUBJECT: Slicer,
                                         VERB: 'sliced',
                                         OBJECT: volume_file,
@@ -575,17 +577,18 @@ class Printer:
         fabbed =  fabricate(stored_values)
         if volume_file.stl_location == '':
             instruction("Slice the file.",
-                        latex_details = {SUBJECT: "Authors",
+                        latex_details = {SUBJECT: Slicer,
                                             VERB: 'sliced',
                                             OBJECT: volume_file,
                                             SETTINGS: stored_values})
         else:
             instruction(f"Slice {volume_file.stl_location}.",
-                        latex_details = {SUBJECT: "Authors",
+                        latex_details = {SUBJECT: Slicer,
                                             VERB: 'sliced',
                                             OBJECT: volume_file,
                                             SETTINGS: stored_values})
         instruction(f"Run the printer, creating object #{fabbed.uid}",
+                            fabbing = True,
                             latex_details = {SUBJECT: Printer,
                                                 VERB: 'printed',
                                                 OBJECT: volume_file,
@@ -602,7 +605,6 @@ class Printer:
         setup = '''We used a {machine}. Our default settings were {defaults}.'''.format(
                 **{
                     'machine': str(Printer.default_printer_settings[Printer.PRINTER]),
-                    'bedsize': str(Printer.default_printer_settings[Printer.SLICER]),
                     'defaults': ', '.join([str(x) + ':' + str(y) for x, y in zip(Slicer.default_slicer_settings.keys(),
                                                                                  Slicer.default_slicer_settings.values())])
                 })
@@ -934,7 +936,8 @@ class Human:
         instruction(instr)
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            return input(question)
+            response = input(question)
+            return response
         return question
 
     @staticmethod
@@ -946,14 +949,15 @@ class Human:
             versions = obj.metadata[VERSIONS]
             versions.append(obj)
         new_obj = fabricate(obj.metadata)
-        instruction(f"(this creates a new version of #{obj.uid}, which we call object #{new_obj.uid})")
+        note(f"(this creates a new version of #{obj.uid}, which we call object #{new_obj.uid})")
         new_obj.metadata.update({VERSIONS: versions, "post-process": action})
         return new_obj
     
     @staticmethod
     def is_reasonable(obj: RealWorldObject):
-        if Human.do_and_respond(f"check if object #{obj.uid} looks reasonable",
-                                "does it look reasonable?"):
+        answer = Human.do_and_respond(f"check if object #{obj.uid} looks reasonable",
+                                        f"does object #{obj.uid} look reasonable [y/n]?")
+        if answer == 'y':
             obj.metadata.update({"human reasonableness check": True})
         else:
             obj.metadata.update({"human reasonableness check": False})
@@ -961,7 +965,6 @@ class Human:
 
     @staticmethod
     def describe():
-        # TODO how to track which ones?
         setup = '''We manually performed some steps.'''
         return setup
 

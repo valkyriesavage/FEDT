@@ -24,7 +24,7 @@ def fabricate(metadata: dict[str, object],
         instruction(instr)
 
     global CURRENT_UID
-    obj = RealWorldObject(CURRENT_UID, metadata)
+    obj = RealWorldObject(CURRENT_UID, dict(metadata))
     CURRENT_UID += 1
 
     return obj

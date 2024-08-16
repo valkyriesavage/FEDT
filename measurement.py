@@ -58,7 +58,7 @@ class BatchMeasurements:
                             self.measurements.union(other.measurements))
 
     def instruction(self):
-        return f"Fill out the measurements for objects {list(self.objects)} and measurements {list(self.measurements)}."
+        return f"Fill out the csv for {len(list(self.objects))} objects ({list(self.objects)}) and {len(list(self.measurements))} measurements ({list(self.measurements)}) ({self.how_many()} datapoints)."
 
     def get_all_data(self) -> dict[tuple[Measurement, RealWorldObject], float|str]:
         from control import MODE, Execute
@@ -74,7 +74,7 @@ class BatchMeasurements:
             csv_to_meas = dict((f"{measurement.name}: {measurement.feature} ({measurement.units})", measurement) for measurement in self.measurements)
             columns = ["Label"] + columns
             rows = [f"{obj.uid}" for obj in self.objects]
-            csv_to_obj = dict((obj.uid,obj) for obj in self.objects)
+            csv_to_obj = dict((str(obj.uid),obj) for obj in self.objects)
 
             with open(experiment_csv, 'w') as csvfile:
                 spamwriter = csv.writer(csvfile)
@@ -116,7 +116,7 @@ class BatchMeasurements:
                     for col in row:
                         mobj = None
                         if col == 'Label':
-                            mobj = csv_to_obj[row[col]] # it will be the first one
+                            mobj = csv_to_obj[row[col]]
                         else:
                             meas = csv_to_meas[col]
                             value = row[col]
@@ -125,6 +125,9 @@ class BatchMeasurements:
         else:
             FlowChart().add_instruction(self.instruction())
             return dict()
+    
+    def how_many(self) -> int:
+        return len(self.objects) * len(self.measurements)
 
 class ImmediateMeasurements:
     objects: list[RealWorldObject] = [] # rows
@@ -177,6 +180,7 @@ class ImmediateMeasurements:
                 spamwriter.writerow([obj.uid] + walk_metadata(obj, ret_val=True))
 
         print(f"all the data are in {self.csv}. the key for labelled objects is in {key_csv}.")
+        FlowChart().add_note(f"working with ({self.how_many()} data points)")
 
     def do_measure(self, obj: RealWorldObject, meas: Measurement) -> "ImmediateMeasurements":
         if not meas in self.measurements:
@@ -204,4 +208,9 @@ class ImmediateMeasurements:
         return self
 
     def get_all_data(self) -> dict[tuple[Measurement, RealWorldObject], float|str]:
+        FlowChart().add_note(f"working with ({self.how_many()} data points)")
         return self.data_points
+    
+    def how_many(self) -> int:
+        # note that we subtract one from each row because we store the label in there, too
+        return sum([len(self.data_points[rwo].keys()) - 1 for rwo in self.data_points])

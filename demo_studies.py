@@ -42,8 +42,8 @@ def test_force_at_break():
     breakage_points = BatchMeasurements.empty()
 
     for rect_length in Parallel(range(50,100,10)):
-        #svg = SvgEditor.build_geometry(draw_rect, CAD_vars={'rect_length':rect_length})
-        svg = SvgEditor.design(vars={'rect_length':rect_length})
+        svg = SvgEditor.build_geometry(draw_rect, CAD_vars={'rect_length':rect_length})
+        #svg = SvgEditor.design(vars={'rect_length':rect_length})
         for material in Parallel(['wood','acrylic']):
             fabbed_object = Laser.fab(svg, material=material)
             instruction("place the object with 1cm overlapping a shelf at each end and the remainder suspended")
@@ -61,10 +61,8 @@ def test_paint_layers():
     coats_of_paint = 0
     while not is_reasonable: # TODO implement properly with while
         flower = Human.is_reasonable(flower)
-        photos.do_measure(flower, Camera.image)
-        is_reasonable = flower.metadata['human reasonableness check']
-        if is_reasonable:
-            break
+        photos += Camera.take_picture(flower)
+        is_reasonable = flower.metadata["human reasonableness check"]
         coats_of_paint = coats_of_paint + 1
         flower = Human.post_process(flower, f"add a {coats_of_paint}th coat of paint")
 
@@ -92,19 +90,22 @@ def test_user_assembly_time():
             timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
             assembly = User.do(simple_assembly, "solve the assembly", user)
             timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
-
-    #print(FlowChart().to_latex())
             
     summarize(timings.dump_to_csv())
 
 if __name__ == "__main__":
     # create a flowchart
-    #render_flowchart(test_paint_layers)
+    #render_flowchart(test_print_shrinkage)
+    #render_flowchart(test_force_at_break)
 
     # run an experiment
-    #from control import MODE, Execute
-    #control.MODE = Execute()
-    print(test_user_assembly_time())
+    # from control import MODE, Execute
+    # control.MODE = Execute()
+    # test_force_at_break()
 
     # render a LaTeX description
     #print(FlowChart().to_latex())
+
+    # other sample flowcharts
+    #render_flowchart(test_paint_layers)
+    #render_flowchart(test_user_assembly_time)

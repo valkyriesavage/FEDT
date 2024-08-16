@@ -124,5 +124,4 @@ def test_change_over_time():
 
 if __name__ == "__main__":
     #control.MODE = Execute()
-    Laser.default_laser_settings[Laser.MATERIAL] = 'wood'
     render_flowchart(test_optimal_number_of_scans)

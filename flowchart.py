@@ -1,4 +1,6 @@
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
+import inspect
 from typing import Literal, Union
 
 LATEX_DETAILS = 'latex_details'
@@ -13,6 +15,9 @@ class Node:
         ...
 
     def toLatex(self) -> str:
+        ...
+
+    def FindFabbedCount(self) -> int:
         ...
 
 
@@ -46,29 +51,35 @@ class Instr(Node):
     def __init__(self, instr, **kwargs):
         self.instr = instr
         if LATEX_DETAILS in kwargs:
-            self.other = kwargs[LATEX_DETAILS]
+            self.latexable = kwargs[LATEX_DETAILS]
+            if SUBJECT in self.latexable and inspect.isclass(self.latexable[SUBJECT]):
+                self.latexable[SUBJECT] = self.latexable[SUBJECT].describe()
 
     def toXML(self) -> str:
         return f"<instruction>{self.instr}</instruction>"
     
     def toLatex(self) -> str:
-        if hasattr(self,'other'):
-            return f"{self.other[SUBJECT].describe()} did {self.other[VERB]} with settings {self.other[SETTINGS]}"
+        if hasattr(self,"latexable"):
+            return f"{self.latexable[SUBJECT]} did {self.latexable[VERB]} to {self.latexable[OBJECT]} with additional settings {self.latexable[SETTINGS]}"
         return ''
 
 @dataclass
 class Note(Node):
     instr: str
 
-    def __init__(self, instr, other=None, **kwargs):
+    def __init__(self, instr, **kwargs):
         self.instr = instr
+        if LATEX_DETAILS in kwargs:
+            self.latexable = kwargs[LATEX_DETAILS]
+            if SUBJECT in self.latexable and inspect.isclass(self.latexable[SUBJECT]):
+                self.latexable[SUBJECT] = self.latexable[SUBJECT].describe()
 
     def toXML(self) -> str:
         return f"<note>{self.instr}</note>"
     
     def toLatex(self) -> str:
-        if hasattr(self,'other'):
-            return f"{self.other[SUBJECT].describe()} did {self.other[VERB]} with settings {self.other[SETTINGS]}"
+        if hasattr(self,"latexable"):
+            return f"{self.latexable[SUBJECT]} did {self.latexable[VERB]} with settings {self.latexable[SETTINGS]}"
         return ''
 
 
@@ -81,7 +92,9 @@ class Header(Node):
     
     def toLatex(self) -> str:
         return ''
-
+    
+    def FindFabbedCount(self) -> int:
+        return 0
 
 @dataclass
 class Par(Node):
@@ -89,7 +102,14 @@ class Par(Node):
 
     def toXML(self) -> str:
         return f"<in-parallel>{''.join(map(lambda x: f'<par-item>{x.toXML()}</par-item>', self.nodes))}</in-parallel>"
-  
+
+    def find_differences_in_children(self) -> str:
+        base_case = self.nodes[0]
+        # ok, do something painful like evaluate all the values :sob:
+        if not hasattr(base_case, "other"):
+            # hmmm... we are a bit in trouble.
+            pass
+    
     def toLatex(self) -> str:
         return f"In no particular order, we tested {' '.join([x.toLatex() for x in self.nodes])}"
 
@@ -129,25 +149,32 @@ class FlowChart:
     in_loop: Union[Literal["parallel"], Literal["series"], str,
                    None] = None
 
+    fabbed_objects: int = 0
+
     def reset(self):
         self.node = Empty()
         self.temp_node = Empty()
         self.temp_nodes = []
         self.in_loop = None
+        self.fabbed_objects = 0
 
-    def add_instruction(self, x: str, header=False, **kwargs):
+    def add_instruction(self, x: str, header=False, fabbing=False, **kwargs):
         if self.in_loop:
             self.temp_node = Seq(self.temp_node,
                                  Instr(x, **kwargs) if not header else Header(x))
         else:
             self.node = Seq(self.node, Instr(x, **kwargs))
+        if fabbing:
+            self.fabbed_objects += 1
 
-    def add_note(self, x: str, **kwargs):
+    def add_note(self, x: str, fabbing=False, **kwargs):
         if self.in_loop:
             self.temp_node = Seq(self.temp_node,
                                  Note(x, **kwargs))
         else:
             self.node = Seq(self.node, Note(x, **kwargs))
+        if fabbing:
+            self.fabbed_objects += 1
 
     def enter_loop(self, kind: Union[Literal["series"], Literal["parallel"], str]):
         self.in_loop = kind
@@ -170,4 +197,5 @@ class FlowChart:
         self.in_loop = None
     
     def to_latex(self):
+        print(f"We fabricated {self.fabbed_objects} objects in total.")
         return self.node.toLatex()
