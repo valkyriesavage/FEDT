@@ -2,7 +2,7 @@ from numpy import arange
 
 from flowchart_render import render_flowchart
 from instruction import instruction
-from iterators import Series, Parallel
+from iterators import Series, Parallel, include_last
 from measurement import BatchMeasurements
 from decorator import fedt_experiment
 from lib import *
@@ -68,18 +68,25 @@ def mechanical_and_shrinkage_features():
     shrinkage_results = BatchMeasurements.empty()
     mechanical_results = BatchMeasurements.empty()
     mould = Printer.slice_and_print(scaled_mould)
-    for myco_material in Series(['30% coffee inclusions', 'no inclusions']): # I can't tell if this was series or parallel
+
+    fabbed_objects = []
+
+    for myco_material in Series(['30% coffee inclusions', 'no inclusions']):
         for repetition in Series(range(4)):
-            fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material} ({repetition}th copy from this mould)")
+            fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material} ({repetition}th copy)")
             Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
+            instruction("remove the object from the mould")
             shrinkage_results += Calipers.measure_size(fabbed_object, "x-axis")
             shrinkage_results += Calipers.measure_size(fabbed_object, "y-axis")
             shrinkage_results += Calipers.measure_size(fabbed_object, "z-axis")
-            for repetition_mechanical in Series(range(5)):
-                for depth in Series(arange(0,5,.5)):
-                    instruction("ensure fabbed object is appropriately arranged on testing stand")
-                    fabbed_object = Human.post_process(fabbed_object, f"compress the object to {str(depth)} ({repetition_mechanical}th time)") # not clear who/what does the compressing?
-                    mechanical_results += ForceGauge.measure_force(fabbed_object)           
+            fabbed_objects.append(fabbed_object)
+    
+    for fabbed_object in Parallel(fabbed_objects):
+        for repetition_mechanical in Series(range(5)):
+            for depth in Series(arange(0,5+include_last,.5)):
+                instruction("ensure fabbed object is appropriately arranged on testing stand")
+                fabbed_object = Human.post_process(fabbed_object, f"compress the object to {str(depth)} ({repetition_mechanical}th time)") # not clear who/what does the compressing?
+                mechanical_results += ForceGauge.measure_force(fabbed_object)           
     
     summarize(shrinkage_results.get_all_data())
     summarize(mechanical_results.get_all_data())
@@ -96,7 +103,7 @@ def test_software_tool():
         fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
         fabbed_object.metadata.update({'repetition':repetition})
         Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
-        measurement_points = range(0,90,45)
+        measurement_points = range(0,90+include_last,45)
         for x_axis_point in measurement_points:
             results += Calipers.measure_size(fabbed_object, f"{x_axis_point} degrees along the x axis")
         for y_axis_point in measurement_points:
