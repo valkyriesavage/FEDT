@@ -6,6 +6,7 @@ from instruction import instruction
 from iterators import Series, Parallel, Infinite, include_last
 from measurement import BatchMeasurements
 from fabricate import RealWorldObject
+from flowchart_render import render_flowchart
 from decorator import fedt_experiment
 from lib import *
 
@@ -138,4 +139,7 @@ def user_experience():
     pass
 
 if __name__ == "__main__":
-    print(geometric_accuracy())
+    # print(geometric_accuracy())
+    render_flowchart(physical_inflation)
+    # render_flowchart(electrical_deflation)
+    # render_flowchart(electrical_inflation)
