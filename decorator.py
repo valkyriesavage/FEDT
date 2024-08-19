@@ -57,8 +57,7 @@ class FixLoops(ast.NodeTransformer):
                     ast.Constant(True)
                 ], []))
 
-        for n in node.body:
-            self.generic_visit(n)
+        self.generic_visit(node)
 
         target_use = copy.deepcopy(node.target)
         UseVariables().visit(target_use)
@@ -99,12 +98,14 @@ class FixLoops(ast.NodeTransformer):
                     ast.Compare(
                         ast.Attribute(ast.Name("control", ast.Load()), "MODE",
                                       ast.Load()), [ast.NotEq()],
-                        [ast.Call(ast.Name("Execute", ast.Load()), [], [])]),
-                    [ast.Break()], [])
+                        [
+                            ast.Call(
+                                ast.Attribute(ast.Name("control", ast.Load()),
+                                              "Execute", ast.Load()), [], [])
+                        ]), [ast.Break()], [])
             ]
 
-        for n in node.body:
-            self.generic_visit(n)
+        self.generic_visit(node)
 
         return [
             ast.ImportFrom("flowchart", [ast.alias("FlowChart")], 0),

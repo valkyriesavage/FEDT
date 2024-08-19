@@ -96,7 +96,7 @@ def test_user_assembly_time():
 
 if __name__ == "__main__":
     # create a flowchart
-    #render_flowchart(test_print_shrinkage)
+    render_flowchart(test_print_shrinkage)
     #render_flowchart(test_force_at_break)
 
     # run an experiment
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     # test_paint_layers()
     # test_force_at_break()
 
-    # render a LaTeX description
+    # render a LaTeX description - under construction
     #print(FlowChart().to_latex())
 
     # other sample flowcharts
