@@ -1,7 +1,7 @@
 import control
 from control import Execute, Evaluate
 from instruction import instruction
-from iterators import Parallel, Series, shuffle
+from iterators import Parallel, Series, shuffle, include_last
 from measurement import BatchMeasurements, ImmediateMeasurements
 from flowchart import FlowChart
 from flowchart_render import render_flowchart
@@ -20,8 +20,8 @@ def test_print_shrinkage():
 
     shrinkage_measurements = BatchMeasurements.empty()
 
-    for infill_pattern in Parallel(['concentric','line','rectilinear']):
-        for repetition in Parallel(range(5)):
+    for infill_pattern in Parallel(['concentric','line']):
+        for repetition in Parallel(range(2)):
             fabbed_object = Printer.slice_and_print(cube,
                                                     infill_pattern=infill_pattern,
                                                     repetition=repetition)
@@ -41,7 +41,7 @@ def test_force_at_break():
 
     breakage_points = BatchMeasurements.empty()
 
-    for rect_length in Parallel(range(50,100,10)):
+    for rect_length in Parallel(range(50,100+include_last,25)):
         svg = SvgEditor.build_geometry(draw_rect, CAD_vars={'rect_length':rect_length})
         #svg = SvgEditor.design(vars={'rect_length':rect_length})
         for material in Parallel(['wood','acrylic']):
@@ -76,20 +76,18 @@ def test_user_assembly_time():
 
     timings = ImmediateMeasurements.empty()
 
-    treatments = shuffle(["simple_first"] * 3 + ["complex_first"] * 3)
+    treatments = shuffle(["simple_first"] * 2 + ["complex_first"] * 2)
 
     for (user, treatment) in Parallel(enumerate(treatments)):
         simple_assembly = Printer.slice_and_print(simple)
         complex_assembly = Printer.slice_and_print(complex)
+        order = []
         if treatment == "simple_first":
-            assembly = User.do(simple_assembly, "solve the assembly", user)
-            timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
-            assembly = User.do(complex_assembly, "solve the assembly", user)
-            timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
+            order = [simple_assembly, complex_assembly]
         else:
-            assembly = User.do(complex_assembly, "solve the assembly", user)
-            timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
-            assembly = User.do(simple_assembly, "solve the assembly", user)
+            order = [complex_assembly, simple_assembly]
+        for assembly in Series(order):
+            assembly = User.do(assembly, "solve the assembly", user)
             timings += Stopwatch.measure_time(assembly, "time to solve the assembly")
             
     summarize(timings.dump_to_csv())
@@ -102,7 +100,7 @@ if __name__ == "__main__":
     # run an experiment
     # from control import MODE, Execute
     # control.MODE = Execute()
-    # test_paint_layers()
+    # # test_paint_layers()
     # test_force_at_break()
 
     # render a LaTeX description
@@ -110,4 +108,4 @@ if __name__ == "__main__":
 
     # other sample flowcharts
     #render_flowchart(test_paint_layers)
-    #render_flowchart(test_user_assembly_time)
+    render_flowchart(test_user_assembly_time)
