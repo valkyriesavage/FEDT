@@ -7,7 +7,7 @@ from PIL import Image
 import xml.etree.ElementTree as ET
 
 indent = 0
-shutup = True
+shutup = False
 
 id_counter = 0
 def next_id():
@@ -83,6 +83,28 @@ def process_in_parallel(dot, parent, parallel_node):
 
     return converge_node_id
 
+def process_while(dot, parent, while_node):
+    global indent
+    if not shutup:
+        print(' '*indent + f'making while nodes for parent {while_node.tag}')
+    parallel_end_nodes = []
+    # add a condition node
+    condition_node = create_styled_node(dot, 'do while ' + while_node.attrib.get('condition'), parent=parent)
+
+    last_node_created = condition_node
+    for loop_item in while_node.findall('loop-item'):
+        if not len([child for child in loop_item]):
+            continue # some bug
+
+        indent += 4
+        last_node_created = build_flowchart_recursive(dot, loop_item, last_node_created)
+        indent -= 4
+
+    # loop back up to the condition
+    dot.edge(last_node_created, condition_node)
+
+    return last_node_created
+
 def build_flowchart_recursive(dot, node, current_parent):
     last_id = None
     global indent
@@ -96,6 +118,8 @@ def build_flowchart_recursive(dot, node, current_parent):
         last_id = process_in_series(dot, current_parent, node)
     elif node.tag == 'in-parallel':
         last_id = process_in_parallel(dot, current_parent, node)
+    elif node.tag == 'loop':
+        last_id = process_while(dot, current_parent, node)
     elif node.tag in ['par-item','series-item']:
         last_id = current_parent
     else:
@@ -104,7 +128,7 @@ def build_flowchart_recursive(dot, node, current_parent):
         last_id = current_parent
 
     # process sequential children
-    if not node.tag in ['in-series','in-parallel']:
+    if not node.tag in ['in-series','in-parallel','loop']:
         for item in node:
             if not shutup:
                 print(' '*indent + f'now looking at children of {node.tag}: {node.text}')
