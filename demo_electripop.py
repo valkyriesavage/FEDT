@@ -34,11 +34,11 @@ def optimize_simulation():
     simmed = BatchMeasurements.empty()
 
     for f in Parallel(test_files):
-        fabbed_object = Laser.fab(f) # not 100% clear what machine was used. they also mention vinyl cutters and scissors
+        fabbed_object = Laser.fab(f) # not clear what machine was used. they also mention vinyl cutters and scissors
         ground_truths += Scanner.scan(fabbed_object) # they did this manually and not with a scanner, but this shorthand seems ok
         for weight_of_be_exp in Parallel(arange(-3,6+include_last)):
             for weight_of_ee_exp in Parallel(arange(-1, 1+include_last, .2)):
-                sim = VirtualWorldObject({'weight of bending energy': math.pow(10,weight_of_be_exp),
+                sim = VirtualWorldObject({'weight of bending energy': math.pow(10,weight_of_be_exp), # based on the figure, this is my guess
                                           'weight of electrical energy': math.pow(10, weight_of_ee_exp),
                                           'file': CustomSimulator.runsimulation(weight_of_be_exp,weight_of_ee_exp)})
                 simmed += Scanner.scan(sim)
@@ -48,7 +48,7 @@ def optimize_simulation():
 
 @fedt_experiment
 def electrical_inflation():
-    # not quite an experiment. they say that it takes "on the order of 10ms to fully saturate the mylar with charge"
+    # not sure if this is an experiment. they say that it takes "on the order of 10ms to fully saturate the mylar with charge"
     # but it's not clear if this was tested on more than one object or more than one repetition
     pass
 
@@ -122,7 +122,7 @@ def geometric_accuracy():
     elapsed_times = BatchMeasurements.empty()
 
     for f in Parallel(test_files):
-        fabbed_object = Laser.fab(f) # not 100% clear what machine was used. they also mention vinyl cutters and scissors
+        fabbed_object = Laser.fab(f) # not clear what machine was used. they also mention vinyl cutters and scissors
         ground_truths += Scanner.scan(fabbed_object) # they did this manually and not with a scanner, but this shorthand seems ok
         for sim_repetition in Parallel(range(100)):
             sim = VirtualWorldObject({'file': CustomSimulator.runsimulation(f)})
@@ -139,11 +139,10 @@ def user_experience():
     pass
 
 if __name__ == "__main__":
-    # render_flowchart(optimize_simulation)
+    render_flowchart(optimize_simulation)
+    # render_flowchart(physical_inflation)
     # render_flowchart(electrical_inflation)
-    render_flowchart(physical_inflation)
     # render_flowchart(electrical_deflation)
     # render_flowchart(physical_deflation)
-    # render_flowchart(volumetric_change)
     # render_flowchart(fabrication_time)
     # render_flowchart(geometric_accuracy)
