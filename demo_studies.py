@@ -1,3 +1,5 @@
+from numpy import arange
+
 import control
 from control import Execute, Evaluate
 from instruction import instruction
@@ -41,7 +43,7 @@ def test_force_at_break():
 
     breakage_points = BatchMeasurements.empty()
 
-    for rect_length in Parallel(range(50,100+include_last,25)):
+    for rect_length in Parallel(arange(50,100+include_last,25)):
         svg = SvgEditor.build_geometry(draw_rect, CAD_vars={'rect_length':rect_length})
         #svg = SvgEditor.design(vars={'rect_length':rect_length})
         for material in Parallel(['wood','acrylic']):
@@ -95,17 +97,17 @@ def test_user_assembly_time():
 if __name__ == "__main__":
     # create a flowchart
     render_flowchart(test_print_shrinkage)
-    #render_flowchart(test_force_at_break)
+    # render_flowchart(test_force_at_break)
 
     # run an experiment
     # from control import MODE, Execute
     # control.MODE = Execute()
-    # # test_paint_layers()
+    # test_paint_layers()
     # test_force_at_break()
 
     # render a LaTeX description - under construction
     #print(FlowChart().to_latex())
 
     # other sample flowcharts
-    #render_flowchart(test_paint_layers)
-    render_flowchart(test_user_assembly_time)
+    # render_flowchart(test_paint_layers)
+    # render_flowchart(test_user_assembly_time)

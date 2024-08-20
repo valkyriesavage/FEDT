@@ -113,9 +113,9 @@ def lasting():
     summarize([pre_weights.get_all_data(),post_weights.get_all_data()])
 
 if __name__ == "__main__":
-    #render_flowchart(resin_types)
+    # render_flowchart(resin_types)
     # render_flowchart(bend_vs_thickness)
-    # render_flowchart(min_wall_thickness)
+    render_flowchart(min_wall_thickness)
     # render_flowchart(min_wall_spacing)
     # render_flowchart(min_thin_wall_area)
     # render_flowchart(pneumatic_vs_hydraulic)

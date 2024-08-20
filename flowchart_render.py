@@ -7,7 +7,7 @@ from PIL import Image
 import xml.etree.ElementTree as ET
 
 indent = 0
-shutup = False
+shutup = True
 
 id_counter = 0
 def next_id():

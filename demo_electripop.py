@@ -39,8 +39,8 @@ def optimize_simulation():
         for weight_of_be_exp in Parallel(arange(-3,6+include_last)):
             for weight_of_ee_exp in Parallel(arange(-1, 1+include_last, .2)):
                 sim = VirtualWorldObject({'weight of bending energy': math.pow(10,weight_of_be_exp), # based on the figure, this is my guess
-                                          'weight of electrical energy': math.pow(10, weight_of_ee_exp),
-                                          'file': CustomSimulator.runsimulation(weight_of_be_exp,weight_of_ee_exp)})
+                                            'weight of electrical energy': math.pow(10, weight_of_ee_exp),
+                                            'file': CustomSimulator.runsimulation(weight_of_be_exp,weight_of_ee_exp)})
                 simmed += Scanner.scan(sim)
         
     summarize(ground_truths.get_all_data())
@@ -139,10 +139,10 @@ def user_experience():
     pass
 
 if __name__ == "__main__":
-    render_flowchart(optimize_simulation)
+    # render_flowchart(optimize_simulation)
     # render_flowchart(physical_inflation)
     # render_flowchart(electrical_inflation)
     # render_flowchart(electrical_deflation)
     # render_flowchart(physical_deflation)
     # render_flowchart(fabrication_time)
-    # render_flowchart(geometric_accuracy)
+    render_flowchart(geometric_accuracy)
