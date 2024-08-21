@@ -14,13 +14,17 @@ def summarize(data):
 
 @fedt_experiment
 def resin_types():
-    stl = VolumeFile('bellows_1mm.stl')
+    stl = VolumeFile('bellows_1mm.stl') # would be good to note that this was found in previous work
+    # needed to recompile to make it suitable for their size
+    # pre-knowledge: the structure should be able to be fully compressed and to fully rebound
 
     compression_results = BatchMeasurements.empty()
     tension_results = BatchMeasurements.empty()
     for resin in Parallel(['standard','tenacious','f39/f69']):
         fabbed_object = Printer.slice_and_print(stl, material=resin)
         instruction(f"compress object #{fabbed_object.uid} as much as possible (?)") # with what? how much?
+        # want to check if it behaves more or less like that. if it does: good. if it breaks: N/A.
+        # _speed_ of compression and rebound was also a part of this.
         compression_results += Calipers.measure_size(fabbed_object,"height after compression")
         instruction(f"extend object #{fabbed_object.uid} as much as possible (?)") # with what? how much?
         tension_results += Calipers.measure_size(fabbed_object,"height after stretching")
@@ -39,6 +43,9 @@ def bend_vs_thickness():
         fabbed_object = Printer.slice_and_print(stl)
         instruction(f"fix object #{fabbed_object.uid} at one end and hang a load of 0.49N at the other end")
         bend_results += Protractor.measure_angle(fabbed_object,"angle of tip below 90 degrees")
+        # measurements were repeated multiple times. this was improvised!
+        # used a camera which was fixed to take pictures, then measured pixels on the images.
+        # ...but this is not always accurate. the error bars come from that repetition.
 
     # were these measurements repeated? were the prints repeated? there are error bars but I'm not sure what from
 
@@ -62,6 +69,7 @@ def min_wall_thickness():
 @fedt_experiment
 def min_wall_spacing():
     # not clear what the experiment was? they say "Based on our printing test, ..."
+    # was trying to shrink into minimum unit. changing spacings by .1 mm during the study, looking for failure
     summarize("1.4mm")
 
 @fedt_experiment
@@ -81,6 +89,9 @@ def min_thin_wall_area():
 @fedt_experiment
 def pneumatic_vs_hydraulic():
     # this reads more like a demonstration than an experiment; not sure how to classify it
+    # scientifically, air compresses more than liquid, and we know the effect. this is more of a demonstration.
+    # not trying to report numbers.
+    # pre-knowledge: there would be a huge difference, but unclear how much.
     expansion_results = BatchMeasurements.empty()
 
     stl = VolumeFile("single_actuator_single_generator.stl")
@@ -115,9 +126,9 @@ def lasting():
 if __name__ == "__main__":
     # render_flowchart(resin_types)
     # render_flowchart(bend_vs_thickness)
-    render_flowchart(min_wall_thickness)
+    # render_flowchart(min_wall_thickness)
     # render_flowchart(min_wall_spacing)
     # render_flowchart(min_thin_wall_area)
     # render_flowchart(pneumatic_vs_hydraulic)
-    # render_flowchart(lasting) # crashes
+    render_flowchart(lasting) # crashes
     #print(lasting())

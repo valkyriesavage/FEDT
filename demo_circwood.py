@@ -116,7 +116,7 @@ def test_change_over_time():
             fabbed_object = Laser.fab(line_file, repetition=repetition)
             fabbed_objects.append(Human.post_process(fabbed_object, post_process_condition))
     results = BatchMeasurements.empty()
-    # TODO: add a beginning measurement for 0 months
+    # did: add a beginning measurement for 0 months
     for wait_months in Series(range(0, 6)):
         fabbed_objects = Environment.wait_up_to_time_multiple(fabbed_objects, num_months=wait_months)
         for fabbed_object in Parallel(fabbed_objects):
