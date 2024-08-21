@@ -370,6 +370,7 @@ class SvgEditor:
             svg_fullpath = os.path.join(svg_location, svg_fname)
             d.save_svg(svg_fullpath)
 
+        # TODO : this is actually building the object slightly wrong!
         stored_values = {LineFile.LINE_FILE: svg_fullpath}
         if explicit_args:
             stored_values.update(explicit_args)
