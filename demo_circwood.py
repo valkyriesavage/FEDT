@@ -30,10 +30,12 @@ def test_materials():
         for coating in Parallel(coatings):
             instruction(f"get a piece of {material} with coating {coating}")
             fabbed_objects.append(Laser.fab(line_file, material=material, coating=coating))
+            # line file: the test was if it is conductive or not
             # not completely sure how to capture what was done here... it seems like
             # there was some experimentation with settings, but I'm not clear on what it was
     results = BatchMeasurements.empty()
     for fabbed_object in Parallel(fabbed_objects):
+        # if it is conductive at all, it is suitable for this method
         results += Multimeter.measure_resistance(fabbed_object)
     data = results.get_all_data()
     return summarize(data)
@@ -43,8 +45,9 @@ def test_height_vs_focal_point():
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
     results = BatchMeasurements.empty()
 
-    for focal_height_mm in Parallel(arange(0, 5+include_last)):
-        fabbed_object = Laser.fab(line_file, focal_height_mm=focal_height_mm)
+    #for focal_height_mm in Parallel(arange(0, 5+include_last)): # corrected from what we thought
+    for focal_height_mm in Parallel(arange(0, 6+include_last)):
+        fabbed_object = Laser.fab(line_file, focal_height_mm=focal_height_mm, material='wood')
         results += Multimeter.measure_resistance(fabbed_object)
     data = results.get_all_data()
     return summarize(data)
@@ -59,7 +62,7 @@ def test_optimal_number_of_scans():
     num_scans = 0
     while resistance == best_result:
         num_scans = num_scans + 1
-        fabbed_object = Laser.fab(line_file, num_scans=num_scans)
+        fabbed_object = Laser.fab(line_file, num_scans=num_scans, material='wood')
         instruction("leave the material in the bed in between")
         resistance = results.do_measure(fabbed_object, Multimeter.resistance)
         resistance = float(resistance) if resistance else best_result
@@ -71,7 +74,7 @@ def test_optimal_number_of_scans():
 
 @fedt_experiment
 def test_laser_power_and_speed():
-    speeds = arange(20,80+include_last,10)
+    speeds = arange(20,80+include_last,10) # fix this! they only did the ones in the table. "likely" ones
     powers = arange(10,50+include_last,5)
     setting_names = Laser.prep_cam(cut_speeds=speeds, cut_powers=powers)
 
@@ -83,13 +86,15 @@ def test_laser_power_and_speed():
           for repetition in Parallel(range(4)):
             fabbed_object = Laser.fab(line_file, setting_names, cut_speed, cut_power,
                                       color_to_setting=Laser.SvgColor.GREEN,
-                                      repetition=repetition)
+                                      repetition=repetition,
+                                      material='wood')
             resistance = Multimeter.measure_resistance(fabbed_object)
             results += resistance
     summarize(results.get_all_data())
 
 @fedt_experiment
 def test_grain_direction():
+    # fixme: the LINES are what changed, not the orientation of the wood. the relative orientation!
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
     fabbed_objects: list[RealWorldObject] = []
     for orientation in Parallel(["orthogonal","along grain"]):
@@ -111,16 +116,17 @@ def test_change_over_time():
             fabbed_object = Laser.fab(line_file, repetition=repetition)
             fabbed_objects.append(Human.post_process(fabbed_object, post_process_condition))
     results = BatchMeasurements.empty()
-    for wait_months in Series(range(1, 6)):
+    # TODO: add a beginning measurement for 0 months
+    for wait_months in Series(range(0, 6)):
         fabbed_objects = Environment.wait_up_to_time_multiple(fabbed_objects, num_months=wait_months)
         for fabbed_object in Parallel(fabbed_objects):
             results += Multimeter.measure_resistance(fabbed_object)
     summarize(results.get_all_data())
 
 if __name__ == "__main__":
-    render_flowchart(test_materials)
+    # render_flowchart(test_materials)
     # render_flowchart(test_height_vs_focal_point)
-    render_flowchart(test_optimal_number_of_scans)
-    # render_flowchart(test_laser_power_and_speed) # broken with too many loop depths
+    # render_flowchart(test_optimal_number_of_scans)
+    # render_flowchart(test_laser_power_and_speed)
     # render_flowchart(test_grain_direction)
-    # render_flowchart(test_change_over_time)
+    render_flowchart(test_change_over_time)

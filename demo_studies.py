@@ -94,15 +94,35 @@ def test_user_assembly_time():
             
     summarize(timings.dump_to_csv())
 
+@fedt_experiment
+def test_user_assembly_time():
+    simple = VolumeFile("simple_assembly.stl")
+    complex = VolumeFile("complex_assembly.stl")
+
+    timings = ImmediateMeasurements.empty()
+
+    treatments = shuffle(["simple_first"] * 2 + ["complex_first"] * 2)
+
+    for (user, treatment) in Parallel(enumerate(treatments)):
+        simple_assembly = Printer.slice_and_print(simple)
+        complex_assembly = Printer.slice_and_print(complex)
+        order = [simple_assembly, complex_assembly]
+        if treatment == 'complex_first':
+            order = [complex_assembly, simple_assembly]
+        for assembly in Series(order):
+            assembly = User.do(assembly, "solve the assembly", user)
+            
+    summarize(timings.dump_to_csv())
+
 if __name__ == "__main__":
     # create a flowchart
-    render_flowchart(test_print_shrinkage)
+    # render_flowchart(test_print_shrinkage)
     # render_flowchart(test_force_at_break)
 
     # run an experiment
     # from control import MODE, Execute
     # control.MODE = Execute()
-    # test_paint_layers()
+    # # test_paint_layers()
     # test_force_at_break()
 
     # render a LaTeX description - under construction
@@ -110,4 +130,4 @@ if __name__ == "__main__":
 
     # other sample flowcharts
     # render_flowchart(test_paint_layers)
-    # render_flowchart(test_user_assembly_time)
+    render_flowchart(test_user_assembly_time)

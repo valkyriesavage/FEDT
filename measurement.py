@@ -84,8 +84,11 @@ class BatchMeasurements:
 
             def walk_metadata(obj: RealWorldObject | VirtualWorldObject, ret_val=False):
                 variables = []
+                print(type(metaval))
                 for metakey, metaval in obj.metadata.items():
-                    if type(metaval) is RealWorldObject or type(metaval) is VirtualWorldObject:
+                    if type(metaval) in [RealWorldObject, VirtualWorldObject] or \
+                        issubclass(type(metaval), VirtualWorldObject) or \
+                        issubclass(type(metaval), RealWorldObject):
                         variables.extend(walk_metadata(metaval, ret_val=ret_val))
                     else:
                         if ret_val:

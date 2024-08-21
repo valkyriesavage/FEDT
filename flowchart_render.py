@@ -7,7 +7,7 @@ from PIL import Image
 import xml.etree.ElementTree as ET
 
 indent = 0
-shutup = True
+shutup = False
 
 id_counter = 0
 def next_id():
@@ -41,6 +41,8 @@ def create_styled_node(dot, label, parent=None, is_header=False, block_type=None
     dot.node(new_id, label, style=style, shape=shape, fillcolor=color, width=width)
     if parent:
         dot.edge(parent, new_id)
+        if not shutup:
+            print(' '*(indent+4) + f'\tmaking parent edge from {new_id} to {parent}')
     if not shutup:
         print(' '*(indent+4) + f'\tnew node id is {new_id}')
     return new_id
@@ -48,7 +50,7 @@ def create_styled_node(dot, label, parent=None, is_header=False, block_type=None
 def process_in_series(dot, parent, series_node):
     global indent
     if not shutup:
-        print(' '*indent + f'making series nodes for parent {series_node}')
+        print(' '*indent + f'making series nodes for parent {parent}')
     last_node_created = parent
     for series_item in series_node.findall('series-item'):
         if not len([child for child in series_item]):
@@ -57,7 +59,7 @@ def process_in_series(dot, parent, series_node):
         indent += 4
         tmp = build_flowchart_recursive(dot, series_item, last_node_created)
         indent -= 4
-        dot.edge(tmp, last_node_created)
+
         last_node_created = tmp
 
     return last_node_created
@@ -79,6 +81,8 @@ def process_in_parallel(dot, parent, parallel_node):
 
     converge_node_id = create_styled_node(dot, 'Converge', block_type='converge')
     for end_node in parallel_end_nodes:
+        if not shutup:
+            print(' '*indent + f'making a parent edge from {last_node_created} to {converge_node_id} (converge)')
         dot.edge(end_node, converge_node_id)
 
     return converge_node_id
@@ -101,15 +105,17 @@ def process_while(dot, parent, while_node):
         indent -= 4
 
     # loop back up to the condition
+    if not shutup:
+        print(' '*indent + f'making a parent edge from {last_node_created} to {condition_node}')
     dot.edge(last_node_created, condition_node)
 
     return last_node_created
 
 def build_flowchart_recursive(dot, node, current_parent):
-    last_id = None
+    last_id = current_parent
     global indent
     if not shutup:
-        print(' '*indent + f'exploring {node.tag}: {node.text}')
+        print(' '*indent + f'exploring {node.tag}: {node.text.strip() if node.text else ""} ; parent: {current_parent}')
 
     # process the node
     if node.tag in ['instruction','note','header']:
@@ -121,17 +127,19 @@ def build_flowchart_recursive(dot, node, current_parent):
     elif node.tag == 'loop':
         last_id = process_while(dot, current_parent, node)
     elif node.tag in ['par-item','series-item']:
+        if not shutup:
+            print(' ' * indent + f'keeping parent: {current_parent}')
         last_id = current_parent
     else:
         if not shutup:
-            print(f'{node.tag}')
+            print(' ' * indent + f'unknown tag: {node.tag}, keeping parent: {current_parent}')
         last_id = current_parent
 
     # process sequential children
     if not node.tag in ['in-series','in-parallel','loop']:
+        if not shutup:
+            print(' '*indent + f'now looking at children of {node.tag}: {node.text.strip() if node.text else ""}')
         for item in node:
-            if not shutup:
-                print(' '*indent + f'now looking at children of {node.tag}: {node.text}')
             indent += 4
             tmp = build_flowchart_recursive(dot, item, last_id)
             indent -= 4
