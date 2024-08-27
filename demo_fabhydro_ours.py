@@ -2,7 +2,7 @@ from numpy import arange
 
 from instruction import instruction
 from iterators import Series, Parallel, include_last
-from measurement import BatchMeasurements, ImmediateMeasurements
+from measurement import BatchMeasurements
 from design import VolumeFile
 from decorator import fedt_experiment
 from flowchart_render import render_flowchart
@@ -68,20 +68,9 @@ def min_wall_thickness():
 
 @fedt_experiment
 def min_wall_spacing():
-    acceptability_results = ImmediateMeasurements.empty()
-    base_stl = VolumeFile("thin_wall.stl")
-    neighbours_separated = True
-    separation = 2.5
-    while neighbours_separated:
-        printing_stl = StlEditor.modify_feature_by_hand(base_stl, "spacing between copies", separation)
-        fabbed_object = Printer.slice_and_print(printing_stl)
-        fabbed_object = Human.is_reasonable(fabbed_object)
-        neighbours_separated = acceptability_results.do_measure(fabbed_object,
-                                                                TrueFalser.truefalse.set_feature("did the neighbouring cubes separate?"))
-        if neighbours_separated:
-            separation -= .1
-
-    summarize(acceptability_results)
+    # not clear what the experiment was? they say "Based on our printing test, ..."
+    # was trying to shrink into minimum unit. changing spacings by .1 mm during the study, looking for failure
+    summarize("1.4mm")
 
 @fedt_experiment
 def min_thin_wall_area():
@@ -94,6 +83,22 @@ def min_thin_wall_area():
         fabbed_object = Printer.slice_and_print(stl)
         instruction("pump 20psi into the fabricated object")
         expansion_results += Calipers.measure_size(fabbed_object,"vertical expansion height")
+
+    summarize(expansion_results.get_all_data())
+ 
+@fedt_experiment
+def pneumatic_vs_hydraulic():
+    # this reads more like a demonstration than an experiment; not sure how to classify it
+    # scientifically, air compresses more than liquid, and we know the effect. this is more of a demonstration.
+    # not trying to report numbers.
+    # pre-knowledge: there would be a huge difference, but unclear how much.
+    expansion_results = BatchMeasurements.empty()
+
+    stl = VolumeFile("single_actuator_single_generator.stl")
+    for fill in Parallel(['water','air']):
+        fabbed_object = Printer.slice_and_print(stl)
+        filled_object = Human.post_process(fabbed_object,f"fill object with {fill}")
+        expansion_results += Calipers.measure_size(filled_object,"displacement of tip")
 
     summarize(expansion_results.get_all_data())
 
@@ -125,8 +130,8 @@ if __name__ == "__main__":
     # render_flowchart(resin_types)
     # render_flowchart(bend_vs_thickness)
     # render_flowchart(min_wall_thickness)
-    render_flowchart(min_wall_spacing)
+    # render_flowchart(min_wall_spacing)
     # render_flowchart(min_thin_wall_area)
     # render_flowchart(pneumatic_vs_hydraulic)
-    # render_flowchart(lasting) # crashes
+    render_flowchart(lasting) # crashes
     #print(lasting())

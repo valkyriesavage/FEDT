@@ -30,12 +30,12 @@ def create_styled_node(dot, label, parent=None, is_header=False, block_type=None
     width = '2'
     
     color = 'lightgrey'
-    if block_type == 'fabricate':
-        color = 'lightblue'
-    elif block_type == 'measure':
-        color = 'lightgreen'
-    elif block_type == 'converge':
-        color = 'orange'
+    # if block_type == 'fabricate':
+    #     color = 'lightblue'
+    # elif block_type == 'measure':
+    #     color = 'lightgreen'
+    # elif block_type == 'converge':
+    #     color = 'orange'
 
     new_id = next_id()
     dot.node(new_id, label, style=style, shape=shape, fillcolor=color, width=width)
@@ -164,7 +164,7 @@ def build_flowchart(xml_root):
     return dot
 
 
-def render_flowchart(capture_function = None):
+def render_flowchart(capture_function = None, pdf=False):
 
     f = io.StringIO()
     with redirect_stdout(f):                 
@@ -181,12 +181,21 @@ def render_flowchart(capture_function = None):
     flowchart = build_flowchart(xml_root)
 
     # Save the flowchart
-    fname = f'expt_flowcharts/{capture_function.__name__}_flowchart'
-    flowchart.render(fname, format='png', cleanup=True)
+    if pdf:
+        fname = f'expt_flowcharts/{capture_function.__name__}_flowchart'
+        flowchart.render(fname, format='pdf', cleanup=True)
 
-    # Display the flowchart
-    im=Image.open(fname + '.png')
-    im.show()
+        from pdf2image import convert_from_path
+        # Display the flowchart
+        im=convert_from_path(fname + '.pdf')[0]
+        im.show()
+    else:
+        fname = f'expt_flowcharts/{capture_function.__name__}_flowchart'
+        flowchart.render(fname, format='png', cleanup=True)
+
+        # Display the flowchart
+        im=Image.open(fname + '.png')
+        im.show()
 
 sample_simple = '''
 <in-parallel>

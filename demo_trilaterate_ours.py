@@ -45,29 +45,20 @@ def latinsquare(n):
         sq.append(sqrw)
     return sq
 
-PYRAMID = None
-
-def get_pyramid():
-    global PYRAMID
-    if PYRAMID is None:
-        geometry_file = VolumeFile("pyramid.stl")
-
-        for coverage_condition in Parallel(['high','low']):
-            for distance_condition in Parallel(['near','far']):
-                for mirror_condition in Parallel(range(1,2)):
-                    StlEditor.edit(geometry_file, f"add an electrode with coverage {coverage_condition} and distance {distance_condition}")
-
-        fabbed_object = Printer.slice_and_print(geometry_file)
-
-    PYRAMID = fabbed_object
-    return PYRAMID
-
 @fedt_experiment
 def placement_response():
+    # geometry_file = VolumeFile("pyramid.stl")
+
+    # for coverage_condition in ['high','low']:
+    #     for distance_condition in ['near','far']:
+    #         for mirror_condition in range(1,2):
+    #             StlEditor.edit(geometry_file, f"add an electrode with coverage {coverage_condition} and distance {distance_condition}")
+    # unsure if this was generated specifically in this way, or if the pyramid was just taken as given
+    # designed geometry to cover the conditions
+
     electrodes = list(range(7))
 
-    fabbed_object = get_pyramid()
-    
+    fabbed_object = Printer.slice_and_print(VolumeFile("pyramid.stl"))
     raw_results = BatchMeasurements.empty()
     test_values = BatchMeasurements.empty()
 
@@ -87,7 +78,7 @@ def placement_response():
 
 @fedt_experiment
 def force_response():
-    fabbed_object = get_pyramid()
+    fabbed_object = Printer.slice_and_print(VolumeFile("pyramid.stl")) # same single object for both experiments
 
     ground_truth = BatchMeasurements.empty()
     test_values = BatchMeasurements.empty()

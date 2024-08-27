@@ -795,6 +795,22 @@ class Timestamper:
         instruction(Timestamper.timestamp.procedure)
         return BatchMeasurements.single(obj, Timestamper.timestamp)
 
+class TrueFalser:
+    truefalse = Measurement(
+        name="true or false",
+        description="The answer to a decision",
+        procedure="""
+            Decide if the answer to "{}" is true or false
+            """,
+        units="boolean",
+        feature="n/a")
+
+    @staticmethod
+    def decide_truefalse(obj: RealWorldObject, feature: str=truefalse.procedure) -> BatchMeasurements:
+        instruction(f"Measure object #{obj.uid}.", header=True)
+        instruction(TrueFalser.truefalse.procedure.format(feature))
+        return BatchMeasurements.single(obj, TrueFalser.truefalse.set_feature(feature))
+
 class Calipers:
     length = Measurement(
         name="size",

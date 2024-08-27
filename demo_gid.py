@@ -108,8 +108,6 @@ def cross_validation():
         fabbed_object = Human.post_process(fabbed_object, "hold a light above the object") # I'm assuming this happened
         all_object_results += Camera.take_picture(fabbed_object, "bottom")
 
-    print(FlowChart().to_latex()) # TODO remove later!!
-
     summarize(all_object_results.get_all_data())
 
 @fedt_experiment
