@@ -35,7 +35,10 @@ def find_bottom_spacings():
     for obj_file in Parallel([large_object,medium_object,small_object]):
 
         for bottom_angle in Parallel(arange(0,180+include_last,1)): # or was it arange(0,6+include_last,1) ?
-            fabbed_object = Printer.slice_and_print(obj_file, bottom_angle=bottom_angle)
+            # table 1 is more of a summary of synthesized results, not what was used for the experiment
+            # it says 16 pictures... maybe that's related to the number of combinations?
+            # gave a picture of him with all the objects in the talk
+            fabbed_object = Printer.slice_and_print(obj_file, bottom_angle=bottom_angle) # need to add partial print option
             bottom_angle_results += Camera.take_picture(fabbed_object, "bottom")
         
         for bottom_width in Parallel(arange(0.35,0.6+include_last,.01)): # or was it arange(0.35,0.35+0.06+include_last,.01) ?
@@ -53,6 +56,7 @@ def find_bottom_spacings():
                                                         infill_pattern=infill_pattern,
                                                         infill_rotation=infill_angle)
                 fabbed_object = Human.post_process(fabbed_object, "hold a light above the object")
+                #for repetition_picture in range(16): # taking 16 of each object
                 picture = Camera.take_picture(fabbed_object, "bottom")
                 infill_angle_results += picture
                 if infill_angle == 0:
@@ -80,7 +84,7 @@ def random_param_set():
         infill_rotation_range = arange(0,60,1)
     else: # if it's grid
         infill_rotation_range = arange(0,90,1)
-    return (random.choice(arange(0,180,5)), # bottom angle
+    return (random.choice(arange(0,180,5)), # bottom angle. need to remove 0 and 90 from the list, as well; reserved for error check
             random.choice(arange(0.35,0.6+include_last,.05)), # bottom width
             infill_pattern, # infill pattern
             random.choice(infill_rotation_range), # infill rotation
@@ -134,7 +138,7 @@ def materials_lighting_thicknesses():
 
 @fedt_experiment
 def different_printers():
-    model = VolumeFile("keycover.stl") # maybe?
+    model = VolumeFile("keycover.stl") # not sure which file was used
     # they are only testing bottom line widths and angles, so I am assuming they use the same 6 configurations as above
     bottom_line_angles = list(arange(0,180+include_last,(180-0)/6)) # evenly spaced for 6 types of prints
     bottom_line_widths = list(arange(0.35,0.6+include_last,(.6-.35)/6)) # evenly spaced for 6 types of prints
@@ -197,9 +201,9 @@ def camera_angle():
 
 
 if __name__ == "__main__":
-    # render_flowchart(find_bottom_spacings) # broken due to too many loops
+    # render_flowchart(find_bottom_spacings)
     # render_flowchart(cross_validation)
-    # render_flowchart(materials_lighting_thicknesses) # broken due to too many loops
+    # render_flowchart(materials_lighting_thicknesses)
     # render_flowchart(different_printers)
     render_flowchart(camera_distance)
-    # render_flowchart(camera_angle) # crashes
+    # render_flowchart(camera_angle)

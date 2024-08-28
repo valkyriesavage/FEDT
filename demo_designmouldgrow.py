@@ -56,7 +56,7 @@ def grow_mycomaterial_from_mould(mould, myco_material):
     #     fabbed_object = Human.is_reasonable(fabbed_object)
     #     is_reasonable = fabbed_object.metadata["human reasonableness check"]
     instruction("material is ready when it is dry")
-
+    print(fabbed_object)
     return fabbed_object
 
 @fedt_experiment

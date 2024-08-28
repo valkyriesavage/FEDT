@@ -24,7 +24,7 @@ def test_materials():
                          "beech", "oak", "walnut"]
     coatings = ['fire retardant', 'no coating']
 
-    line_file = SvgEditor.build_geometry(SvgEditor.draw_circle) # fixme, they used a line
+    line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
     fabbed_objects: list[RealWorldObject] = []
     for material in Parallel(materials):
         for coating in Parallel(coatings):
@@ -41,7 +41,7 @@ def test_height_vs_focal_point():
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
     results = BatchMeasurements.empty()
 
-    for focal_height_mm in Parallel(arange(0, 6+include_last)):
+    for focal_height_mm in Parallel(arange(0, 5+include_last)):
         fabbed_object = Laser.fab(line_file, focal_height_mm=focal_height_mm, material='wood')
         results += Multimeter.measure_resistance(fabbed_object)
     data = results.get_all_data()
@@ -69,27 +69,26 @@ def test_optimal_number_of_scans():
 
 @fedt_experiment
 def test_laser_power_and_speed():
-    speeds = arange(20,80+include_last,10) # fix this! they only did the ones in the table. "likely" ones
+    speeds = arange(20,80+include_last,10)
     powers = arange(10,50+include_last,5)
-    speeds_powers = [(10,20)] # fill in from table
     setting_names = Laser.prep_cam(cut_speeds=speeds, cut_powers=powers)
 
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
     results = BatchMeasurements.empty()
 
-    for cut_speed, cut_power in Parallel(speeds_powers):
-        for repetition in Parallel(range(4)):
+    for cut_speed in Parallel(speeds):
+      for cut_power in Parallel(powers):
+          for repetition in Parallel(range(4)):
             fabbed_object = Laser.fab(line_file, setting_names, cut_speed, cut_power,
-                                        color_to_setting=Laser.SvgColor.GREEN,
-                                        repetition=repetition,
-                                        material='wood')
+                                      color_to_setting=Laser.SvgColor.GREEN,
+                                      repetition=repetition,
+                                      material='wood')
             resistance = Multimeter.measure_resistance(fabbed_object)
             results += resistance
     summarize(results.get_all_data())
 
 @fedt_experiment
 def test_grain_direction():
-    # fixme: the LINES are what changed, not the orientation of the wood. the relative orientation!
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
     fabbed_objects: list[RealWorldObject] = []
     for orientation in Parallel(["orthogonal","along grain"]):
