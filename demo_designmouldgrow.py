@@ -8,7 +8,7 @@ from decorator import fedt_experiment
 from lib import *
 
 def compare(dataset1, dataset2):
-    return "Hmmmm... I think these two are pretty same-same??"
+    return "Hmmmm... I think these two are pretty same-same?"
 
 def summarize(data):
     return "Oh wow, great data!"
@@ -25,9 +25,39 @@ class CustomModellingTool:
         return VolumeFile(stl_location)
 
 def prep_materials():
-    instruction("remove pathogens by pouring boiling water through strainer")
+    instruction("remove pathogens by pouring boiling water through materials in strainer")
     instruction("bulk growth - 1 week")
     instruction("break up for forming growth - 3 days")
+    instruction("keep in the fridge as prepared material")
+    instruction("remove from fridge to reactivate 1 day before beginning experiments")
+
+def grow_mycomaterial_from_mould(mould, myco_material):
+    instruction("sterilize the prep area")
+    instruction("sterlize the mould with isopropyl alcohol")
+    fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
+    is_reasonable = False
+    while not is_reasonable:
+        Environment.wait_up_to_time_single(fabbed_object, num_days=1)
+        instruction("look at or poke the sample")
+        fabbed_object = Human.is_reasonable(fabbed_object)
+        is_reasonable = fabbed_object.metadata["human reasonableness check"]
+    instruction("remove the material from the mould for open growth")
+    is_reasonable = False
+    # while not is_reasonable:
+    #     Environment.wait_up_to_time_single(fabbed_object, num_days=1)
+    #     instruction("look at or poke the sample")
+    #     fabbed_object = Human.is_reasonable(fabbed_object)
+    #     is_reasonable = fabbed_object.metadata["human reasonableness check"]
+    # instruction("allow the material to dry in a 50-80C oven")
+    # is_reasonable = False
+    # while not is_reasonable:
+    #     Environment.wait_up_to_time_single(fabbed_object, num_days=1)
+    #     instruction("look at or poke the sample")
+    #     fabbed_object = Human.is_reasonable(fabbed_object)
+    #     is_reasonable = fabbed_object.metadata["human reasonableness check"]
+    instruction("material is ready when it is dry")
+
+    return fabbed_object
 
 @fedt_experiment
 def mushroom_types():
@@ -41,36 +71,20 @@ def geometric_features():
 
     geometries = [VolumeFile(f) for f in ['ramps.stl', 'circular.stl', 'patterns.stl']]
 
-    prep_materials() # how was this timed? just constant prepping in rotation, or?
-    # the grow yourself kits, you can put in the fridge, and they are ready when you need them
-    # while in the incubator in the growing phase, you want it to think it's underground
-    # as long as you don't freeze it, you keep it in the fridge, and it will just grow very very slowly
-    # then it needs to "reactivate" after coming out of the fridge.
+    prep_materials()
     instruction("ensure you wear gloves")
-    # sterlize everything!
+    instruction("sterilize the prep space")
 
     for geometry_file in Parallel(geometries):
         mould = Printer.slice_and_print(geometry_file)
         for myco_material in Series(['30% coffee inclusions', 'no inclusions']):
-            instruction("sterilize the prep area")
-            instruction("sterlize the mould with isopropyl alcohol") # also note that PLA just gets infected
-            # using acrylic, it wouldn't have this same problem. ABS might be more stable. TPU is more soft, could try that.
-            fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
-            Environment.wait_up_to_time_single(fabbed_object, num_weeks=1) # there's a reasonableness test here, not just 1 week
-            # this can take more or less time, depending on the temperature
-            # can determine if it's colonized "enough" by looking at or poking it
-            # with white rot fungus, there is a white covering over most of it. where it starts to turn brown, it's ok to leave it longer
-            # just make sure there's no fruiting bodies forming
-            instruction("remove the material from the mould")
-            Environment.wait_up_to_time_single(fabbed_object, num_days=3)
-            instruction("allow the material to dry in a 50-80C oven")
-            Environment.wait_up_to_time_single(fabbed_object, num_weeks=7) # 1 day to 1 week
+            fabbed_object = grow_mycomaterial_from_mould(mould, myco_material)
             shrinkage_results += Calipers.measure_size(fabbed_object, "important dimension")
             if geometry_file.stl_location != 'ramps.stl':
                 scan = Scanner.scan(fabbed_object)
                 scanning_results += scan
             if geometry_file.stl_location == 'circular.stl':
-                oneoff_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
+                oneoff_object = grow_mycomaterial_from_mould(mould, myco_material)
                 oneoff_object = Human.post_process(oneoff_object, 'glycerine treatment')
                 shrinkage_results += Calipers.measure_size(oneoff_object, "important dimension")
                 scanning_results += Scanner.scan(oneoff_object)
@@ -98,16 +112,8 @@ def mechanical_and_shrinkage_features():
 
     prep_materials()
 
-    # used same objects from first study, the rectangular cuboid ones.
-
     for myco_material in Series(['30% coffee inclusions', 'no inclusions']):
-        fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
-        Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
-        instruction("remove the material from the mould")
-        Environment.wait_up_to_time_single(fabbed_object, num_days=3)
-        instruction("allow the material to dry in a 50-80C oven")
-        Environment.wait_up_to_time_single(fabbed_object, num_weeks=7) # 1 day to 1 week
-        instruction("remove the object from the mould")
+        fabbed_object = grow_mycomaterial_from_mould(mould, myco_material)
         shrinkage_results += Calipers.measure_size(fabbed_object, "x-axis")
         shrinkage_results += Calipers.measure_size(fabbed_object, "y-axis")
         shrinkage_results += Calipers.measure_size(fabbed_object, "z-axis")
@@ -137,13 +143,8 @@ def test_software_tool():
     mould = Printer.slice_and_print(software_generated_mould)
     myco_material = "30% coffee inclusions"
     for repetition in Parallel(range(3)):
-        fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
-        fabbed_object.metadata.update({'repetition':repetition})
-        Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
-        instruction("remove the material from the mould")
-        Environment.wait_up_to_time_single(fabbed_object, num_days=3)
-        instruction("allow the material to dry in a 50-80C oven")
-        Environment.wait_up_to_time_single(fabbed_object, num_weeks=7) # 1 day to 1 week
+        fabbed_object = grow_mycomaterial_from_mould(mould, myco_material)
+        fabbed_object.metadata.update({'repetition': repetition})
         measurement_points = range(0,90+include_last,45)
         for x_axis_point in measurement_points:
             results += Calipers.measure_size(fabbed_object, f"{x_axis_point} degrees along the x axis")
@@ -154,8 +155,31 @@ def test_software_tool():
 
     summarize(results.get_all_data())
 
+@fedt_experiment
+def test_functions():
+    prep_materials()
+
+    results = BatchMeasurements.empty()
+    mould = Printer.slice_and_print(VolumeFile("some.stl"))
+    myco_material = "30% coffee inclusions"
+    # fabbed_object = grow_mycomaterial_from_mould(mould, myco_material) # doesn't work
+    fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}") # this code copy/pasted from function, it works.
+    is_reasonable = False
+    while not is_reasonable:
+        Environment.wait_up_to_time_single(fabbed_object, num_days=1)
+        instruction("look at or poke the sample")
+        fabbed_object = Human.is_reasonable(fabbed_object)
+        is_reasonable = fabbed_object.metadata["human reasonableness check"]
+    instruction("remove the material from the mould for open growth")
+    results += Calipers.measure_size(fabbed_object, f"0 degrees along the x axis")
+    results += Calipers.measure_size(fabbed_object, f"0 degrees along the y axis")
+    results += Calipers.measure_size(fabbed_object, f"0 degrees along the z axis")
+
+    summarize(results.get_all_data())
+
 
 if __name__ == "__main__":
-    render_flowchart(geometric_features)
+    # render_flowchart(geometric_features)
     # render_flowchart(mechanical_and_shrinkage_features)
     # render_flowchart(test_software_tool)
+    render_flowchart(test_functions)
