@@ -7,7 +7,7 @@ from measurement import BatchMeasurements
 from design import VolumeFile
 from decorator import fedt_experiment
 from flowchart_render import render_flowchart
-from iterators import Parallel, Series, include_last
+from iterators import Parallel, Series, include_last, shuffle
 from lib import *
 
 include_last = .001
@@ -71,12 +71,11 @@ def placement_response():
     raw_results = BatchMeasurements.empty()
     test_values = BatchMeasurements.empty()
 
-    for participant in Parallel(range(10)): # 12
-        for repetition in Series(range(1)): # not sure how many random touches were required
-            # probably the same number per participant, but not sure of the number
+    for participant in Parallel(range(12)):
+        for repetition in Series(range(1)):
+            # the same number of repetitions per participant, but not sure of the number
             User.do(fabbed_object, f"touch electrode #{random.choice(electrodes)}, rep #{repetition}", participant)
-        for touch in Series(latinsquare(len(electrodes))[participant % len(electrodes)]): # how was the square truncated?
-            # can't recall; seems reasonable to truncate.
+        for touch in Series(latinsquare(len(electrodes))[participant % len(electrodes)]):
             User.do(fabbed_object, f"touch electrode #{touch}", participant)
             raw_results += CustomCapacitanceSystem.measure_capacitances(fabbed_object)
             test_values += CustomCapacitanceSystem.measure_capacitances(fabbed_object)
@@ -94,13 +93,12 @@ def force_response():
 
     forces = list(arange(10,90+include_last,20))
 
-    for participant in Parallel(range(10)):
+    for participant in Parallel(range(12)):
         for force_level in Parallel([0,100]):
-            #User.do(fabbed_object, f"touch the top with {force_level}% force", participant)
             User.do(fabbed_object, f"touch electrode #3 with {force_level}% force", participant)
             ground_truth += CustomCapacitanceSystem.measure_capacitances(fabbed_object)
-        # seven repetitions for each, randomized each time. no counterbalancing. randomize the whole 7x7 block. counterbalancing isn't important.
-        for force in Series(latinsquare(len(forces))[participant % len(forces)]): # not sure how many repetitions
+        seven_repetitions = forces*7
+        for force in Series(shuffle(seven_repetitions)):
             User.do(fabbed_object, f"touch with force {force}", participant)
             test_values += CustomCapacitanceSystem.measure_capacitances(fabbed_object)
 
@@ -110,5 +108,5 @@ def force_response():
 
 
 if __name__ == "__main__":
-    # render_flowchart(placement_response)
+    render_flowchart(placement_response)
     render_flowchart(force_response)

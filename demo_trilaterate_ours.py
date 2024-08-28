@@ -62,12 +62,10 @@ def placement_response():
     raw_results = BatchMeasurements.empty()
     test_values = BatchMeasurements.empty()
 
-    for participant in Parallel(range(10)): # 12
+    for participant in Parallel(range(12)):
         for repetition in Series(range(1)): # not sure how many random touches were required
-            # probably the same number per participant, but not sure of the number
             User.do(fabbed_object, f"touch electrode #{random.choice(electrodes)}, rep #{repetition}", participant)
         for touch in Series(latinsquare(len(electrodes))[participant % len(electrodes)]): # how was the square truncated?
-            # can't recall; seems reasonable to truncate.
             User.do(fabbed_object, f"touch electrode #{touch}", participant)
             raw_results += CustomCapacitanceSystem.measure_capacitances(fabbed_object)
             test_values += CustomCapacitanceSystem.measure_capacitances(fabbed_object)
@@ -78,7 +76,7 @@ def placement_response():
 
 @fedt_experiment
 def force_response():
-    fabbed_object = Printer.slice_and_print(VolumeFile("pyramid.stl")) # same single object for both experiments
+    fabbed_object = Printer.slice_and_print(VolumeFile("pyramid.stl")) # same single object for both experiments?
 
     ground_truth = BatchMeasurements.empty()
     test_values = BatchMeasurements.empty()
@@ -87,11 +85,9 @@ def force_response():
 
     for participant in Parallel(range(10)):
         for force_level in Parallel([0,100]):
-            #User.do(fabbed_object, f"touch the top with {force_level}% force", participant)
-            User.do(fabbed_object, f"touch electrode #3 with {force_level}% force", participant)
+            User.do(fabbed_object, f"touch the top with {force_level}% force", participant)
             ground_truth += CustomCapacitanceSystem.measure_capacitances(fabbed_object)
-        # seven repetitions for each, randomized each time. no counterbalancing. randomize the whole 7x7 block. counterbalancing isn't important.
-        for force in Series(latinsquare(len(forces))[participant % len(forces)]): # not sure how many repetitions
+        for force in Series(7*latinsquare(len(forces))[participant % len(forces)]):
             User.do(fabbed_object, f"touch with force {force}", participant)
             test_values += CustomCapacitanceSystem.measure_capacitances(fabbed_object)
 

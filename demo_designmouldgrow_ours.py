@@ -42,25 +42,12 @@ def geometric_features():
     geometries = [VolumeFile(f) for f in ['ramps.stl', 'circular.stl', 'patterns.stl']]
 
     prep_materials() # how was this timed? just constant prepping in rotation, or?
-    # the grow yourself kits, you can put in the fridge, and they are ready when you need them
-    # while in the incubator in the growing phase, you want it to think it's underground
-    # as long as you don't freeze it, you keep it in the fridge, and it will just grow very very slowly
-    # then it needs to "reactivate" after coming out of the fridge.
-    instruction("ensure you wear gloves")
-    # sterlize everything!
 
     for geometry_file in Parallel(geometries):
         mould = Printer.slice_and_print(geometry_file)
         for myco_material in Series(['30% coffee inclusions', 'no inclusions']):
-            instruction("sterilize the prep area")
-            instruction("sterlize the mould with isopropyl alcohol") # also note that PLA just gets infected
-            # using acrylic, it wouldn't have this same problem. ABS might be more stable. TPU is more soft, could try that.
             fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
-            Environment.wait_up_to_time_single(fabbed_object, num_weeks=1) # there's a reasonableness test here, not just 1 week
-            # this can take more or less time, depending on the temperature
-            # can determine if it's colonized "enough" by looking at or poking it
-            # with white rot fungus, there is a white covering over most of it. where it starts to turn brown, it's ok to leave it longer
-            # just make sure there's no fruiting bodies forming
+            Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
             instruction("remove the material from the mould")
             Environment.wait_up_to_time_single(fabbed_object, num_days=3)
             instruction("allow the material to dry in a 50-80C oven")
@@ -88,39 +75,35 @@ def geometric_features():
 def mechanical_and_shrinkage_features():
     target_cube = StlEditor.cube((30,60,16))
     scaled_mould = StlEditor.cube((30, 60, 16), scale=1/.92)
-    scaled_mould_all = StlEditor.edit(scaled_mould, "include four cubes in one file")
 
     shrinkage_results = BatchMeasurements.empty()
     mechanical_results = BatchMeasurements.empty()
-    mould = Printer.slice_and_print(scaled_mould_all)
+    mould = Printer.slice_and_print(scaled_mould)
 
     fabbed_objects = []
 
     prep_materials()
 
-    # used same objects from first study, the rectangular cuboid ones.
-
     for myco_material in Series(['30% coffee inclusions', 'no inclusions']):
-        fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
-        Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
-        instruction("remove the material from the mould")
-        Environment.wait_up_to_time_single(fabbed_object, num_days=3)
-        instruction("allow the material to dry in a 50-80C oven")
-        Environment.wait_up_to_time_single(fabbed_object, num_weeks=7) # 1 day to 1 week
-        instruction("remove the object from the mould")
-        shrinkage_results += Calipers.measure_size(fabbed_object, "x-axis")
-        shrinkage_results += Calipers.measure_size(fabbed_object, "y-axis")
-        shrinkage_results += Calipers.measure_size(fabbed_object, "z-axis")
-        fabbed_objects.append(fabbed_object)
+        for repetition in Series(range(4)):
+            fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material} ({repetition}th copy)")
+            Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
+            instruction("remove the material from the mould")
+            Environment.wait_up_to_time_single(fabbed_object, num_days=3)
+            instruction("allow the material to dry in a 50-80C oven")
+            Environment.wait_up_to_time_single(fabbed_object, num_weeks=7) # 1 day to 1 week
+            instruction("remove the object from the mould")
+            shrinkage_results += Calipers.measure_size(fabbed_object, "x-axis")
+            shrinkage_results += Calipers.measure_size(fabbed_object, "y-axis")
+            shrinkage_results += Calipers.measure_size(fabbed_object, "z-axis")
+            fabbed_objects.append(fabbed_object)
     
     for fabbed_object in Parallel(fabbed_objects):
         for repetition_mechanical in Series(range(5)):
-            instruction("ensure fabbed object is appropriately arranged on testing stand")
             for depth in Series(arange(0,5+include_last,.5)):
+                instruction("ensure fabbed object is appropriately arranged on testing stand")
                 fabbed_object = Human.post_process(fabbed_object, f"compress the object to {str(depth)} ({repetition_mechanical}th time)")
-                mechanical_results += ForceGauge.measure_force(fabbed_object)
-            for depth in Series(arange(5,0-include_last,-.5)):
-                fabbed_object = Human.post_process(fabbed_object, f"release the object to {str(depth)} ({repetition_mechanical}th time)")
+                # not clear who/what does the compressing?
                 mechanical_results += ForceGauge.measure_force(fabbed_object)
     
     summarize(shrinkage_results.get_all_data())
@@ -128,7 +111,7 @@ def mechanical_and_shrinkage_features():
 
 @fedt_experiment
 def test_software_tool():
-    target_sphere = StlEditor.sphere(20) # radius
+    target_sphere = StlEditor.sphere(20)
     software_generated_mould = CustomModellingTool.sphere(20)
 
     prep_materials()
@@ -151,7 +134,7 @@ def test_software_tool():
             results += Calipers.measure_size(fabbed_object, f"{y_axis_point} degrees along the y axis")
         for z_axis_point in measurement_points:
             results += Calipers.measure_size(fabbed_object, f"{z_axis_point} degrees along the z axis")
-
+                
     summarize(results.get_all_data())
 
 

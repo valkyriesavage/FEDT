@@ -27,7 +27,7 @@ def airflow_gatetypes():
             instruction(f"set the air compressor to {input_massflow} and connect the object")
             results += Anemometer.measure_airflow(fabbed_object, f"input massflow at {input_massflow}")
     
-    # I'm not totally sure about how to write this last bit. it's possible this is two experiments...
+    # it's possible this is two experiments?
     # summarize([result in results if result.related_object in logic_gate_files])
     # summarize([result in results if result.related_object in input_files])
     summarize(results.get_all_data())

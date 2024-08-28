@@ -55,5 +55,5 @@ def bend_vs_thickness():
     summarize(results.get_all_data())
 
 if __name__ == "__main__":
-    render_flowchart(cross_section_ratios) # broken with too-deep loops
+    render_flowchart(cross_section_ratios)
     # render_flowchart(bend_vs_thickness)

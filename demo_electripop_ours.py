@@ -27,7 +27,7 @@ class ManualGeometryScanner:
         procedure="""
             Take a photograph of the object from 3 angles,
             and extract the profiles from it into Blender.
-            """, # tweaked blender representations to be as close as possible. A bit of wiggle room on accuracy. Wind, etc.
+            """,
         units="filename",
         feature="full object")
 
@@ -51,15 +51,13 @@ def optimize_simulation():
     simmed = BatchMeasurements.empty()
 
     for f in Parallel(test_files):
-        fabbed_object = Laser.fab(f, material="mylar") # all with lasercutter
+        fabbed_object = Laser.fab(f, material="mylar") # not clear what machine was used. they also mention vinyl cutters and scissors
         ground_truths += ManualGeometryScanner.scan(fabbed_object)
         for weight_of_be_exp in Parallel(arange(-3,6+include_last)):
             for weight_of_ee_exp in Parallel(arange(-1, 1+include_last, .2)):
                 sim = VirtualWorldObject({'weight of bending energy': math.pow(10, weight_of_be_exp), # based on the figure, this is my guess
                                             'weight of electrical energy': math.pow(10, weight_of_ee_exp),
                                             'file': CustomSimulator.runsimulation(f, weight_of_be_exp, weight_of_ee_exp)})
-                # the variables are not exactly real numbers, just numbers in the sim tool. so describing these is hard.
-                # these are "abstract" numbers
                 simmed += ManualGeometryScanner.scan(sim)
         
     summarize(ground_truths.get_all_data())
@@ -69,7 +67,6 @@ def optimize_simulation():
 def electrical_inflation():
     # not sure if this is an experiment. it takes "on the order of 10ms to fully saturate the mylar with charge"
     # but it's not clear if this was tested on more than one object or more than one repetition
-    # just used the snowman
     pass
 
 @fedt_experiment
@@ -81,8 +78,6 @@ def physical_inflation():
     elapsed_times = BatchMeasurements.empty()
     for obj in Parallel(fabbed_objects):
         # were there repetitions? were there other objects? mention of "remarkably consistent", and implication that some others were tested
-        # maybe not remarkable :D it's a very manual process, adding the resistor
-        # inflate it and then deflate it, and then time both repeatedly. perceptually and numerically consistent.
         elapsed_times += Stopwatch.measure_time(obj, "inflate to full")
     
     summarize(elapsed_times.get_all_data())
@@ -92,8 +87,6 @@ def physical_inflation():
 def electrical_deflation():
     configure_for_electripop()
     snowman = Laser.fab(LineFile('snowman.svg'), material="mylar")
-    # this might not be accurate. got the total amount of time, and 60% was based on the RC curve.
-    # based on current, we derived many of these measurements. the curves are theoretically-derived based on a few measurements.
 
     current_measures = ImmediateMeasurements.empty()
     instruction('connect a 1kOhm resistor to the plate')
@@ -113,11 +106,6 @@ def physical_deflation():
     elapsed_times = BatchMeasurements.empty()
     elapsed_times += Stopwatch.measure_time(snowman, "deflate fully")
     summarize(elapsed_times.get_all_data())
-    # more like reporting and observation. just to make sure that we think about all the questions people might have.
-    # goes hand-in-hand with electrical deflation. that one was purposely deflated (time for charge to dissipate)
-    # physical, this is also about the weight of the mylar, the drag (gravity), and taking that into account.
-    # the geometry and so forth is also a factor... kirigami tree is very fast to deflate, because it's so heavy
-    # would characterize this as an "observation", depends so much on geometry. to give intuition.
 
 @fedt_experiment
 def volumetric_change():
@@ -130,8 +118,6 @@ def volumetric_change():
     volumes += ManualGeometryScanner.scan(snowman_phys)
     volumes += ManualGeometryScanner.scan(snowman_virt)
     summarize(volumes.get_all_data())
-    # similar to ... why do people care :D we can inflate something to a huge magnitude
-    # showing off versus other shape displays :)
 
 @fedt_experiment
 def fabrication_time():
@@ -141,7 +127,6 @@ def fabrication_time():
     elapsed_times = BatchMeasurements.empty()
     elapsed_times += Stopwatch.measure_time(snowman, "fabricate on the laser")
     summarize(elapsed_times.get_all_data())
-    # same same. easy to quantify, because the laser tells you.
 
 @fedt_experiment
 def geometric_accuracy():
@@ -153,18 +138,12 @@ def geometric_accuracy():
     simmed = BatchMeasurements.empty()
 
     for f in Parallel(test_files):
-        fabbed_object = Laser.fab(f, material="mylar") # done on lasercutter
-        instruction("inflate the object")
+        fabbed_object = Laser.fab(f, material="mylar") # not clear what machine was used. they also mention vinyl cutters and scissors
         ground_truths += ManualGeometryScanner.scan(fabbed_object)
         for sim_repetition in Parallel(range(100)):
             sim = VirtualWorldObject({'file': CustomSimulator.runsimulation(f)})
             simmed += ManualGeometryScanner.scan(sim)
             simmed += Stopwatch.measure_time(sim, "converge simulation")
-    # wanted to characterize non-deterministic behaviour in the results from the tool.
-    # wanted to get an average of the values on this.
-    # did you cut the same physical cuts of the designs? yes, used the same one for consistency, as long as it didn't break
-    # some designs had to be done twice, because they ruptured when inflating (when tangled)
-    # see discussion about this.
         
     summarize(ground_truths.get_all_data())
     summarize(simmed.get_all_data())
@@ -175,10 +154,10 @@ def user_experience():
     pass
 
 if __name__ == "__main__":
-    render_flowchart(optimize_simulation)
+    # render_flowchart(optimize_simulation)
     # render_flowchart(physical_inflation)
     # render_flowchart(electrical_inflation)
-    # render_flowchart(electrical_deflation)
+    render_flowchart(electrical_deflation)
     # render_flowchart(physical_deflation)
     # render_flowchart(fabrication_time)
     # render_flowchart(geometric_accuracy)
