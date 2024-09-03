@@ -79,9 +79,9 @@ def find_bottom_spacings():
     summarize(infill_density_results.get_all_data())
 
 def random_param_set():
-    infill_pattern = random.choice(['trihexagon','triangular','grid'])
+    infill_pattern = random.choice(['honeycomb','triangles','grid'])
     infill_rotation_range = None
-    if infill_pattern in ['trihexagon', 'triangular']:
+    if infill_pattern in ['honeycomb', 'triangles']:
         infill_rotation_range = arange(0,60,1)
     else: # if it's grid
         infill_rotation_range = arange(0,90,1)
@@ -89,7 +89,7 @@ def random_param_set():
             random.choice(arange(0.35,0.6+include_last,.05)), # bottom width
             infill_pattern, # infill pattern
             random.choice(infill_rotation_range), # infill rotation
-            random.choice(arange(2.6, 3.2+include_last, 0.6))) # infill density / width
+            random.choice(arange(.15, 1, 0.05))) # infill density / width
 
 @fedt_experiment
 def cross_validation():
