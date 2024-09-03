@@ -4,6 +4,7 @@ import copy
 from functools import wraps
 import inspect
 import types
+from datetime import datetime
 
 from flowchart import FlowChart
 
@@ -127,10 +128,15 @@ def fedt_experiment(f):
 
     @wraps(f)
     def new_new_f(*args, **kwargs):
-        new_f(*args, **kwargs)
+        result = new_f(*args, **kwargs)
         instructions = FlowChart().node
         FlowChart().reset()
-        return instructions.toXML()
+        date_and_time = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+        file_name = f"{date_and_time}-fedt-{f.__name__}.xml"
+        print(f"Flowchart XML printed to {file_name}")
+        with open(file_name, "w") as out_file:
+            out_file.writelines(instructions.toXML())
+        return result
 
     return new_new_f
 
