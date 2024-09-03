@@ -6,12 +6,13 @@ import math
 import os
 import random
 import subprocess
+import traceback
 from zipfile import ZipFile
 
 from flowchart import SUBJECT, VERB, OBJECT, SETTINGS, FABBED_SOMETHING
 from instruction import instruction, note
 from measurement import Measurement, BatchMeasurements
-from fabricate import fabricate, RealWorldObject
+from fabricate import fabricate, RealWorldObject, CURRENT_UID
 from design import design, VirtualWorldObject, LineFile, VolumeFile, GCodeFile
 from decorator import explicit_checker
 
@@ -201,8 +202,9 @@ class Laser:
                 map_file.write(mapping_file_template.format(mappings=mappings))
             mapping_file = temp_mapping_file
 
-        instruction(f"ensure that the line colors in your file match the line colors defined in {mapping_file}")
+        instruction(f"ensure that the line colors in your file match the mapping {colors_to_mappings}")
         instruction(f"set the focal height of the laser to {focal_height_mm}")
+        instruction("ensure visicut is open")
 
         # make the svg into the .plf file that they like
         temp_zf = 'spam.zip'
@@ -213,14 +215,18 @@ class Laser:
         temp_plf = temp_zf.replace('.zip','.plf')
         os.rename(temp_zf, temp_plf)
         cut_command = [VISICUT_LOCATION,
-                    '--laserdevice ' + Laser.default_laser_settings[Laser.LASERDEVICE],
+                    #'--laserdevice \"' + Laser.default_laser_settings[Laser.LASERDEVICE] + '\"',
                     '--execute',
-                    temp_plf]
+                    os.path.join(os.getcwd(), temp_plf)]
         try:
-            results = subprocess.check_output(cut_command)
-        except:
+            results = subprocess.check_output(cut_command, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as exc:
             # it probably didn't work! incredible. that's likely because we didn't get visicut in here right, or we're running offline.
             print("was not able to call visicut properly")
+            print(exc.output)
+            raise
+        instruction("make sure your file doesn't overlap existing cuts")
+        instruction("press 'execute', turn on extraction, and wait for the laser to complete its work")
         os.remove(temp_plf)
         try:
             os.remove(temp_mapping_file)
@@ -335,6 +341,21 @@ class SvgEditor:
                 fill='none', stroke_width=1, stroke='green'))
     
     @staticmethod
+    def draw_line(draw, d, CAD_vars):
+        length = 30
+        stroke = 'blue'
+        if 'length' in CAD_vars:
+            length = CAD_vars['length']
+        if 'stroke' in CAD_vars:
+            stroke = CAD_vars['stroke']
+        if 'rotate' in CAD_vars:
+            d.append(draw.Line(-40, -10, -40, -10+length,
+                    fill='none', stroke_width=1, stroke=stroke))
+        else:
+            d.append(draw.Line(-40, -10, -40+length, -10,
+                    fill='none', stroke_width=1, stroke=stroke))
+    
+    @staticmethod
     def labelcentre(draw, d, label):
         d.append(draw.Text(x=-20, y=-20, fill='blue', text=label, font_size=10))
 
@@ -342,7 +363,9 @@ class SvgEditor:
     @explicit_checker
     def build_geometry(geometry_function=None,
                        label_function=None,
-                       label=None,
+                       label=CURRENT_UID, # FIXME this is hacky?? we should really have
+                                          # a good way to find the id of the object without
+                                          # assuming that it has the next ID
                        svg_location = "./expt_svgs/",
                        CAD_vars={},
                        explicit_args=None,
@@ -469,9 +492,10 @@ class PrusaSlicer(Slicer):
             slice_command = [PRUSA_SLICER_LOCATION,
                             '--load', PRUSA_CONFIG_LOCATION]
             for keyval in argdict.items():
-                slice_command.extend(list(keyval))
+                slice_command.extend(list(str(t) for t in keyval))
             slice_command.extend(['--export-gcode', volume_file.stl_location])
             slice_command.extend(['--output-filename-format', 'FEDT_[timestamp]_[input_filename_base].gcode'])
+            print(slice_command)
             results = subprocess.check_output(slice_command)
         
             # the last line from Prusa Slicer is "Slicing result exported to ..."
@@ -556,6 +580,13 @@ class Printer:
 
         gcode = ''
 
+        if volume_file.stl_location == '':
+            instruction("Slice the file.",
+                        latex_details = {SUBJECT: Slicer,
+                                            VERB: 'sliced',
+                                            OBJECT: volume_file,
+                                            SETTINGS: stored_values})
+
         gcode = slicer.slice(volume_file,
                     printer=printer,
                     temperature=temperature,
@@ -568,6 +599,14 @@ class Printer:
                     **kwargs)
         if isinstance(MODE, Execute):
             Printer.print(gcode)
+        else:
+            instruction(f"Run the printer, creating object #{fabbed.uid}",
+                    fabbing = True,
+                    latex_details = {SUBJECT: Printer,
+                                        VERB: 'printed',
+                                        OBJECT: volume_file,
+                                        SETTINGS: stored_values,
+                                        FABBED_SOMETHING: True})
 
         stored_values = {GCodeFile.GCODE_FILE: gcode}
         if explicit_args:
@@ -576,25 +615,6 @@ class Printer:
             stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
 
         fabbed =  fabricate(stored_values)
-        if volume_file.stl_location == '':
-            instruction("Slice the file.",
-                        latex_details = {SUBJECT: Slicer,
-                                            VERB: 'sliced',
-                                            OBJECT: volume_file,
-                                            SETTINGS: stored_values})
-        else:
-            instruction(f"Slice {volume_file.stl_location}.",
-                        latex_details = {SUBJECT: Slicer,
-                                            VERB: 'sliced',
-                                            OBJECT: volume_file,
-                                            SETTINGS: stored_values})
-        instruction(f"Run the printer, creating object #{fabbed.uid}",
-                            fabbing = True,
-                            latex_details = {SUBJECT: Printer,
-                                                VERB: 'printed',
-                                                OBJECT: volume_file,
-                                                SETTINGS: stored_values,
-                                                FABBED_SOMETHING: True})
 
         if isinstance(MODE, Execute):
             print(f"object #{fabbed.uid} has been fabricated!")
@@ -948,6 +968,20 @@ class Scale:
 
 class Human:
     # so multifunctional!
+    judgement = Measurement(
+        name="human judgement",
+        description="A human's judgement on a feature of an object.",
+        procedure="""
+            Judge the object.
+            """,
+        units="n/a",
+        feature="whole object")
+    
+    @staticmethod
+    def judge_something(obj: RealWorldObject, feature: str=judgement.feature) -> BatchMeasurements:
+        instruction(f"Measure object #{obj.uid}.", header=True)
+        instruction(Human.judgement.procedure + " : " + feature)
+        return BatchMeasurements.single(obj, Human.judgement.set_feature(feature))
 
     @staticmethod
     def do_and_respond(instr: str,
