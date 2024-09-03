@@ -22,8 +22,7 @@ def effect_of_b_horizontal():
     C = 10
     D = 14
 
-    delta = (27.5-4)/3 # ? -> there are 3 values in the figure, so probably?
-    # tried 4 or 5 values here
+    delta = (27.5-4)/3 # ? -> there are 3 values in the figure
 
     results = BatchMeasurements.empty()
     for B in Parallel(arange(4, 27.5+include_last, delta)):
@@ -31,13 +30,10 @@ def effect_of_b_horizontal():
         fabbed_object = Laser.fab(linefile)
         for repetition in Series(range(5)):
             fabbed_object = Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
-            # always used the plate. it depends on the size of the object. smaller ones are easy to heat on the plate. it heats the whole part uniformly
             fabbed_object = Human.post_process(fabbed_object, "inject air to inflate the object") # ? -> probably human does this, based on the video
-            # in the experiment, used an air compressor. used a valve to control the air pressure going in
             results += Protractor.measure_angle(fabbed_object,"overall bend")
             fabbed_object = Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
             fabbed_object = Human.post_process(fabbed_object, "flatten the object") # ? -> it's not specified that they are flattened, but they must be
-            # yes this is correct
 
     summarize(results.get_all_data())
 
@@ -54,9 +50,7 @@ def effect_of_incision_number():
         fabbed_object = Laser.fab(linefile)
         fabbed_object = Human.post_process(fabbed_object, "heat with the heat gun") # ? -> not sure if it is heat gun or plate
         fabbed_object = Human.post_process(fabbed_object, "inject air to inflate the object") # ? -> probably human does this, based on the video
-        # also done with plate and air compressor
         results += Protractor.measure_angle(fabbed_object,"overall bend")
-        # took a photo, and extracted angles from the photo
     
     summarize(results.get_all_data())
 

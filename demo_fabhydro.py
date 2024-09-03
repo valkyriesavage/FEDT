@@ -14,20 +14,18 @@ def summarize(data):
 
 @fedt_experiment
 def resin_types():
-    stl = VolumeFile('bellows_1mm.stl') # would be good to note that this was found in previous work
-    # needed to recompile to make it suitable for their size
-    # pre-knowledge: the structure should be able to be fully compressed and to fully rebound
+    stl = VolumeFile('bellows_1mm_priorwork_recompiled.stl')
 
     compression_results = BatchMeasurements.empty()
     tension_results = BatchMeasurements.empty()
     for resin in Parallel(['standard','tenacious','f39/f69']):
         fabbed_object = Printer.slice_and_print(stl, material=resin)
-        instruction(f"compress object #{fabbed_object.uid} as much as possible (?)") # with what? how much?
-        # want to check if it behaves more or less like that. if it does: good. if it breaks: N/A.
-        # _speed_ of compression and rebound was also a part of this.
-        compression_results += Calipers.measure_size(fabbed_object,"height after compression")
-        instruction(f"extend object #{fabbed_object.uid} as much as possible (?)") # with what? how much?
-        tension_results += Calipers.measure_size(fabbed_object,"height after stretching")
+        instruction(f"compress object #{fabbed_object.uid} as much as possible")
+        compression_results += Human.judge_something(fabbed_object, "height after squishing is good")
+        compression_results += Human.judge_something(fabbed_object, "speed of squshing is good")
+        instruction(f"extend object #{fabbed_object.uid} as much as possible")
+        compression_results += Human.judge_something(fabbed_object, "height after stretching is good")
+        compression_results += Human.judge_something(fabbed_object, "speed of stretching is good")
     
     summarize(compression_results.get_all_data())
     summarize(tension_results.get_all_data())
@@ -41,13 +39,10 @@ def bend_vs_thickness():
     for thickness in Parallel(arange(1,5.5+include_last,.5)):
         stl = StlEditor.cube((20,30,thickness))
         fabbed_object = Printer.slice_and_print(stl)
-        instruction(f"fix object #{fabbed_object.uid} at one end and hang a load of 0.49N at the other end")
-        bend_results += Protractor.measure_angle(fabbed_object,"angle of tip below 90 degrees")
-        # measurements were repeated multiple times. this was improvised!
-        # used a camera which was fixed to take pictures, then measured pixels on the images.
-        # ...but this is not always accurate. the error bars come from that repetition.
-
-    # were these measurements repeated? were the prints repeated? there are error bars but I'm not sure what from
+        for repetition in range(3): # it was somewhat unofficial how many times each was repeated
+            instruction(f"fix object #{fabbed_object.uid} at one end and hang a load of 0.49N at the other end")
+            instruction("take a photo of the object and use a protractor on the image")
+            bend_results += Protractor.measure_angle(fabbed_object,"angle of tip below 90 degrees")
 
     summarize(bend_results.get_all_data())
 
@@ -75,7 +70,6 @@ def min_wall_spacing():
     while neighbours_separated:
         printing_stl = StlEditor.modify_feature_by_hand(base_stl, "spacing between copies", separation)
         fabbed_object = Printer.slice_and_print(printing_stl)
-        fabbed_object = Human.is_reasonable(fabbed_object)
         neighbours_separated = acceptability_results.do_measure(fabbed_object,
                                                                 TrueFalser.truefalse.set_feature("did the neighbouring cubes separate?"))
         if neighbours_separated:
@@ -101,7 +95,7 @@ def min_thin_wall_area():
 def lasting():
     # this actually didn't happen in 16 days, because we couldn't print 48 of them in a single day.
     # 4-5 per layer in a printer, 2-3 hours for a print. only 20 per day, and it was used for other stuff
-    # measuring based on the day that the cube was printed.
+    # measuring based on the day that the cube was printed. : this is not possible to encode currently.
     stl = VolumeFile("side_11mm_wall_1mm.stl")
     fabbed_objects = []
     for repetition in Parallel(range(48)):

@@ -111,8 +111,8 @@ def mechanical_and_shrinkage_features():
 
 @fedt_experiment
 def test_software_tool():
-    target_sphere = StlEditor.sphere(20)
-    software_generated_mould = CustomModellingTool.sphere(20)
+    target_sphere = StlEditor.sphere(radius=20)
+    software_generated_mould = CustomModellingTool.sphere(radius=20)
 
     prep_materials()
 

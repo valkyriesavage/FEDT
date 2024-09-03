@@ -24,7 +24,7 @@ def test_materials():
                          "beech", "oak", "walnut"]
     coatings = ['fire retardant', 'no coating']
 
-    line_file = SvgEditor.build_geometry(SvgEditor.draw_circle) # fixme, they used a line
+    line_file = SvgEditor.build_geometry(SvgEditor.draw_line)
     fabbed_objects: list[RealWorldObject] = []
     for material in Parallel(materials):
         for coating in Parallel(coatings):
@@ -38,10 +38,12 @@ def test_materials():
 
 @fedt_experiment
 def test_height_vs_focal_point():
-    line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
+    
     results = BatchMeasurements.empty()
 
     for focal_height_mm in Parallel(arange(0, 6+include_last)):
+        line_file = SvgEditor.build_geometry(SvgEditor.draw_line,
+                                             label_function=SvgEditor.labelcentre)
         fabbed_object = Laser.fab(line_file, focal_height_mm=focal_height_mm, material='wood')
         results += Multimeter.measure_resistance(fabbed_object)
     data = results.get_all_data()
@@ -50,7 +52,7 @@ def test_height_vs_focal_point():
 
 @fedt_experiment
 def test_optimal_number_of_scans():
-    line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
+    line_file = SvgEditor.build_geometry(SvgEditor.draw_line)
     results = ImmediateMeasurements.empty()
     resistance = 9999999999
     best_result = resistance
@@ -69,18 +71,24 @@ def test_optimal_number_of_scans():
 
 @fedt_experiment
 def test_laser_power_and_speed():
-    speeds = arange(20,80+include_last,10) # fix this! they only did the ones in the table. "likely" ones
-    powers = arange(10,50+include_last,5)
-    speeds_powers = [(10,20)] # fill in from table
-    setting_names = Laser.prep_cam(cut_speeds=speeds, cut_powers=powers)
+    speeds_powers = [(50,50),
+                     (45,50),(45,60),(45,70),(45,80),
+                     (40,50),(40,60),(40,70),(40,80),
+                     (35,50),(35,60),(35,70),(35,80),
+                     (30,50),(30,60),(30,70),
+                     (25,50),(25,60),
+                     (20,40),
+                     (15,40),
+                     (10,20),(10,30)]
+    setting_names = Laser.prep_cam(cut_speeds=[speed for speed,power in speeds_powers],
+                                   cut_powers=[power for speed,power in speeds_powers])
 
-    line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
+    line_file = SvgEditor.build_geometry(SvgEditor.draw_line)
     results = BatchMeasurements.empty()
 
     for cut_speed, cut_power in Parallel(speeds_powers):
         for repetition in Parallel(range(4)):
             fabbed_object = Laser.fab(line_file, setting_names, cut_speed, cut_power,
-                                        color_to_setting=Laser.SvgColor.GREEN,
                                         repetition=repetition,
                                         material='wood')
             resistance = Multimeter.measure_resistance(fabbed_object)
@@ -89,8 +97,7 @@ def test_laser_power_and_speed():
 
 @fedt_experiment
 def test_grain_direction():
-    # fixme: the LINES are what changed, not the orientation of the wood. the relative orientation!
-    line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
+    line_file = SvgEditor.design("a file with two perpendicular lines")
     fabbed_objects: list[RealWorldObject] = []
     for orientation in Parallel(["orthogonal","along grain"]):
         instruction("orient the wood {}".format(orientation))
@@ -104,7 +111,7 @@ def test_grain_direction():
 
 @fedt_experiment
 def test_change_over_time():
-    line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
+    line_file = SvgEditor.build_geometry(SvgEditor.draw_line)
     fabbed_objects = []
     for post_process_condition in Parallel(['varnished','unvarnished']):
         for repetition in Parallel(range(4)):
@@ -119,8 +126,11 @@ def test_change_over_time():
 
 if __name__ == "__main__":
     # render_flowchart(test_materials)
-    # render_flowchart(test_height_vs_focal_point)
+    render_flowchart(test_height_vs_focal_point)
     # render_flowchart(test_optimal_number_of_scans)
     # render_flowchart(test_laser_power_and_speed)
     # render_flowchart(test_grain_direction)
-    render_flowchart(test_change_over_time)
+    # render_flowchart(test_change_over_time)
+    # from control import MODE, Execute
+    # control.MODE = Execute()
+    # test_height_vs_focal_point()

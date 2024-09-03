@@ -31,34 +31,6 @@ def prep_materials():
     instruction("keep in the fridge as prepared material")
     instruction("remove from fridge to reactivate 1 day before beginning experiments")
 
-def grow_mycomaterial_from_mould(mould, myco_material):
-    instruction("sterilize the prep area")
-    instruction("sterlize the mould with isopropyl alcohol")
-    fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
-    is_reasonable = False
-    while not is_reasonable:
-        Environment.wait_up_to_time_single(fabbed_object, num_days=1)
-        instruction("look at or poke the sample")
-        fabbed_object = Human.is_reasonable(fabbed_object)
-        is_reasonable = fabbed_object.metadata["human reasonableness check"]
-    instruction("remove the material from the mould for open growth")
-    is_reasonable = False
-    # while not is_reasonable:
-    #     Environment.wait_up_to_time_single(fabbed_object, num_days=1)
-    #     instruction("look at or poke the sample")
-    #     fabbed_object = Human.is_reasonable(fabbed_object)
-    #     is_reasonable = fabbed_object.metadata["human reasonableness check"]
-    # instruction("allow the material to dry in a 50-80C oven")
-    # is_reasonable = False
-    # while not is_reasonable:
-    #     Environment.wait_up_to_time_single(fabbed_object, num_days=1)
-    #     instruction("look at or poke the sample")
-    #     fabbed_object = Human.is_reasonable(fabbed_object)
-    #     is_reasonable = fabbed_object.metadata["human reasonableness check"]
-    instruction("material is ready when it is dry")
-    print(fabbed_object)
-    return fabbed_object
-
 @fedt_experiment
 def mushroom_types():
     pass
@@ -66,6 +38,34 @@ def mushroom_types():
 
 @fedt_experiment
 def geometric_features():
+    def grow_mycomaterial_from_mould(mould, myco_material):
+        instruction("sterilize the prep area")
+        instruction("sterlize the mould with isopropyl alcohol")
+        fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
+        is_reasonable = False
+        while not is_reasonable:
+            Environment.wait_up_to_time_single(fabbed_object, num_days=1)
+            instruction("look at or poke the sample")
+            fabbed_object = Human.is_reasonable(fabbed_object)
+            is_reasonable = fabbed_object.metadata["human reasonableness check"]
+        instruction("remove the material from the mould for open growth")
+        is_reasonable = False
+        while not is_reasonable:
+            Environment.wait_up_to_time_single(fabbed_object, num_days=1)
+            instruction("look at or poke the sample")
+            fabbed_object = Human.is_reasonable(fabbed_object)
+            is_reasonable = fabbed_object.metadata["human reasonableness check"]
+        instruction("allow the material to dry in a 50-80C oven")
+        is_reasonable = False
+        while not is_reasonable:
+            Environment.wait_up_to_time_single(fabbed_object, num_days=1)
+            instruction("look at or poke the sample")
+            fabbed_object = Human.is_reasonable(fabbed_object)
+            is_reasonable = fabbed_object.metadata["human reasonableness check"]
+        instruction("material is ready when it is dry")
+        print(fabbed_object)
+        return fabbed_object
+
     shrinkage_results = BatchMeasurements.empty()
     scanning_results = BatchMeasurements.empty()
 
@@ -100,6 +100,10 @@ def geometric_features():
 
 @fedt_experiment
 def mechanical_and_shrinkage_features():
+    def grow_mycomaterial_from_mould(mould, myco_material):
+        # helper as above
+        return RealWorldObject()
+
     target_cube = StlEditor.cube((30,60,16))
     scaled_mould = StlEditor.cube((30, 60, 16), scale=1/.92)
     scaled_mould_all = StlEditor.edit(scaled_mould, "include four cubes in one file")
@@ -134,8 +138,12 @@ def mechanical_and_shrinkage_features():
 
 @fedt_experiment
 def test_software_tool():
-    target_sphere = StlEditor.sphere(20) # radius
-    software_generated_mould = CustomModellingTool.sphere(20)
+    def grow_mycomaterial_from_mould(mould, myco_material):
+        # helper as above
+        return RealWorldObject()
+
+    target_sphere = StlEditor.sphere(radius=20)
+    software_generated_mould = CustomModellingTool.sphere(radius=20)
 
     prep_materials()
 
@@ -155,31 +163,8 @@ def test_software_tool():
 
     summarize(results.get_all_data())
 
-@fedt_experiment
-def test_functions():
-    prep_materials()
-
-    results = BatchMeasurements.empty()
-    mould = Printer.slice_and_print(VolumeFile("some.stl"))
-    myco_material = "30% coffee inclusions"
-    # fabbed_object = grow_mycomaterial_from_mould(mould, myco_material) # doesn't work
-    fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}") # this code copy/pasted from function, it works.
-    is_reasonable = False
-    while not is_reasonable:
-        Environment.wait_up_to_time_single(fabbed_object, num_days=1)
-        instruction("look at or poke the sample")
-        fabbed_object = Human.is_reasonable(fabbed_object)
-        is_reasonable = fabbed_object.metadata["human reasonableness check"]
-    instruction("remove the material from the mould for open growth")
-    results += Calipers.measure_size(fabbed_object, f"0 degrees along the x axis")
-    results += Calipers.measure_size(fabbed_object, f"0 degrees along the y axis")
-    results += Calipers.measure_size(fabbed_object, f"0 degrees along the z axis")
-
-    summarize(results.get_all_data())
-
 
 if __name__ == "__main__":
-    # render_flowchart(geometric_features)
+    render_flowchart(geometric_features)
     # render_flowchart(mechanical_and_shrinkage_features)
     # render_flowchart(test_software_tool)
-    render_flowchart(test_functions)

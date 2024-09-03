@@ -14,17 +14,13 @@ def summarize(data):
 
 @fedt_experiment
 def resin_types():
-    stl = VolumeFile('bellows_1mm.stl') # would be good to note that this was found in previous work
-    # needed to recompile to make it suitable for their size
-    # pre-knowledge: the structure should be able to be fully compressed and to fully rebound
+    stl = VolumeFile('bellows_1mm.stl')
 
     compression_results = BatchMeasurements.empty()
     tension_results = BatchMeasurements.empty()
     for resin in Parallel(['standard','tenacious','f39/f69']):
         fabbed_object = Printer.slice_and_print(stl, material=resin)
         instruction(f"compress object #{fabbed_object.uid} as much as possible (?)") # with what? how much?
-        # want to check if it behaves more or less like that. if it does: good. if it breaks: N/A.
-        # _speed_ of compression and rebound was also a part of this.
         compression_results += Calipers.measure_size(fabbed_object,"height after compression")
         instruction(f"extend object #{fabbed_object.uid} as much as possible (?)") # with what? how much?
         tension_results += Calipers.measure_size(fabbed_object,"height after stretching")

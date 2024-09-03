@@ -18,8 +18,6 @@ def summarize(data):
 
 @fedt_experiment
 def test_density_and_materials():
-
-    # test impact of ruffle density and materials on compression
     results = BatchMeasurements.empty()
     for ruffle_design in Parallel(['default', 'wide', 'dense']):
         ruffle_file = SvgEditor.design(ruffle_design)
@@ -35,7 +33,6 @@ def test_density_and_materials():
                     if not Human.is_reasonable(fabbed_object):
                         break
                     fabbed_object = Human.post_process(fabbed_object, f"apply load {current_load} in {load_direction}")
-                # then relax it
                 fabbed_object = Human.post_process(fabbed_object, "remove all loads")
                 results += Calipers.measure_size(fabbed_object,'height at unload in {load_direction}')
 

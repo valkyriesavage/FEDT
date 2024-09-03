@@ -68,7 +68,7 @@ def output_airneeds():
     output_widgets = ['pin_display.stl','vibration_motor.stl',
 									'whistle.stl','wiggler.stl']
 									
-    epsilon = '.1kPa' # ?
+    epsilon = '.1kPa' # informally, yes
 
     airflow = BatchMeasurements.empty()
     for widget in Parallel(output_widgets):

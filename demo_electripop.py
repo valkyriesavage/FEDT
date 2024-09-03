@@ -71,6 +71,8 @@ def electrical_inflation():
     
     elapsed_times = BatchMeasurements.empty()
     for repetition in Series(range(10)):
+        instruction("attach the oscilloscope probe")
+        instruction("monitor the oscilloscope to determine full saturation")
         elapsed_times += Stopwatch.measure_time(fabbed_object, f"inflate to full for {repetition}th time")
     
     summarize(elapsed_times.get_all_data())
@@ -93,8 +95,6 @@ def physical_inflation():
 def electrical_deflation():
     configure_for_electripop()
     snowman = Laser.fab(LineFile('snowman.svg'), material="mylar")
-    # this might not be accurate. got the total amount of time, and 60% was based on the RC curve.
-    # based on current, we derived many of these measurements. the curves are theoretically-derived based on a few measurements.
 
     current_measures = ImmediateMeasurements.empty()
     instruction('connect a 1kOhm resistor to the plate')
@@ -103,6 +103,7 @@ def electrical_deflation():
         current = current_measures.do_measure(snowman, Multimeter.current)
         current = float(current) if current else 99999999
         current_measures += Timestamper.get_ts(snowman)
+        # the speed of the loop isn't so important, because the final result was theoretically derived
 
     summarize(current_measures.dump_to_csv())
 
@@ -138,6 +139,7 @@ def geometric_accuracy():
     configure_for_electripop()
 
     test_files = [LineFile(fname) for fname in ['rose.svg', 'snowman.svg', 'christmas_tree.svg']]
+    # the same cut objects were used until they broke and had to be re-cut. not possible to encode currently.
 
     ground_truths = BatchMeasurements.empty()
     simmed = BatchMeasurements.empty()
@@ -150,9 +152,6 @@ def geometric_accuracy():
             sim = VirtualWorldObject({'file': CustomSimulator.runsimulation(f)})
             simmed += ManualGeometryScanner.scan(sim)
             simmed += Stopwatch.measure_time(sim, "converge simulation")
-    # did you cut the same physical cuts of the designs? yes, used the same one for consistency, as long as it didn't break
-    # some designs had to be done twice, because they ruptured when inflating (when tangled)
-    # see discussion about this.
         
     summarize(ground_truths.get_all_data())
     summarize(simmed.get_all_data())
