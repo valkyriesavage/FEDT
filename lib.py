@@ -2,6 +2,7 @@ from datetime import date
 from typing import List
 import datetime
 from dateutil.relativedelta import relativedelta
+import json
 import math
 import os
 import random
@@ -516,21 +517,144 @@ class PrusaSlicer(Slicer):
     def describe():
         return '''Prusa Slicer'''
 
-class BambuSlicer(Slicer):
+class JankyBambuSlicer(Slicer):
     @staticmethod
-    def slice(volume_file: VolumeFile) -> GCodeFile:
-        argdict = {}
+    def slice(volume_file: VolumeFile,
+                temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
+                nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
+                layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
+                infill_pattern: str = Slicer.default_slicer_settings[Slicer.INFILL_PATTERN],
+                infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
+                wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
+                material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
+                **kwargs) -> GCodeFile:
         gcode_location = ''
-        # TODO prep_cam(argdict)
-        # there is some kind of processing that needs to happen here to encode the arguments into files
-        # because Bambu does not take commandline arguments
+        argdict = {
+            '--layer-height': layer_height,
+            '--nozzle-diameter': nozzle,
+            '--temperature': temperature,
+            '--fill-pattern': infill_pattern,
+            '--fill-density': infill_density,
+            '--perimeters': str(math.floor(float(wall_thickness.strip('mm'))/float(nozzle.strip('mm'))))
+        }
 
         from control import MODE, Execute
         if isinstance(MODE, Execute):
+            slice_command = [PRUSA_SLICER_LOCATION,
+                            '--load', 'bambu.ini']
+            for keyval in argdict.items():
+                slice_command.extend(list(str(t) for t in keyval))
+            slice_command.extend(['--export-gcode', volume_file.stl_location])
+            slice_command.extend(['--output-filename-format', 'FEDT_[timestamp]_[input_filename_base].gcode'])
+            print(slice_command)
+            results = subprocess.check_output(slice_command)
+        
+            # the last line from Prusa Slicer is "Slicing result exported to ..."
+            last_line = results.decode('utf-8').strip().split("\n")[-1]
+            gcode_location = last_line.split(" exported to ")[1]
+
+        design_bake = {VolumeFile.VOLUME_FILE: volume_file}
+        design_bake.update(argdict)
+        gcode = design(design_bake)
+        gcode.gcode_location = gcode_location
+
+        if isinstance(MODE, Execute):
+            print(f"gcode has been generated, and is available at {gcode_location}")
+
+        return gcode
+
+    @staticmethod      
+    def describe():
+        return '''Prusa Slicer'''
+    
+class JankyUltimakerSlicer(Slicer):
+    @staticmethod
+    def slice(volume_file: VolumeFile,
+                temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
+                nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
+                layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
+                infill_pattern: str = Slicer.default_slicer_settings[Slicer.INFILL_PATTERN],
+                infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
+                wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
+                material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
+                **kwargs) -> GCodeFile:
+        gcode_location = ''
+        argdict = {
+            '--layer-height': layer_height,
+            '--nozzle-diameter': nozzle,
+            '--temperature': temperature,
+            '--fill-pattern': infill_pattern,
+            '--fill-density': infill_density,
+            '--perimeters': str(math.floor(float(wall_thickness.strip('mm'))/float(nozzle.strip('mm'))))
+        }
+
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            slice_command = [PRUSA_SLICER_LOCATION,
+                            '--load', 'ultimaker.ini']
+            for keyval in argdict.items():
+                slice_command.extend(list(str(t) for t in keyval))
+            slice_command.extend(['--export-gcode', volume_file.stl_location])
+            slice_command.extend(['--output-filename-format', 'FEDT_[timestamp]_[input_filename_base].gcode'])
+            print(slice_command)
+            results = subprocess.check_output(slice_command)
+        
+            # the last line from Prusa Slicer is "Slicing result exported to ..."
+            last_line = results.decode('utf-8').strip().split("\n")[-1]
+            gcode_location = last_line.split(" exported to ")[1]
+
+        design_bake = {VolumeFile.VOLUME_FILE: volume_file}
+        design_bake.update(argdict)
+        gcode = design(design_bake)
+        gcode.gcode_location = gcode_location
+
+        if isinstance(MODE, Execute):
+            print(f"gcode has been generated, and is available at {gcode_location}")
+
+        return gcode
+
+    @staticmethod      
+    def describe():
+        return '''Prusa Slicer'''
+
+class BambuSlicer(Slicer):
+    @staticmethod
+    def slice(volume_file: VolumeFile,
+                temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE], # unused
+                nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE], # used only in calc of walls
+                layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
+                infill_pattern: str = Slicer.default_slicer_settings[Slicer.INFILL_PATTERN],
+                infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
+                wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
+                material: str = Slicer.default_slicer_settings[Slicer.MATERIAL], # unused
+                **kwargs) -> GCodeFile:
+        argdict = {}
+        gcode_location = ''
+        # FIXME bambu studio is a huge pain for actually running on the command line. this... sort of works. but not quite.
+        # see: extensive internet complaints.
+
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            # first read and write all the arguments into the file
+            process_json = {}
+            with open('process.json') as f:
+                process_json = json.loads(''.join(l for l in f.readlines()))
+            process_json["infill_density"] = infill_density
+            process_json["infill_pattern"] = infill_pattern
+            process_json["layer_height"] = layer_height
+            process_json["wall_loops"] = str(math.floor(float(wall_thickness)/float(nozzle)))
+            generated_process_file = 'fedt_process.json'
+            with open(generated_process_file, 'w+') as f:
+                f.write(json.dumps(process_json))
+
+            # then call the slicer
             slice_command = [BAMBU_SLICER_LOCATION,
-                            '--debug 2',
-                            '--load-settings "{BAMBU_MACHINE_SETTINGS_LOCATION};{BAMBU_PROCESS_SETTINGS_LOCATION}"',
-                            volume_file]
+                            f'--load-settings machine.json;{generated_process_file}',
+                            '--slice', '2',
+                            '--debug', '2',
+                            '--export-3mf', 'output.3mf',
+                            volume_file.stl_location]
+            print(' '.join(slice_command))
             gcode_location = subprocess.check_output(slice_command)
 
         design_bake = {VolumeFile.VOLUME_FILE: volume_file}
@@ -597,6 +721,15 @@ class Printer:
                     wall_thickness=wall_thickness,
                     material=material,
                     **kwargs)
+
+
+        stored_values = {GCodeFile.GCODE_FILE: gcode}
+        if explicit_args:
+            stored_values.update(explicit_args)
+        if kwargs:
+            stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
+
+        fabbed =  fabricate(stored_values)
         if isinstance(MODE, Execute):
             Printer.print(gcode)
         else:
@@ -608,13 +741,6 @@ class Printer:
                                         SETTINGS: stored_values,
                                         FABBED_SOMETHING: True})
 
-        stored_values = {GCodeFile.GCODE_FILE: gcode}
-        if explicit_args:
-            stored_values.update(explicit_args)
-        if kwargs:
-            stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
-
-        fabbed =  fabricate(stored_values)
 
         if isinstance(MODE, Execute):
             print(f"object #{fabbed.uid} has been fabricated!")

@@ -109,7 +109,9 @@ def cross_validation():
                                                 bottom_angle=bottom_angle,
                                                 bottom_width=bottom_width,
                                                 infill_density=infill_density,
-                                                filament_color=filament)
+                                                filament_color=filament,
+                                                layer_height=0.2,
+                                                slicer=JankyUltimakerSlicer)
         fabbed_object = Human.post_process(fabbed_object, "hold a light above the object")
         all_object_results += Camera.take_picture(fabbed_object, "bottom")
 

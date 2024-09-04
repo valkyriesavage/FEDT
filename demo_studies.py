@@ -22,8 +22,8 @@ def test_print_shrinkage():
 
     shrinkage_measurements = BatchMeasurements.empty()
 
-    for infill_pattern in Parallel(['concentric','line']):
-        for repetition in Parallel(range(2)):
+    for infill_pattern in Parallel(['honeycomb','triangles','grid']):
+        for repetition in Parallel(range(5)):
             fabbed_object = Printer.slice_and_print(cube,
                                                     infill_pattern=infill_pattern,
                                                     repetition=repetition)
@@ -97,14 +97,15 @@ def test_user_assembly_time():
 
 if __name__ == "__main__":
     # create a flowchart
-    # render_flowchart(test_print_shrinkage)
+    #render_flowchart(test_print_shrinkage)
     # render_flowchart(test_force_at_break)
 
     # run an experiment
-    # from control import MODE, Execute
-    # control.MODE = Execute()
-    # test_force_at_break()
+    from control import MODE, Execute
+    control.MODE = Execute()
+    #test_force_at_break()
+    test_print_shrinkage()
 
     # other sample flowcharts
     # render_flowchart(test_paint_layers)
-    render_flowchart(test_user_assembly_time)
+    #render_flowchart(test_user_assembly_time)
