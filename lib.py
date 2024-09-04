@@ -247,7 +247,7 @@ class Laser:
             color_to_setting: SvgColor = SvgColor.GREEN,
             focal_height_mm: int = default_laser_settings[FOCAL_HEIGHT_MM],
             mapping_file: str = None,
-            default_settings: dict = None,
+            default_settings: dict = {},
             explicit_args = None,
             **kwargs
             ) -> RealWorldObject:
@@ -259,18 +259,23 @@ class Laser:
             # figure out if they set up a mapping request
             colors_to_mappings = Laser.default_laser_settings[Laser.MAPPINGS]
             if setting_names:
-                desired_setting = setting_names[Laser.generate_setting_key(material, thickness, cut_power, cut_speed, frequency)]
+                desired_setting = setting_names[Laser.generate_setting_key(default_settings['material'] if 'material' in default_settings else material,
+                                                                           default_settings['thickness'] if 'thickness' in default_settings else thickness,
+                                                                           default_settings['cut_power'] if 'cut_power' in default_settings else cut_power,
+                                                                           default_settings['cut_speed'] if 'cut_speed' in default_settings else cut_speed,
+                                                                           default_settings['frequency'] if 'frequency' in default_settings else frequency)]
                 colors_to_mappings[color_to_setting] = desired_setting
             # actually call the laser
             Laser.do_fab(line_file,
-                            mapping_file=mapping_file,
-                            focal_height_mm=focal_height_mm)
+                            mapping_file=default_settings['mapping_file'] if 'mapping_file' in default_settings else mapping_file,
+                            focal_height_mm=default_settings['focal_height_mm'] if 'focal_height_mm' in default_settings else focal_height_mm)
         
         user_chosen_settings = {}
         user_chosen_settings.update(kwargs)
         user_chosen_settings.update(explicit_args)
 
         all_settings = dict(Laser.default_laser_settings)
+        all_settings.update(default_settings)
         all_settings.update(dict(user_chosen_settings))
 
         stored_values = {"line_file": line_file}
@@ -696,6 +701,7 @@ class Printer:
                         infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
                         wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
                         slicer: Slicer = default_printer_settings[SLICER],
+                        defaults: dict = {},
                         explicit_args = None,
                         **kwargs
                         ) -> RealWorldObject:
@@ -712,14 +718,14 @@ class Printer:
                                             SETTINGS: stored_values})
 
         gcode = slicer.slice(volume_file,
-                    printer=printer,
-                    temperature=temperature,
-                    nozzle=nozzle,
-                    layer_height=layer_height,
-                    infill_pattern=infill_pattern,
-                    infill_density=infill_density,
-                    wall_thickness=wall_thickness,
-                    material=material,
+                    printer=defaults['printer'] if 'printer' in defaults else printer,
+                    temperature=defaults['temperature'] if 'temperature' in defaults else temperature,
+                    nozzle=defaults['nozzle'] if 'nozzle' in defaults else nozzle,
+                    layer_height=defaults['layer_height'] if 'layer_height' in defaults else layer_height,
+                    infill_pattern=defaults['infill_pattern'] if 'infill_pattern' in defaults else infill_pattern,
+                    infill_density=defaults['infill_density'] if 'infill_density' in defaults else infill_density,
+                    wall_thickness=defaults['wall_thickness'] if 'wall_thickness' in defaults else wall_thickness,
+                    material=defaults['material'] if 'material' in defaults else material,
                     **kwargs)
 
 
@@ -728,6 +734,11 @@ class Printer:
             stored_values.update(explicit_args)
         if kwargs:
             stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
+        
+        all_values = dict.copy(Slicer.default_slicer_settings)
+        all_values.update(Printer.default_printer_settings)
+        all_values.update(defaults)
+        all_values.update(stored_values)
 
         fabbed =  fabricate(stored_values)
         if isinstance(MODE, Execute):
@@ -738,12 +749,11 @@ class Printer:
                     latex_details = {SUBJECT: Printer,
                                         VERB: 'printed',
                                         OBJECT: volume_file,
-                                        SETTINGS: stored_values,
+                                        SETTINGS: all_values,
                                         FABBED_SOMETHING: True})
 
 
-        if isinstance(MODE, Execute):
-            print(f"object #{fabbed.uid} has been fabricated!")
+        note(f"object #{fabbed.uid} has been fabricated!")
         
         return fabbed
     
