@@ -1,3 +1,4 @@
+import copy
 from datetime import date
 from typing import List
 import datetime
@@ -800,12 +801,11 @@ class StlEditor:
         versions = []
         if VERSIONS in stl.metadata:
             versions = stl.metadata[VERSIONS]
-        versions.append(stl)
-        new_obj = design(stl.metadata)
-        new_obj.stl_location = stl_location
-        new_obj.metadata.update({VERSIONS: versions, HAND_EDIT: specification})
+        versions.append(copy.deepcopy(stl))
+        stl.version += 1
+        stl.metadata.update({VERSIONS: versions, HAND_EDIT: specification})
 
-        return new_obj
+        return stl
 
     @staticmethod
     def cube(size: tuple=(1,1,1),
@@ -839,13 +839,13 @@ class StlEditor:
         versions = []
         if VERSIONS in volume_file.metadata:
             versions = volume_file.metadata[VERSIONS]
-            versions.append(volume_file)
-        new_obj = design(volume_file.metadata)
+            versions.append(copy.deepcopy(volume_file))
+        volume_file.version += 1
         if isinstance(MODE, Execute):
             stl_location = input("what is the location of the rotated stl?")
-        new_obj.stl_location = stl_location
-        new_obj.metadata.update({VERSIONS: versions, "rotation angle": angle})
-        return new_obj
+            volume_file.stl_location = stl_location
+        volume_file.metadata.update({VERSIONS: versions, "rotation angle": angle})
+        return volume_file
 
     @staticmethod
     def modify_feature_by_hand(volume_file:VolumeFile,
@@ -857,13 +857,13 @@ class StlEditor:
         versions = []
         if VERSIONS in volume_file.metadata:
             versions = volume_file.metadata[VERSIONS]
-            versions.append(volume_file)
-        new_obj = design(volume_file.metadata)
-        new_obj.metadata.update({VERSIONS: versions, feature_name: feature_value})
+            versions.append(copy.deepcopy(volume_file))
+        volume_file.version += 1
+        volume_file.metadata.update({VERSIONS: versions, feature_name: feature_value})
         if isinstance(MODE, Execute):
             stl_location = input(f"what is the location of the modified stl with {feature_name} value {feature_value}?")
-        new_obj.stl_location = stl_location
-        return new_obj
+        volume_file.stl_location = stl_location
+        return volume_file
     
     @staticmethod
     def extract_2D_profile(volume_file: VolumeFile,
@@ -1136,11 +1136,11 @@ class Human:
         versions = []
         if VERSIONS in obj.metadata:
             versions = obj.metadata[VERSIONS]
-            versions.append(obj)
-        new_obj = fabricate(obj.metadata)
-        note(f"(this creates a new version of #{obj.uid}, which we call object #{new_obj.uid})")
-        new_obj.metadata.update({VERSIONS: versions, "post-process": action})
-        return new_obj
+            versions.append(copy.deepcopy(obj))
+        obj.version += 1
+        note(f"(this creates a new version of #{obj.uid}, which we call object #{obj.uid}v{obj.version})")
+        obj.metadata.update({VERSIONS: versions, "post-process": action})
+        return obj
     
     @staticmethod
     def is_reasonable(obj: RealWorldObject):

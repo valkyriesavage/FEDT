@@ -9,6 +9,7 @@ CURRENT_UID = 0
 @dataclass
 class VirtualWorldObject:
     uid: int
+    version: int
     metadata: dict[str, object]
 
     def __init__(self, metadata):
@@ -16,12 +17,13 @@ class VirtualWorldObject:
         self.uid = CURRENT_UID
         CURRENT_UID += 1
         self.metadata = metadata
+        self.version = 0
 
     def __hash__(self):
         return self.uid
 
     def __repr__(self) -> str:
-        return "Virtual" + str(self.uid)
+        return "Virtual" + str(self.uid) + 'v' + str(self.version)
     
 @dataclass
 class LineFile(VirtualWorldObject):
@@ -36,7 +38,7 @@ class LineFile(VirtualWorldObject):
         return self.uid
 
     def __repr__(self) -> str:
-        return "Virtual" + str(self.uid)
+        return "Virtual" + str(self.uid) + 'v' + str(self.version)
 
 @dataclass
 class VolumeFile(VirtualWorldObject):
@@ -51,7 +53,7 @@ class VolumeFile(VirtualWorldObject):
         return self.uid
 
     def __repr__(self) -> str:
-        return "Virtual" + str(self.uid)
+        return "Virtual" + str(self.uid) + 'v' + str(self.version)
 
 @dataclass
 class GCodeFile(VirtualWorldObject):
@@ -66,7 +68,7 @@ class GCodeFile(VirtualWorldObject):
         return self.uid
 
     def __repr__(self) -> str:
-        return "Virtual" + str(self.uid)
+        return "Virtual" + str(self.uid) + 'v' + str(self.version)
 
 def design(metadata: dict[str, object],
               instr: str | None = None) -> VirtualWorldObject:

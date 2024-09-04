@@ -1,6 +1,7 @@
 import inspect
 import io
 from contextlib import redirect_stdout
+import os
 
 from graphviz import Digraph
 from PIL import Image
@@ -119,7 +120,7 @@ def build_flowchart_recursive(dot, node, current_parent):
 
     # process the node
     if node.tag in ['instruction','note','header']:
-        last_id = create_styled_node(dot, node.text.strip(), parent=current_parent)
+        last_id = create_styled_node(dot, node.text.strip(), parent=current_parent) # TODO some weird artefact text generated in some places, not sure why
     elif node.tag == 'in-series':
         last_id = process_in_series(dot, current_parent, node)
     elif node.tag == 'in-parallel':
@@ -164,15 +165,18 @@ def build_flowchart(xml_root):
     return dot
 
 
-def render_flowchart(capture_function = None, pdf=False):
+def render_flowchart(capture_function, pdf=False, remove=True):
 
     f = io.StringIO()
     with redirect_stdout(f):                 
         print(capture_function())
-    xml_content = f.getvalue()
+    xml_location = f.getvalue().split(' to ')[-1].split('\n')[0]
+    xml_content = ''
+    with open(xml_location) as f:
+        xml_content = f.readlines()
+    if remove:
+        os.remove(xml_location)
     xml_content = f"<data>{xml_content}</data>"
-
-    print(xml_content)
 
     # Parse the XML
     xml_root = ET.fromstring(xml_content)
