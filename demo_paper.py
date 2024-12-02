@@ -35,7 +35,7 @@ def test_weight():
 
 @fedt_experiment
 def test_paint_layers():
-    flower = Laser.fab(LineFile('flower.svg'), material='delrin')
+    flower = Laser.fab(LineFile('flower.svg'), material='wood')
 
     photos = ImmediateMeasurements.empty()
     is_reasonable = False

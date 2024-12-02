@@ -206,12 +206,12 @@ def camera_angle():
 
 if __name__ == "__main__":
     # render_flowchart(find_bottom_spacings)
-    # render_flowchart(cross_validation)
+    render_flowchart(cross_validation, pdf=True)
     # render_flowchart(materials_lighting_thicknesses)
     # render_flowchart(different_printers)
     # render_flowchart(camera_distance)
     # render_flowchart(camera_angle)
-    import control
-    from control import MODE, Execute
-    control.MODE = Execute()
-    cross_validation()
+    # import control
+    # from control import MODE, Execute
+    # control.MODE = Execute()
+    # cross_validation()

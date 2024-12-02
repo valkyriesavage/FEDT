@@ -126,7 +126,7 @@ def test_change_over_time():
 
 if __name__ == "__main__":
     # render_flowchart(test_materials)
-    render_flowchart(test_height_vs_focal_point)
+    render_flowchart(test_height_vs_focal_point, pdf=True)
     # render_flowchart(test_optimal_number_of_scans)
     # render_flowchart(test_laser_power_and_speed)
     # render_flowchart(test_grain_direction)
