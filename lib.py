@@ -15,7 +15,7 @@ from flowchart import SUBJECT, VERB, OBJECT, SETTINGS, FABBED_SOMETHING
 from instruction import instruction, note
 from measurement import Measurement, BatchMeasurements
 from fabricate import fabricate, RealWorldObject, CURRENT_UID
-from design import design, VirtualWorldObject, LineFile, VolumeFile, GCodeFile
+from design import design, VirtualWorldObject, LineFile, VolumeFile, GCodeFile, VERSIONS
 from decorator import explicit_checker
 
 from config import *
@@ -26,7 +26,6 @@ TEST_VALUES = "test_values"
 INSTRUCTION = "instruction"
 DATA_TYPE = 'data type'
 ARGNAME = 'argname'
-VERSIONS = 'versions'
 
 CAD = 'CAD'
 CAM = 'CAM'
@@ -879,6 +878,154 @@ class StlEditor:
 
     @staticmethod
     def describe():
+        setup = '''We used FreeCAD to manipulate our STL files.'''
+        return setup
+
+class KnittingMachine:
+
+    @staticmethod
+    def knit(knitfile: LineFile) -> RealWorldObject:
+        return fabricate({'fname':knitfile.svg_location})
+        input(f"load {gcode.gcode_location} onto the printer and hit knit. enter when finished.")
+    
+    @staticmethod
+    @explicit_checker
+    def slice_and_print(knit_file: VolumeFile,
+                        defaults: dict = {},
+                        explicit_args = None,
+                        **kwargs
+                        ) -> RealWorldObject:
+        return fabricate({'fname':knit_file.stl_location})
+
+        from control import MODE, Execute
+
+        gcode = ''
+
+        if volume_file.stl_location == '':
+            instruction("Slice the file.",
+                        latex_details = {SUBJECT: Slicer,
+                                            VERB: 'sliced',
+                                            OBJECT: volume_file,
+                                            SETTINGS: stored_values})
+
+        gcode = 2
+
+
+        stored_values = {GCodeFile.GCODE_FILE: gcode}
+        if explicit_args:
+            stored_values.update(explicit_args)
+        if kwargs:
+            stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
+        
+        all_values = dict.copy(Slicer.default_slicer_settings)
+        all_values.update(Printer.default_printer_settings)
+        all_values.update(defaults)
+        all_values.update(stored_values)
+
+        fabbed =  fabricate(stored_values)
+        if isinstance(MODE, Execute):
+            Printer.print(gcode)
+        else:
+            instruction(f"Run the printer, creating object #{fabbed.uid}",
+                    fabbing = True,
+                    latex_details = {SUBJECT: Printer,
+                                        VERB: 'printed',
+                                        OBJECT: volume_file,
+                                        SETTINGS: all_values,
+                                        FABBED_SOMETHING: True})
+
+
+        note(f"object #{fabbed.uid} has been fabricated!")
+        
+        return fabbed
+    
+    @staticmethod  
+    def describe():
+        return ''
+        setup = '''We used a {machine}. Our default settings were {defaults}.'''.format(
+                **{
+                    'machine': str(Printer.default_printer_settings[Printer.PRINTER]),
+                    'defaults': ', '.join([str(x) + ':' + str(y) for x, y in zip(Slicer.default_slicer_settings.keys(),
+                                                                                 Slicer.default_slicer_settings.values())])
+                })
+        return setup
+
+class KnitCompiler:
+
+    @staticmethod
+    def design(specification: str=None) -> VolumeFile:
+        return VolumeFile()
+        if not specification:
+            instruction("Get the stl file from the website.")
+        else:
+            instruction(f"Design an STL file like {specification}")
+        
+        stl_location = ''
+
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            stl_location = input("where is the stl file?")
+        
+        designed = VolumeFile(stl_location)
+        designed.metadata.update({"specification":specification})
+        return designed
+    
+    @staticmethod
+    def edit(stl: VolumeFile, specification: str) -> VolumeFile:
+        return VolumeFile()
+        instruction(f"Edit {stl.stl_location} like {specification}")
+        stl_location = stl.stl_location
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            stl_location = input(f"What is the location of the modified stl?")
+        HAND_EDIT = "hand-edited"
+        if HAND_EDIT in stl.metadata:
+            specification = stl.metadata[HAND_EDIT] + ", then " + specification
+
+        versions = []
+        if VERSIONS in stl.metadata:
+            versions = stl.metadata[VERSIONS]
+        versions.append(copy.deepcopy(stl))
+        stl.version += 1
+        stl.metadata.update({VERSIONS: versions, HAND_EDIT: specification})
+
+        return stl
+
+    @staticmethod
+    def modify_feature_by_hand(volume_file:VolumeFile,
+                               feature_name: str,
+                               feature_value: str|float) -> VolumeFile:
+        return VolumeFile()
+        instruction(f'modify the file {volume_file.stl_location} to have feature {feature_name} with value {feature_value}')
+        from control import MODE, Execute
+        stl_location = volume_file.stl_location
+        versions = []
+        if VERSIONS in volume_file.metadata:
+            versions = volume_file.metadata[VERSIONS]
+            versions.append(copy.deepcopy(volume_file))
+        volume_file.version += 1
+        volume_file.metadata.update({VERSIONS: versions, feature_name: feature_value})
+        if isinstance(MODE, Execute):
+            stl_location = input(f"what is the location of the modified stl with {feature_name} value {feature_value}?")
+        volume_file.stl_location = stl_location
+        return volume_file
+    
+    @staticmethod
+    def extract_2D_profile(volume_file: VolumeFile,
+                        feature_name: str) -> LineFile:
+        return LineFile()
+        instruction(f'extract an svg profile from {volume_file.stl_location} of {feature_name}')
+        from control import MODE, Execute
+        svg_location = ''
+        if isinstance(MODE, Execute):
+            svg_location = input("what is the location of the svg profile?")
+        extracted = LineFile(svg_location)
+        extracted.metadata.update({"source": volume_file})
+        return extracted
+
+    @staticmethod
+    def describe():
+        return ''
         setup = '''We used FreeCAD to manipulate our STL files.'''
         return setup
 

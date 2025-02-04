@@ -1,10 +1,11 @@
+import copy
 from dataclasses import dataclass
 from typing import Callable
 from control import MODE, Execute
 from instruction import instruction
 
 CURRENT_UID = 0
-
+VERSIONS = 'versions'
 
 @dataclass
 class VirtualWorldObject:
@@ -24,6 +25,14 @@ class VirtualWorldObject:
 
     def __repr__(self) -> str:
         return "Virtual" + str(self.uid) + 'v' + str(self.version)
+    
+    def updateVersion(self, newkey, newval):
+        versions = []
+        if VERSIONS in self.metadata:
+            versions = self.metadata[VERSIONS]
+        versions.append(copy.deepcopy(self))
+        self.version += 1
+        self.metadata.update({VERSIONS: versions, newkey: newval})
     
 @dataclass
 class LineFile(VirtualWorldObject):
