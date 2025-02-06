@@ -2,7 +2,7 @@ import copy
 from dataclasses import dataclass
 from typing import Callable
 from control import MODE, Execute
-from instruction import instruction
+from instruction import instruction, note
 
 CURRENT_UID = 0
 VERSIONS = 'versions'
@@ -19,6 +19,7 @@ class VirtualWorldObject:
         CURRENT_UID += 1
         self.metadata = metadata
         self.version = 0
+        note("this creates object #{}".format(self.uid))
 
     def __hash__(self):
         return self.uid
@@ -33,6 +34,7 @@ class VirtualWorldObject:
         versions.append(copy.deepcopy(self))
         self.version += 1
         self.metadata.update({VERSIONS: versions, newkey: newval})
+        note("(this creates a new version of #{}, which we call {})".format(self.uid, str(self)))
     
 @dataclass
 class LineFile(VirtualWorldObject):

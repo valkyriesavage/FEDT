@@ -16,13 +16,18 @@ def summarize(data):
     return "Oh wow, great data!"
 
 class CustomProgram:
+    def modify_knitdesign(knitfile: VirtualWorldObject, specification: str):
+        instruction("modify design: {}".format(specification))
+        knitfile.updateVersion("edit", specification)
+        return knitfile
+
     def knitcarve(knitfile: VirtualWorldObject, specification: str):
-        instruction("knitcarve {}: {}".format(knitfile, specification))
+        instruction("knitcarve: {}".format(specification))
         knitfile.updateVersion("KnitCarve", specification)
         return knitfile
 
     def basicremove(knitfile: VirtualWorldObject, specification: str):
-        instruction("naive remove {}: {}".format(knitfile, specification))
+        instruction("naive remove: {}".format(specification))
         knitfile.updateVersion("NaiveCarve", specification)
         return knitfile
     
@@ -36,8 +41,8 @@ def compare_knit_textures_from_dbs():
         textures_from_db.append(LineFile("texture{}.knit".format(i)))
 
     for texture in Parallel(textures_from_db):
-        Human.do_and_respond("tile to 60x60, fill gaps with knit stitches") # need to operate on the texture object
-        Human.do_and_respond("add 12-stitch checkered knit/purl to edges") # need to operate on the texture object
+        CustomProgram.modify_knitdesign(texture, "tile to 60x60, fill gaps with knit stitches")
+        CustomProgram.modify_knitdesign(texture, "add 12-stitch checkered knit/purl to edges")
 
     knitted = []
     weights = BatchMeasurements.empty()
