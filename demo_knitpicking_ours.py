@@ -101,20 +101,17 @@ def crowdsource_knitcarve_comparison():
             naive[carve_level][texture] = naive_phys
             
     
-    workerpool_size = 20 # 200
+    workerpool_size = 20 #200
     ratings = ImmediateMeasurements.empty()
     textures = list(base.keys())
-    for worker in Parallel(range(workerpool_size)):
+    for worker in Parallel(arange(1,workerpool_size+include_last)):
         carve_level = worker % 5 + 1
         comparator = naive if worker % 2 else carve
         for texture in Parallel(shuffle(textures)):
             CustomProgram.showToCrowdworker(comparator[carve_level][texture], worker)
             CustomProgram.showToCrowdworker(base[texture], worker)
-            ratings += Human.judge_something(comparator[carve_level][texture], "worker {} compare to {} based on skew".format(worker, base[texture]))
-            ratings += Human.judge_something(comparator[carve_level][texture], "worker {} compare to {} based on size".format(worker, base[texture]))
-            ratings += Human.judge_something(comparator[carve_level][texture], "worker {} compare to {} based on number of whole repetitions".format(worker, base[texture]))
-            ratings += Human.judge_something(comparator[carve_level][texture], "worker {} compare to {} based on stretch".format(worker, base[texture]))
-            ratings += Human.judge_something(comparator[carve_level][texture], "worker {} compare to {} based on opacity".format(worker, base[texture]))
+            for aspect in Series(['skew','size','number of whole repetitions','stretch','opacity']):
+                ratings += Human.judge_something(comparator[carve_level][texture], "worker {} compare to {} based on {}".format(worker, base[texture], aspect))
             
     summarize(ratings.get_all_data())
 

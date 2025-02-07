@@ -1,6 +1,7 @@
 import inspect
 import io
 from contextlib import redirect_stdout
+import math
 import os
 
 from graphviz import Digraph
@@ -9,6 +10,7 @@ import xml.etree.ElementTree as ET
 
 indent = 0
 shutup = True
+DEFAULT = -1234567890
 
 id_counter = 0
 def next_id():
@@ -16,21 +18,17 @@ def next_id():
     id_counter += 1
     return f"node{id_counter}"
 
-def parse_xml(file):
-    tree = ET.parse(file)
-    root = tree.getroot()
-    return root
-
-def create_styled_node(dot, label, parent=None, is_header=False, block_type=None):
+def create_styled_node(dot, label, parent=None, is_header=False, block_type=None, invisible=False):
     global indent
     if not shutup:
         print(' '*(indent+4) + f'making a node: {label}, with parent {parent}')
     # Set node attributes based on type and whether it's a header
-    style = 'filled,bold' if is_header else 'filled'
+    label = '<<b>{}</b>>'.format(label) if is_header else label
+    style = 'invis' if invisible else 'filled'
     shape = 'rectangle'
     width = '2'
     
-    color = 'lightgrey'
+    color = 'white' if is_header else 'lightgrey'
     # if block_type == 'fabricate':
     #     color = 'lightblue'
     # elif block_type == 'measure':
@@ -48,34 +46,98 @@ def create_styled_node(dot, label, parent=None, is_header=False, block_type=None
         print(' '*(indent+4) + f'\tnew node id is {new_id}')
     return new_id
 
-def process_in_series(dot, parent, series_node):
+def generate_fake_node(node_list, item_type="par"):
+    class FakeNode:
+        def __init__(self, text, item_type="par"):
+            self.text = text
+            self.item_type = item_type
+            # is this the best way to do it? probably not. but that's fine.
+            self.node = ET.ElementTree(ET.fromstring(f'''<{item_type}-item>
+<header>Repeat for {text}</header></{item_type}-item>
+''')).getroot()
+
+    def summarize_nodes(node_list):
+        # we want to just look at the headers
+        summarize = []
+        for node in node_list:
+            summarize.append(node.find('header').text.split("Loop for ")[-1])
+        summary = ", ".join(summarize) + "..."
+        is_numerical_sequence = True
+        last = DEFAULT
+        num = DEFAULT
+        step = DEFAULT
+        mult = DEFAULT
+        for tag in summarize:
+            try:
+                num = float(tag)
+            except:
+                # whoops, not a number
+                is_numerical_sequence = False
+                break
+            if last == DEFAULT: # first loop, set the 'last'
+                last = num
+                continue
+            if step == DEFAULT: # second loop, find the 'step'/'mult'
+                step = num - last
+                mult = num / last
+                last = num
+                continue
+            this_step = num - last
+            this_mult = num/last
+            if not (math.isclose(this_step, step) or math.isclose(this_mult, mult)): # future loops, check the step/mult
+                is_numerical_sequence = False
+                break
+            last = num
+        if is_numerical_sequence and len(summarize) > 3:
+            summary = "{}, {}, ... {}".format(summarize[0], summarize[1], summarize[-1])
+        return summary
+
+    fakenode = FakeNode(summarize_nodes(node_list), item_type).node
+    return fakenode
+
+def process_in_series(dot, parent, series_node, pare_down=True):
     global indent
     if not shutup:
         print(' '*indent + f'making series nodes for parent {parent}')
     last_node_created = parent
-    for series_item in series_node.findall('series-item'):
+    nodes = series_node.findall('series-item')
+
+    if pare_down and len(nodes) > 4:
+        # note that the -2th node is the last "real" node. the -1th node is just the "</par-item>" thing, for some reason.
+        summary_node = generate_fake_node(nodes[2:-1], item_type="series")
+        nodes = [nodes[0], nodes[1], summary_node, nodes[-1]]
+
+    for series_item in nodes:
         if not len([child for child in series_item]):
             continue # some bug
 
         indent += 4
-        tmp = build_flowchart_recursive(dot, series_item, last_node_created)
+        tmp = build_flowchart_recursive(dot, series_item, last_node_created, pare_down=pare_down)
         indent -= 4
 
         last_node_created = tmp
 
     return last_node_created
 
-def process_in_parallel(dot, parent, parallel_node):
+def process_in_parallel(dot, parent, parallel_node, pare_down=True):
     global indent
     if not shutup:
         print(' '*indent + f'making parallel nodes for parent {parallel_node.tag}')
+
+    nodes = parallel_node.findall('par-item')
+
+    if pare_down and len(nodes) > 4:
+        # note that the -2th node is the last "real" node. the -1th node is just the "</par-item>" thing, for some reason.
+        summary_node = generate_fake_node(nodes[2:-1], item_type="par")
+        nodes = [nodes[0], nodes[1], summary_node, nodes[-1]]
+    
     parallel_end_nodes = []
-    for par_item in parallel_node.findall('par-item'):
+    for par_item in nodes:
         if not len([child for child in par_item]):
             continue # some bug
 
         indent += 4
-        last_node_created = build_flowchart_recursive(dot, par_item, parent)
+        last_node_created = build_flowchart_recursive(dot, par_item, parent, pare_down=pare_down)
         indent -= 4
 
         parallel_end_nodes.append(last_node_created)
@@ -88,7 +150,7 @@ def process_in_parallel(dot, parent, parallel_node):
 
     return converge_node_id
 
-def process_while(dot, parent, while_node):
+def process_while(dot, parent, while_node, pare_down=True):
     global indent
     if not shutup:
         print(' '*indent + f'making while nodes for parent {while_node.tag}')
@@ -102,7 +164,7 @@ def process_while(dot, parent, while_node):
             continue # some bug
 
         indent += 4
-        last_node_created = build_flowchart_recursive(dot, loop_item, last_node_created)
+        last_node_created = build_flowchart_recursive(dot, loop_item, last_node_created, pare_down=pare_down)
         indent -= 4
 
     # loop back up to the condition
@@ -112,7 +174,7 @@ def process_while(dot, parent, while_node):
 
     return last_node_created
 
-def build_flowchart_recursive(dot, node, current_parent):
+def build_flowchart_recursive(dot, node, current_parent, pare_down=True):
     last_id = current_parent
     global indent
     if not shutup:
@@ -120,13 +182,13 @@ def build_flowchart_recursive(dot, node, current_parent):
 
     # process the node
     if node.tag in ['instruction','note','header']:
-        last_id = create_styled_node(dot, node.text.strip(), parent=current_parent) # TODO some weird artefact text generated in some places, not sure why
+        last_id = create_styled_node(dot, node.text.strip(), is_header=node.tag=='header', parent=current_parent) # TODO some weird artefact text generated in some places, not sure why
     elif node.tag == 'in-series':
-        last_id = process_in_series(dot, current_parent, node)
+        last_id = process_in_series(dot, current_parent, node, pare_down=pare_down)
     elif node.tag == 'in-parallel':
-        last_id = process_in_parallel(dot, current_parent, node)
+        last_id = process_in_parallel(dot, current_parent, node, pare_down=pare_down)
     elif node.tag == 'loop':
-        last_id = process_while(dot, current_parent, node)
+        last_id = process_while(dot, current_parent, node, pare_down=pare_down)
     elif node.tag in ['par-item','series-item']:
         if not shutup:
             print(' ' * indent + f'keeping parent: {current_parent}')
@@ -142,14 +204,14 @@ def build_flowchart_recursive(dot, node, current_parent):
             print(' '*indent + f'now looking at children of {node.tag}: {node.text.strip() if node.text else ""}')
         for item in node:
             indent += 4
-            tmp = build_flowchart_recursive(dot, item, last_id)
+            tmp = build_flowchart_recursive(dot, item, last_id, pare_down=pare_down)
             indent -= 4
             # dot.edge(tmp, last_id)
             last_id = tmp
 
     return last_id
 
-def build_flowchart(xml_root):
+def build_flowchart(xml_root, pare_down=True):
     dot = Digraph(comment='Flowchart')
     dot.attr(rankdir='TB')  # Top-to-Bottom flow direction
     
@@ -157,7 +219,7 @@ def build_flowchart(xml_root):
     start_node_id = create_styled_node(dot, 'Experiment Start', block_type='start')
     current_parent = start_node_id
     
-    current_parent = build_flowchart_recursive(dot, xml_root, current_parent) 
+    current_parent = build_flowchart_recursive(dot, xml_root, current_parent, pare_down=pare_down) 
 
     # Add "experiment end" block
     end_node_id = create_styled_node(dot, 'Experiment End', parent=current_parent, block_type='end')
@@ -165,7 +227,7 @@ def build_flowchart(xml_root):
     return dot
 
 
-def render_flowchart(capture_function, pdf=False, remove=True):
+def render_flowchart(capture_function, pdf=False, remove=True, pare_down=True):
 
     f = io.StringIO()
     with redirect_stdout(f):                 
@@ -182,7 +244,7 @@ def render_flowchart(capture_function, pdf=False, remove=True):
     xml_root = ET.fromstring(xml_content)
 
     # Build the flowchart
-    flowchart = build_flowchart(xml_root)
+    flowchart = build_flowchart(xml_root, pare_down=pare_down)
 
     # Save the flowchart
     if pdf:
@@ -200,39 +262,3 @@ def render_flowchart(capture_function, pdf=False, remove=True):
         # Display the flowchart
         im=Image.open(fname + '.png')
         im.show()
-
-sample_simple = '''
-<in-parallel>
-    <par-item>
-        <header>Loop for concentric</header>
-        <in-parallel>
-            <par-item>
-                <header>Loop for 0</header>
-                <instruction>Slice expt_stls/cube.stl.</instruction>
-                <instruction>Run the printer, creating object #0</instruction>
-            </par-item>
-            <par-item>
-                <header>Loop for 1</header>
-                <instruction>Slice expt_stls/cube.stl.</instruction>
-                <instruction>Run the printer, creating object #1</instruction>
-            </par-item>
-        </in-parallel>
-    </par-item>
-    <par-item>
-        <header>Loop for line</header>
-        <in-parallel>
-            <par-item>
-                <header>Loop for 0</header>
-                <instruction>Slice expt_stls/cube.stl.</instruction>
-                <instruction>Run the printer, creating object #2</instruction>
-            </par-item>
-            <par-item>
-                <header>Loop for 1</header>
-                <instruction>Slice expt_stls/cube.stl.</instruction>
-                <instruction>Run the printer, creating object #3</instruction>
-            </par-item>
-        </in-parallel>
-    </par-item>
-</in-parallel>
-<instruction>Fill out the csv for 0 objects ([]) and 0 measurements ([]) (0 datapoints).</instruction>
-'''
