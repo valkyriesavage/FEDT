@@ -15,7 +15,7 @@ from flowchart import SUBJECT, VERB, OBJECT, SETTINGS, FABBED_SOMETHING
 from instruction import instruction, note
 from measurement import Measurement, BatchMeasurements
 from fabricate import fabricate, RealWorldObject, CURRENT_UID
-from design import design, VirtualWorldObject, LineFile, VolumeFile, GCodeFile, VERSIONS
+from design import design, VirtualWorldObject, GeometryFile, CAMFile
 from decorator import explicit_checker
 
 from config import *
@@ -134,7 +134,7 @@ class Laser:
         return generated_setting_names
         
     @staticmethod
-    def do_fab(line_file: LineFile,
+    def do_fab(line_file: GeometryFile,
                 colors_to_mappings = default_laser_settings[MAPPINGS],
                 focal_height_mm = default_laser_settings[FOCAL_HEIGHT_MM],
                 mapping_file=None):
@@ -210,7 +210,7 @@ class Laser:
         # make the svg into the .plf file that they like
         temp_zf = 'spam.zip'
         with ZipFile(temp_zf, 'w') as myzip:
-            myzip.write(line_file.svg_location)
+            myzip.write(line_file.file_location)
             myzip.write(mapping_file, "mappings.xml")
             myzip.write("transform.xml")
         temp_plf = temp_zf.replace('.zip','.plf')
@@ -237,7 +237,7 @@ class Laser:
 
     @staticmethod
     @explicit_checker
-    def fab(line_file: LineFile,
+    def fab(line_file: GeometryFile,
             setting_names: dict = {},
             material: str = default_laser_settings[MATERIAL],
             thickness: str = default_laser_settings[THICKNESS],
@@ -254,6 +254,18 @@ class Laser:
     
         instruction(f"Ensure {material} is in the bed.")
 
+        user_chosen_settings = {}
+        user_chosen_settings.update(kwargs)
+        user_chosen_settings.update(explicit_args)
+
+        all_settings = dict(Laser.default_laser_settings)
+        all_settings.update(default_settings)
+        all_settings.update(dict(user_chosen_settings))
+
+        stored_values = {"line_file": line_file}
+        stored_values.update(explicit_args)
+        stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
+
         from control import MODE, Execute
         if isinstance(MODE, Execute):
             # figure out if they set up a mapping request
@@ -269,27 +281,23 @@ class Laser:
             Laser.do_fab(line_file,
                             mapping_file=default_settings['mapping_file'] if 'mapping_file' in default_settings else mapping_file,
                             focal_height_mm=default_settings['focal_height_mm'] if 'focal_height_mm' in default_settings else focal_height_mm)
-        
-        user_chosen_settings = {}
-        user_chosen_settings.update(kwargs)
-        user_chosen_settings.update(explicit_args)
+        else:
+            data = None
+            if "setting_names" in user_chosen_settings:
+                data = user_chosen_settings.pop("setting_names")
+            instruction(f"Run the laser cutter and cut file {line_file.file_location} with settings {user_chosen_settings}")
+            if data is not None:
+                user_chosen_settings["setting_names"] = data
 
-        all_settings = dict(Laser.default_laser_settings)
-        all_settings.update(default_settings)
-        all_settings.update(dict(user_chosen_settings))
 
-        stored_values = {"line_file": line_file}
-        stored_values.update(explicit_args)
-        stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
-
+        # note(f"Run the laser cutter and cut file {line_file.file_location} with settings {user_chosen_settings}",
+        #             fabbing = True,
+        #             latex_details = {SUBJECT: Laser,
+        #                                 VERB: 'cut',
+        #                                 OBJECT: line_file,
+        #                                 SETTINGS: all_settings,
+        #                                 FABBED_SOMETHING: True})
         fabbed = fabricate(stored_values)
-        note(f"Run the laser cutter and cut file {line_file.svg_location} with settings {user_chosen_settings}, creating object #{fabbed.uid}",
-                    fabbing = True,
-                    latex_details = {SUBJECT: Laser,
-                                        VERB: 'cut',
-                                        OBJECT: line_file,
-                                        SETTINGS: all_settings,
-                                        FABBED_SOMETHING: True})
 
         if isinstance(MODE, Execute):
             print(f"object number {fabbed.uid} has been fabricated!")
@@ -313,7 +321,7 @@ class SvgEditor:
     laser_bed = Laser.default_laser_settings[Laser.LASER_BED]
 
     @staticmethod
-    def design(specification: str=None, vars: dict={}) -> LineFile:
+    def design(specification: str=None, vars: dict={}) -> GeometryFile:
         if specification:
             instruction(f"Design an svg file like {specification}",
                     latex_details = {SUBJECT: "Authors",
@@ -332,7 +340,7 @@ class SvgEditor:
         from control import MODE, Execute
         if isinstance(MODE, Execute):
             location = input("where is the svg?")
-        designed = LineFile(location)
+        designed = GeometryFile(location)
         designed.metadata.update(vars)
         if specification:
             designed.metadata.update({"specification": specification})
@@ -375,7 +383,7 @@ class SvgEditor:
                        svg_location = "./expt_svgs/",
                        CAD_vars={},
                        explicit_args=None,
-                       **kwargs) -> LineFile:
+                       **kwargs) -> GeometryFile:
         
         svg_fullpath = svg_location
         from control import MODE, Execute
@@ -400,14 +408,13 @@ class SvgEditor:
             d.save_svg(svg_fullpath)
 
         # TODO : this is actually building the object slightly wrong!
-        stored_values = {LineFile.LINE_FILE: svg_fullpath}
+        stored_values = {}
         if explicit_args:
             stored_values.update(explicit_args)
         if kwargs:
             stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
 
-        virtual_object = LineFile(stored_values)
-        virtual_object.svg_location = svg_fullpath
+        virtual_object = design(svg_fullpath, GeometryFile, stored_values)
 
         if isinstance(MODE, Execute):
             print(f"svg has been generated, and is available at {svg_fullpath}")
@@ -448,10 +455,10 @@ class Slicer:
     }
 
     @staticmethod
-    def slice(volume_file: VolumeFile,
-              **kwargs) -> GCodeFile:
+    def slice(volume_file: GeometryFile,
+              **kwargs) -> CAMFile:
 
-        instruction(f"slice {volume_file.stl_location} in the slicing software with settings {kwargs}",
+        instruction(f"slice {volume_file.file_location} in the slicing software with settings {kwargs}",
                     fabbing = True,
                     latex_details = {SUBJECT: Slicer,
                                         VERB: 'sliced',
@@ -463,9 +470,8 @@ class Slicer:
         if isinstance(MODE, Execute):
             gcode_location = input("where is the sliced file located? ")
         
-        gcode_file = design({VolumeFile.VOLUME_FILE: volume_file})
+        gcode_file = design(gcode_location, CAMFile)
         gcode_file.metadata.update(kwargs)
-        gcode_file.gcode_location = gcode_location
         return gcode_file
 
     @staticmethod
@@ -474,7 +480,7 @@ class Slicer:
 
 class PrusaSlicer(Slicer):
     @staticmethod
-    def slice(volume_file: VolumeFile,
+    def slice(volume_file: GeometryFile,
                 temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
                 nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
                 layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
@@ -482,7 +488,7 @@ class PrusaSlicer(Slicer):
                 infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
                 wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
                 material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
-                **kwargs) -> GCodeFile:
+                **kwargs) -> CAMFile:
         gcode_location = ''
         argdict = {
             '--layer-height': layer_height,
@@ -499,7 +505,7 @@ class PrusaSlicer(Slicer):
                             '--load', PRUSA_CONFIG_LOCATION]
             for keyval in argdict.items():
                 slice_command.extend(list(str(t) for t in keyval))
-            slice_command.extend(['--export-gcode', volume_file.stl_location])
+            slice_command.extend(['--export-gcode', volume_file.file_location])
             slice_command.extend(['--output-filename-format', 'FEDT_[timestamp]_[input_filename_base].gcode'])
             print(slice_command)
             results = subprocess.check_output(slice_command)
@@ -508,10 +514,9 @@ class PrusaSlicer(Slicer):
             last_line = results.decode('utf-8').strip().split("\n")[-1]
             gcode_location = last_line.split(" exported to ")[1]
 
-        design_bake = {VolumeFile.VOLUME_FILE: volume_file}
+        design_bake = {'slicer': 'PrusaSlicer'}
         design_bake.update(argdict)
-        gcode = design(design_bake)
-        gcode.gcode_location = gcode_location
+        gcode = design(gcode_location, CAMFile, design_bake, 'slice the file')
 
         if isinstance(MODE, Execute):
             print(f"gcode has been generated, and is available at {gcode_location}")
@@ -524,7 +529,7 @@ class PrusaSlicer(Slicer):
 
 class JankyBambuSlicer(Slicer):
     @staticmethod
-    def slice(volume_file: VolumeFile,
+    def slice(volume_file: GeometryFile,
                 temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
                 nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
                 layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
@@ -532,7 +537,7 @@ class JankyBambuSlicer(Slicer):
                 infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
                 wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
                 material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
-                **kwargs) -> GCodeFile:
+                **kwargs) -> CAMFile:
         gcode_location = ''
         argdict = {
             '--layer-height': layer_height,
@@ -549,7 +554,7 @@ class JankyBambuSlicer(Slicer):
                             '--load', 'bambu.ini']
             for keyval in argdict.items():
                 slice_command.extend(list(str(t) for t in keyval))
-            slice_command.extend(['--export-gcode', volume_file.stl_location])
+            slice_command.extend(['--export-gcode', volume_file.file_location])
             slice_command.extend(['--output-filename-format', 'FEDT_[timestamp]_[input_filename_base].gcode'])
             print(slice_command)
             results = subprocess.check_output(slice_command)
@@ -558,10 +563,9 @@ class JankyBambuSlicer(Slicer):
             last_line = results.decode('utf-8').strip().split("\n")[-1]
             gcode_location = last_line.split(" exported to ")[1]
 
-        design_bake = {VolumeFile.VOLUME_FILE: volume_file}
+        design_bake = {'slicer': 'BambuSlicer'}
         design_bake.update(argdict)
-        gcode = design(design_bake)
-        gcode.gcode_location = gcode_location
+        gcode = design(gcode_location, CAMFile, design_bake, 'slice the file')
 
         if isinstance(MODE, Execute):
             print(f"gcode has been generated, and is available at {gcode_location}")
@@ -570,61 +574,11 @@ class JankyBambuSlicer(Slicer):
 
     @staticmethod      
     def describe():
-        return '''Prusa Slicer'''
-    
-class JankyUltimakerSlicer(Slicer):
-    @staticmethod
-    def slice(volume_file: VolumeFile,
-                temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
-                nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
-                layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
-                infill_pattern: str = Slicer.default_slicer_settings[Slicer.INFILL_PATTERN],
-                infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
-                wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
-                material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
-                **kwargs) -> GCodeFile:
-        gcode_location = ''
-        argdict = {
-            '--layer-height': layer_height,
-            '--nozzle-diameter': nozzle,
-            '--temperature': temperature,
-            '--fill-pattern': infill_pattern,
-            '--fill-density': infill_density,
-            '--perimeters': str(math.floor(float(wall_thickness.strip('mm'))/float(nozzle.strip('mm'))))
-        }
-
-        from control import MODE, Execute
-        if isinstance(MODE, Execute):
-            slice_command = [PRUSA_SLICER_LOCATION,
-                            '--load', 'ultimaker.ini']
-            for keyval in argdict.items():
-                slice_command.extend(list(str(t) for t in keyval))
-            slice_command.extend(['--export-gcode', volume_file.stl_location])
-            slice_command.extend(['--output-filename-format', 'FEDT_[timestamp]_[input_filename_base].gcode'])
-            print(slice_command)
-            results = subprocess.check_output(slice_command)
-        
-            # the last line from Prusa Slicer is "Slicing result exported to ..."
-            last_line = results.decode('utf-8').strip().split("\n")[-1]
-            gcode_location = last_line.split(" exported to ")[1]
-
-        design_bake = {VolumeFile.VOLUME_FILE: volume_file}
-        design_bake.update(argdict)
-        gcode = design(design_bake)
-        gcode.gcode_location = gcode_location
-
-        if isinstance(MODE, Execute):
-            print(f"gcode has been generated, and is available at {gcode_location}")
-
-        return gcode
-
-    @staticmethod      
-    def describe():
-        return '''Prusa Slicer'''
+        return '''Prusa Slicer imitating Bambu Slicer'''
 
 class BambuSlicer(Slicer):
     @staticmethod
-    def slice(volume_file: VolumeFile,
+    def slice(volume_file: GeometryFile,
                 temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE], # unused
                 nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE], # used only in calc of walls
                 layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
@@ -632,7 +586,7 @@ class BambuSlicer(Slicer):
                 infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
                 wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
                 material: str = Slicer.default_slicer_settings[Slicer.MATERIAL], # unused
-                **kwargs) -> GCodeFile:
+                **kwargs) -> CAMFile:
         argdict = {}
         gcode_location = ''
         # FIXME bambu studio is a huge pain for actually running on the command line. this... sort of works. but not quite.
@@ -658,14 +612,13 @@ class BambuSlicer(Slicer):
                             '--slice', '2',
                             '--debug', '2',
                             '--export-3mf', 'output.3mf',
-                            volume_file.stl_location]
+                            volume_file.file_location]
             print(' '.join(slice_command))
             gcode_location = subprocess.check_output(slice_command)
 
-        design_bake = {VolumeFile.VOLUME_FILE: volume_file}
+        design_bake = {'slicer': 'BambuSlicer'}
         design_bake.update(argdict)
-        gcode = design(design_bake)
-        gcode.gcode_location = gcode_location
+        gcode = design(gcode_location, CAMFile, design_bake, 'slice the file')
 
         if isinstance(MODE, Execute):
             print(f"gcode has been generated, and is available at {gcode_location}")
@@ -675,6 +628,55 @@ class BambuSlicer(Slicer):
     @staticmethod
     def describe():
         return '''Bambu Slicer'''
+    
+class JankyUltimakerSlicer(Slicer):
+    @staticmethod
+    def slice(volume_file: GeometryFile,
+                temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
+                nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
+                layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
+                infill_pattern: str = Slicer.default_slicer_settings[Slicer.INFILL_PATTERN],
+                infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
+                wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
+                material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
+                **kwargs) -> CAMFile:
+        gcode_location = ''
+        argdict = {
+            '--layer-height': layer_height,
+            '--nozzle-diameter': nozzle,
+            '--temperature': temperature,
+            '--fill-pattern': infill_pattern,
+            '--fill-density': infill_density,
+            '--perimeters': str(math.floor(float(wall_thickness.strip('mm'))/float(nozzle.strip('mm'))))
+        }
+
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            slice_command = [PRUSA_SLICER_LOCATION,
+                            '--load', 'ultimaker.ini']
+            for keyval in argdict.items():
+                slice_command.extend(list(str(t) for t in keyval))
+            slice_command.extend(['--export-gcode', volume_file.file_location])
+            slice_command.extend(['--output-filename-format', 'FEDT_[timestamp]_[input_filename_base].gcode'])
+            print(slice_command)
+            results = subprocess.check_output(slice_command)
+        
+            # the last line from Prusa Slicer is "Slicing result exported to ..."
+            last_line = results.decode('utf-8').strip().split("\n")[-1]
+            gcode_location = last_line.split(" exported to ")[1]
+
+        design_bake = {'slicer': 'UltimakerSlicer'}
+        design_bake.update(argdict)
+        gcode = design(gcode_location, CAMFile, design_bake, 'slice the file')
+
+        if isinstance(MODE, Execute):
+            print(f"gcode has been generated, and is available at {gcode_location}")
+
+        return gcode
+
+    @staticmethod      
+    def describe():
+        return '''Ultimaker Slicer'''
 
 class Printer:
     PRINTER = 'printer'
@@ -686,12 +688,12 @@ class Printer:
     }
 
     @staticmethod
-    def print(gcode: GCodeFile) -> RealWorldObject:
-        input(f"load {gcode.gcode_location} onto the printer and hit print. enter when finished.")
+    def print(gcode: CAMFile) -> RealWorldObject:
+        input(f"load {gcode.file_location} onto the printer and hit print. enter when finished.")
     
     @staticmethod
     @explicit_checker
-    def slice_and_print(volume_file: VolumeFile,
+    def slice_and_print(volume_file: GeometryFile,
                         printer: str = default_printer_settings[PRINTER],
                         material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
                         temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
@@ -710,12 +712,23 @@ class Printer:
 
         gcode = ''
 
-        if volume_file.stl_location == '':
-            instruction("Slice the file.",
-                        latex_details = {SUBJECT: Slicer,
-                                            VERB: 'sliced',
-                                            OBJECT: volume_file,
-                                            SETTINGS: stored_values})
+        stored_values = {}
+        if explicit_args:
+            stored_values.update(explicit_args)
+        if kwargs:
+            stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
+        
+        all_values = dict.copy(Slicer.default_slicer_settings)
+        all_values.update(Printer.default_printer_settings)
+        all_values.update(defaults)
+        all_values.update(stored_values)
+
+        # if volume_file.file_location == '':
+        #     instruction("Slice the file.",
+        #                 latex_details = {SUBJECT: Slicer,
+        #                                     VERB: 'sliced',
+        #                                     OBJECT: volume_file,
+        #                                     SETTINGS: stored_values})
 
         gcode = slicer.slice(volume_file,
                     printer=defaults['printer'] if 'printer' in defaults else printer,
@@ -728,32 +741,18 @@ class Printer:
                     material=defaults['material'] if 'material' in defaults else material,
                     **kwargs)
 
-
-        stored_values = {GCodeFile.GCODE_FILE: gcode}
-        if explicit_args:
-            stored_values.update(explicit_args)
-        if kwargs:
-            stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
-        
-        all_values = dict.copy(Slicer.default_slicer_settings)
-        all_values.update(Printer.default_printer_settings)
-        all_values.update(defaults)
-        all_values.update(stored_values)
-
-        fabbed =  fabricate(stored_values)
+        fabbed = fabricate(stored_values, "Run the printer")
         if isinstance(MODE, Execute):
             Printer.print(gcode)
-        else:
-            instruction(f"Run the printer, creating object #{fabbed.uid}",
-                    fabbing = True,
-                    latex_details = {SUBJECT: Printer,
-                                        VERB: 'printed',
-                                        OBJECT: volume_file,
-                                        SETTINGS: all_values,
-                                        FABBED_SOMETHING: True})
-
-
-        note(f"object #{fabbed.uid} has been fabricated!")
+        # else:
+        #     instruction(f"Run the printer, creating object #{fabbed.uid}",
+        #             fabbing = True,
+        #             latex_details = {SUBJECT: Printer,
+        #                                 VERB: 'printed',
+        #                                 OBJECT: volume_file,
+        #                                 SETTINGS: all_values,
+        #                                 FABBED_SOMETHING: True})
+        # TODO / FIXME : we should either finish or cut the LaTeX stuff
         
         return fabbed
     
@@ -770,111 +769,78 @@ class Printer:
 class StlEditor:
 
     @staticmethod
-    def design(specification: str=None) -> VolumeFile:
+    def design(specification: str=None) -> GeometryFile:
         if not specification:
             instruction("Get the stl file from the website.")
         else:
             instruction(f"Design an STL file like {specification}")
         
-        stl_location = ''
+        file_location = ''
 
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            stl_location = input("where is the stl file?")
+            file_location = input("where is the stl file?")
         
-        designed = VolumeFile(stl_location)
-        designed.metadata.update({"specification":specification})
-        return designed
+        return design(file_location, GeometryFile, {"specification":specification})
     
     @staticmethod
-    def edit(stl: VolumeFile, specification: str) -> VolumeFile:
-        instruction(f"Edit {stl.stl_location} like {specification}")
-        stl_location = stl.stl_location
+    def edit(stl: GeometryFile, specification: str) -> GeometryFile:
+        instruction(f"Edit {stl.file_location} like {specification}")
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            stl_location = input(f"What is the location of the modified stl?")
-        HAND_EDIT = "hand-edited"
-        if HAND_EDIT in stl.metadata:
-            specification = stl.metadata[HAND_EDIT] + ", then " + specification
-
-        versions = []
-        if VERSIONS in stl.metadata:
-            versions = stl.metadata[VERSIONS]
-        versions.append(copy.deepcopy(stl))
-        stl.version += 1
-        stl.metadata.update({VERSIONS: versions, HAND_EDIT: specification})
+            file_location = input(f"What is the location of the modified stl?")
+            stl.file_location = file_location
+        
+        stl.updateVersion("hand-edited", specification)
 
         return stl
 
     @staticmethod
-    def cube(size: tuple=(1,1,1),
-             scale: float=1.) -> VolumeFile:
-        # TODO import freecad and all that jazz
-        note(f"creating a cube with size {size}, scale {scale}")
-        return VolumeFile("")
-    
-    @staticmethod
-    def sphere(radius: float=10.) -> VolumeFile:
-        # TODO import freecad and all that jazz
-        note(f"creating a sphere with radius {radius}")
-        return VolumeFile("")
-
-    @staticmethod
-    def extract_profile(volume_file: VolumeFile,
-                        location: tuple=(0,0,0,0,0,0)) -> LineFile:
-        instruction(f'extract an svg profile of {volume_file.stl_location} at location {location}')
-        from control import MODE, Execute
-        svg_location = ''
-        if isinstance(MODE, Execute):
-            svg_location = input("what is the location of the svg profile?")
-        return LineFile(svg_location)
-    
-    @staticmethod
-    def rotate(volume_file: VolumeFile,
-               angle: float=0) -> VolumeFile:
-        instruction(f'rotate the object {volume_file.stl_location} {angle} degrees')
-        from control import MODE, Execute
-        stl_location = volume_file.stl_location
-        versions = []
-        if VERSIONS in volume_file.metadata:
-            versions = volume_file.metadata[VERSIONS]
-            versions.append(copy.deepcopy(volume_file))
-        volume_file.version += 1
-        if isinstance(MODE, Execute):
-            stl_location = input("what is the location of the rotated stl?")
-            volume_file.stl_location = stl_location
-        volume_file.metadata.update({VERSIONS: versions, "rotation angle": angle})
-        return volume_file
-
-    @staticmethod
-    def modify_feature_by_hand(volume_file:VolumeFile,
+    def modify_feature_by_hand(volume_file:GeometryFile,
                                feature_name: str,
-                               feature_value: str|float) -> VolumeFile:
-        instruction(f'modify the file {volume_file.stl_location} to have feature {feature_name} with value {feature_value}')
+                               feature_value: str|float) -> GeometryFile:
+        instruction(f'modify the file {volume_file.file_location} to have feature {feature_name} with value {feature_value}')
         from control import MODE, Execute
-        stl_location = volume_file.stl_location
-        versions = []
-        if VERSIONS in volume_file.metadata:
-            versions = volume_file.metadata[VERSIONS]
-            versions.append(copy.deepcopy(volume_file))
-        volume_file.version += 1
-        volume_file.metadata.update({VERSIONS: versions, feature_name: feature_value})
         if isinstance(MODE, Execute):
-            stl_location = input(f"what is the location of the modified stl with {feature_name} value {feature_value}?")
-        volume_file.stl_location = stl_location
+            file_location = input(f"What is the location of the modified stl?")
+            volume_file.file_location = file_location
+        
+        volume_file.updateVersion(feature_name, feature_value)
+
         return volume_file
+
+    @staticmethod
+    def cube(size: tuple=(1,1,1),
+             scale: float=1.) -> GeometryFile:
+        # TODO import freecad and all that jazz
+        return design("",GeometryFile,instr=f"create a cube with size {size}, scale {scale}")
     
     @staticmethod
-    def extract_2D_profile(volume_file: VolumeFile,
-                        feature_name: str) -> LineFile:
-        instruction(f'extract an svg profile from {volume_file.stl_location} of {feature_name}')
+    def sphere(radius: float=10.) -> GeometryFile:
+        # TODO import freecad and all that jazz
+        return design("",GeometryFile,instr=f"create a sphere with radius {radius}")
+
+    @staticmethod
+    def extract_profile(volume_file: GeometryFile,
+                        location: tuple=(0,0,0,0,0,0)) -> GeometryFile:
+        instruction(f'extract an svg profile of {volume_file.file_location} at location {location}')
         from control import MODE, Execute
         svg_location = ''
         if isinstance(MODE, Execute):
             svg_location = input("what is the location of the svg profile?")
-        extracted = LineFile(svg_location)
-        extracted.metadata.update({"source": volume_file})
-        return extracted
+        return design(svg_location,GeometryFile,{'profile extracted from': volume_file})
+    
+    @staticmethod
+    def rotate(volume_file: GeometryFile,
+               angle: float=0) -> GeometryFile:
+        instruction(f"Rotate {volume_file.file_location} {angle} degrees")
+        from control import MODE, Execute
+        if isinstance(MODE, Execute):
+            file_location = input(f"What is the location of the modified stl?")
+            volume_file.file_location = file_location
+        
+        volume_file.updateVersion("rotated by", angle)
+        return volume_file
 
     @staticmethod
     def describe():
@@ -884,24 +850,24 @@ class StlEditor:
 class KnittingMachine:
 
     @staticmethod
-    def knit(knitfile: LineFile) -> RealWorldObject:
-        return fabricate({'fname':knitfile.svg_location})
+    def knit(knitfile: GeometryFile) -> RealWorldObject:
+        return fabricate({'fname':knitfile.file_location})
         input(f"load {gcode.gcode_location} onto the printer and hit knit. enter when finished.")
     
     @staticmethod
     @explicit_checker
-    def slice_and_print(knit_file: VolumeFile,
+    def slice_and_print(knit_file: GeometryFile,
                         defaults: dict = {},
                         explicit_args = None,
                         **kwargs
                         ) -> RealWorldObject:
-        return fabricate({'fname':knit_file.stl_location})
+        return fabricate({'fname':knit_file.file_location})
 
         from control import MODE, Execute
 
         gcode = ''
 
-        if volume_file.stl_location == '':
+        if volume_file.file_location == '':
             instruction("Slice the file.",
                         latex_details = {SUBJECT: Slicer,
                                             VERB: 'sliced',
@@ -911,7 +877,7 @@ class KnittingMachine:
         gcode = 2
 
 
-        stored_values = {GCodeFile.GCODE_FILE: gcode}
+        stored_values = {CAMFile.file_description: gcode}
         if explicit_args:
             stored_values.update(explicit_args)
         if kwargs:
@@ -953,73 +919,73 @@ class KnittingMachine:
 class KnitCompiler:
 
     @staticmethod
-    def design(specification: str=None) -> VolumeFile:
-        return VolumeFile()
+    def design(specification: str=None) -> GeometryFile:
+        return GeometryFile()
         if not specification:
             instruction("Get the stl file from the website.")
         else:
             instruction(f"Design an STL file like {specification}")
         
-        stl_location = ''
+        file_location = ''
 
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            stl_location = input("where is the stl file?")
+            file_location = input("where is the stl file?")
         
-        designed = VolumeFile(stl_location)
+        designed = GeometryFile(file_location)
         designed.metadata.update({"specification":specification})
         return designed
     
     @staticmethod
-    def edit(stl: VolumeFile, specification: str) -> VolumeFile:
-        return VolumeFile()
-        instruction(f"Edit {stl.stl_location} like {specification}")
-        stl_location = stl.stl_location
+    def edit(stl: GeometryFile, specification: str) -> GeometryFile:
+        return GeometryFile()
+        instruction(f"Edit {stl.file_location} like {specification}")
+        file_location = stl.file_location
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            stl_location = input(f"What is the location of the modified stl?")
+            file_location = input(f"What is the location of the modified stl?")
         HAND_EDIT = "hand-edited"
         if HAND_EDIT in stl.metadata:
             specification = stl.metadata[HAND_EDIT] + ", then " + specification
 
         versions = []
-        if VERSIONS in stl.metadata:
-            versions = stl.metadata[VERSIONS]
+        if 'beep' in stl.metadata:
+            versions = stl.metadata['beep']
         versions.append(copy.deepcopy(stl))
         stl.version += 1
-        stl.metadata.update({VERSIONS: versions, HAND_EDIT: specification})
+        stl.metadata.update({'beep': versions, HAND_EDIT: specification})
 
         return stl
 
     @staticmethod
-    def modify_feature_by_hand(volume_file:VolumeFile,
+    def modify_feature_by_hand(volume_file:GeometryFile,
                                feature_name: str,
-                               feature_value: str|float) -> VolumeFile:
-        return VolumeFile()
-        instruction(f'modify the file {volume_file.stl_location} to have feature {feature_name} with value {feature_value}')
+                               feature_value: str|float) -> GeometryFile:
+        return GeometryFile()
+        instruction(f'modify the file {volume_file.file_location} to have feature {feature_name} with value {feature_value}')
         from control import MODE, Execute
-        stl_location = volume_file.stl_location
+        file_location = volume_file.file_location
         versions = []
-        if VERSIONS in volume_file.metadata:
-            versions = volume_file.metadata[VERSIONS]
+        if 'beep' in volume_file.metadata:
+            versions = volume_file.metadata['beep']
             versions.append(copy.deepcopy(volume_file))
         volume_file.version += 1
-        volume_file.metadata.update({VERSIONS: versions, feature_name: feature_value})
+        volume_file.metadata.update({'beep': versions, feature_name: feature_value})
         if isinstance(MODE, Execute):
-            stl_location = input(f"what is the location of the modified stl with {feature_name} value {feature_value}?")
-        volume_file.stl_location = stl_location
+            file_location = input(f"what is the location of the modified stl with {feature_name} value {feature_value}?")
+        volume_file.file_location = file_location
         return volume_file
     
     @staticmethod
-    def extract_2D_profile(volume_file: VolumeFile,
-                        feature_name: str) -> LineFile:
-        return LineFile()
-        instruction(f'extract an svg profile from {volume_file.stl_location} of {feature_name}')
+    def extract_2D_profile(volume_file: GeometryFile,
+                        feature_name: str) -> GeometryFile:
+        return GeometryFile()
+        instruction(f'extract an svg profile from {volume_file.file_location} of {feature_name}')
         from control import MODE, Execute
         svg_location = ''
         if isinstance(MODE, Execute):
             svg_location = input("what is the location of the svg profile?")
-        extracted = LineFile(svg_location)
+        extracted = GeometryFile(svg_location)
         extracted.metadata.update({"source": volume_file})
         return extracted
 
@@ -1279,24 +1245,14 @@ class Human:
     @staticmethod
     def post_process(obj: RealWorldObject,
                      action: str) -> RealWorldObject:
-        instruction(f"do {action} to object #{obj.uid}")
-        versions = []
-        if VERSIONS in obj.metadata:
-            versions = obj.metadata[VERSIONS]
-            versions.append(copy.deepcopy(obj))
-        obj.version += 1
-        note(f"(this creates a new version of #{obj.uid}, which we call object #{obj.uid}v{obj.version})")
-        obj.metadata.update({VERSIONS: versions, "post-process": action})
+        obj.updateVersion("post-process", action, f"do {action} to object {obj}")
         return obj
     
     @staticmethod
     def is_reasonable(obj: RealWorldObject):
         answer = Human.do_and_respond(f"check if object #{obj.uid} looks reasonable",
                                         f"does object #{obj.uid} look reasonable [y/n]?")
-        if answer == 'y':
-            obj.metadata.update({"human reasonableness check": True})
-        else:
-            obj.metadata.update({"human reasonableness check": False})
+        obj.metadata.update({"human reasonableness check": (answer == 'y')})
         return obj
 
     @staticmethod

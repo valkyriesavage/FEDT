@@ -16,13 +16,10 @@ def summarize(data):
 class CustomModellingTool:
     # call the custom modelling tool that they created
     @staticmethod
-    def sphere(radius: float=10.) -> VolumeFile:
-        instruction(f"use the custom tool to model a sphere with radius {radius}")
-        from control import MODE, Execute
-        stl_location = 'custom.stl'
-        if isinstance(MODE, Execute):
-            stl_location = input("what is the location of the stl file generated?")
-        return VolumeFile(stl_location)
+    def sphere(radius: float=10.) -> GeometryFile:
+        return design('custom.stl', GeometryFile,
+                      {'target_radius':radius},
+                      f"use the custom tool to model a sphere with radius {radius}")
 
 def prep_materials():
     instruction("remove pathogens by pouring boiling water through strainer")
@@ -39,7 +36,7 @@ def geometric_features():
     shrinkage_results = BatchMeasurements.empty()
     scanning_results = BatchMeasurements.empty()
 
-    geometries = [VolumeFile(f) for f in ['ramps.stl', 'circular.stl', 'patterns.stl']]
+    geometries = [GeometryFile(f) for f in ['ramps.stl', 'circular.stl', 'patterns.stl']]
 
     prep_materials() # how was this timed? just constant prepping in rotation, or?
 
@@ -53,10 +50,10 @@ def geometric_features():
             instruction("allow the material to dry in a 50-80C oven")
             Environment.wait_up_to_time_single(fabbed_object, num_weeks=7) # 1 day to 1 week
             shrinkage_results += Calipers.measure_size(fabbed_object, "important dimension")
-            if geometry_file.stl_location != 'ramps.stl':
+            if geometry_file.file_location != 'ramps.stl':
                 scan = Scanner.scan(fabbed_object)
                 scanning_results += scan
-            if geometry_file.stl_location == 'circular.stl':
+            if geometry_file.file_location == 'circular.stl':
                 oneoff_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
                 oneoff_object = Human.post_process(oneoff_object, 'glycerine treatment')
                 shrinkage_results += Calipers.measure_size(oneoff_object, "important dimension")
@@ -111,15 +108,15 @@ def mechanical_and_shrinkage_features():
 
 @fedt_experiment
 def test_software_tool():
-    target_sphere = StlEditor.sphere(radius=20)
-    software_generated_mould = CustomModellingTool.sphere(radius=20)
+    target_sphere = StlEditor.sphere(radius=20.)
+    software_generated_mould = CustomModellingTool.sphere(radius=20.)
 
     prep_materials()
 
     results = BatchMeasurements.empty()
     mould = Printer.slice_and_print(software_generated_mould)
     myco_material = "30% coffee inclusions"
-    for repetition in Parallel(range(3)):
+    for repetition in Parallel(arange(1,3+include_last)):
         fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
         fabbed_object.metadata.update({'repetition':repetition})
         Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
@@ -127,12 +124,12 @@ def test_software_tool():
         Environment.wait_up_to_time_single(fabbed_object, num_days=3)
         instruction("allow the material to dry in a 50-80C oven")
         Environment.wait_up_to_time_single(fabbed_object, num_weeks=7) # 1 day to 1 week
-        measurement_points = range(0,90+include_last,45)
-        for x_axis_point in measurement_points:
+        measurement_points = arange(0,90+include_last,45)
+        for x_axis_point in Parallel(measurement_points):
             results += Calipers.measure_size(fabbed_object, f"{x_axis_point} degrees along the x axis")
-        for y_axis_point in measurement_points:
+        for y_axis_point in Parallel(measurement_points):
             results += Calipers.measure_size(fabbed_object, f"{y_axis_point} degrees along the y axis")
-        for z_axis_point in measurement_points:
+        for z_axis_point in Parallel(measurement_points):
             results += Calipers.measure_size(fabbed_object, f"{z_axis_point} degrees along the z axis")
                 
     summarize(results.get_all_data())
@@ -140,5 +137,5 @@ def test_software_tool():
 
 if __name__ == "__main__":
     render_flowchart(geometric_features)
-    # render_flowchart(mechanical_and_shrinkage_features)
-    # render_flowchart(test_software_tool)
+    render_flowchart(mechanical_and_shrinkage_features)
+    render_flowchart(test_software_tool)

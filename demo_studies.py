@@ -18,7 +18,7 @@ def summarize(data):
 @fedt_experiment
 def test_print_shrinkage():
 
-    cube = VolumeFile("expt_stls/cube.stl")
+    cube = GeometryFile("expt_stls/cube.stl")
 
     shrinkage_measurements = BatchMeasurements.empty()
 
@@ -56,7 +56,7 @@ def test_force_at_break():
 
 @fedt_experiment
 def test_paint_layers():
-    flower = Laser.fab(LineFile('flower.svg'), material='delrin')
+    flower = Laser.fab(GeometryFile('flower.svg'), material='wood')
 
     photos = ImmediateMeasurements.empty()
     is_reasonable = False
@@ -73,8 +73,8 @@ def test_paint_layers():
 
 @fedt_experiment
 def test_user_assembly_time():
-    simple = VolumeFile("simple_assembly.stl")
-    complex = VolumeFile("complex_assembly.stl")
+    simple = GeometryFile("simple_assembly.stl")
+    complex = GeometryFile("complex_assembly.stl")
 
     timings = ImmediateMeasurements.empty()
 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     # from control import MODE, Execute
     # control.MODE = Execute()
     # test_force_at_break()
-    # # test_print_shrinkage()
+    # test_print_shrinkage()
 
     # other sample flowcharts
     # render_flowchart(test_paint_layers)

@@ -88,9 +88,11 @@ def test_laser_power_and_speed():
 
     for cut_speed, cut_power in Parallel(speeds_powers):
         for repetition in Parallel(range(4)):
-            fabbed_object = Laser.fab(line_file, setting_names, cut_speed, cut_power,
-                                        repetition=repetition,
-                                        material='wood')
+            fabbed_object = Laser.fab(line_file, setting_names=setting_names,
+                                      cut_speed=cut_speed, cut_power=cut_power,
+                                      color_to_setting=Laser.SvgColor.GREEN,
+                                      repetition=repetition,
+                                      material='wood')
             resistance = Multimeter.measure_resistance(fabbed_object)
             results += resistance
     summarize(results.get_all_data())
@@ -125,12 +127,12 @@ def test_change_over_time():
     summarize(results.get_all_data())
 
 if __name__ == "__main__":
-    # render_flowchart(test_materials)
-    render_flowchart(test_height_vs_focal_point, pdf=True)
-    # render_flowchart(test_optimal_number_of_scans)
-    # render_flowchart(test_laser_power_and_speed)
-    # render_flowchart(test_grain_direction)
-    # render_flowchart(test_change_over_time)
+    render_flowchart(test_materials)
+    render_flowchart(test_height_vs_focal_point)
+    render_flowchart(test_optimal_number_of_scans)
+    render_flowchart(test_laser_power_and_speed)
+    render_flowchart(test_grain_direction)
+    render_flowchart(test_change_over_time)
     # from control import MODE, Execute
     # control.MODE = Execute()
     # test_height_vs_focal_point()

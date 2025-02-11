@@ -16,13 +16,10 @@ def summarize(data):
 class CustomModellingTool:
     # call the custom modelling tool that they created
     @staticmethod
-    def sphere(radius: float=10.) -> VolumeFile:
-        instruction(f"use the custom tool to model a sphere with radius {radius}")
-        from control import MODE, Execute
-        stl_location = 'custom.stl'
-        if isinstance(MODE, Execute):
-            stl_location = input("what is the location of the stl file generated?")
-        return VolumeFile(stl_location)
+    def sphere(radius: float=10.) -> GeometryFile:
+        return design('custom.stl', GeometryFile,
+                      {'target_radius':radius},
+                      f"use the custom tool to model a sphere with radius {radius}")
 
 def prep_materials():
     instruction("remove pathogens by pouring boiling water through materials in strainer")
@@ -30,6 +27,8 @@ def prep_materials():
     instruction("break up for forming growth - 3 days")
     instruction("keep in the fridge as prepared material")
     instruction("remove from fridge to reactivate 1 day before beginning experiments")
+    instruction("ensure you wear gloves")
+    instruction("sterilize the prep space")
 
 @fedt_experiment
 def mushroom_types():
@@ -69,21 +68,19 @@ def geometric_features():
     shrinkage_results = BatchMeasurements.empty()
     scanning_results = BatchMeasurements.empty()
 
-    geometries = [VolumeFile(f) for f in ['ramps.stl', 'circular.stl', 'patterns.stl']]
+    geometries = [GeometryFile(f) for f in ['ramps.stl', 'circular.stl', 'patterns.stl']]
 
     prep_materials()
-    instruction("ensure you wear gloves")
-    instruction("sterilize the prep space")
 
     for geometry_file in Parallel(geometries):
         mould = Printer.slice_and_print(geometry_file)
         for myco_material in Series(['30% coffee inclusions', 'no inclusions']):
             fabbed_object = grow_mycomaterial_from_mould(mould, myco_material)
             shrinkage_results += Calipers.measure_size(fabbed_object, "important dimension")
-            if geometry_file.stl_location != 'ramps.stl':
+            if geometry_file.file_location != 'ramps.stl':
                 scan = Scanner.scan(fabbed_object)
                 scanning_results += scan
-            if geometry_file.stl_location == 'circular.stl':
+            if geometry_file.file_location == 'circular.stl':
                 oneoff_object = grow_mycomaterial_from_mould(mould, myco_material)
                 oneoff_object = Human.post_process(oneoff_object, 'glycerine treatment')
                 shrinkage_results += Calipers.measure_size(oneoff_object, "important dimension")
@@ -102,7 +99,7 @@ def geometric_features():
 def mechanical_and_shrinkage_features():
     def grow_mycomaterial_from_mould(mould, myco_material):
         # helper as above
-        return RealWorldObject()
+        return fabricate({'mould':mould, 'mycomaterial':myco_material}, f'prepare {myco_material} and mould as before')
 
     target_cube = StlEditor.cube((30,60,16))
     scaled_mould = StlEditor.cube((30, 60, 16), scale=1/.92)
@@ -140,7 +137,7 @@ def mechanical_and_shrinkage_features():
 def test_software_tool():
     def grow_mycomaterial_from_mould(mould, myco_material):
         # helper as above
-        return RealWorldObject()
+        return fabricate({'mould':mould, 'mycomaterial':myco_material}, f'prepare {myco_material} and mould as before')
 
     target_sphere = StlEditor.sphere(radius=20)
     software_generated_mould = CustomModellingTool.sphere(radius=20)
@@ -150,15 +147,15 @@ def test_software_tool():
     results = BatchMeasurements.empty()
     mould = Printer.slice_and_print(software_generated_mould)
     myco_material = "30% coffee inclusions"
-    for repetition in Parallel(range(3)):
+    for repetition in Parallel(arange(1,3+include_last)):
         fabbed_object = grow_mycomaterial_from_mould(mould, myco_material)
         fabbed_object.metadata.update({'repetition': repetition})
-        measurement_points = range(0,90+include_last,45)
-        for x_axis_point in measurement_points:
+        measurement_points = arange(0,90+include_last,45)
+        for x_axis_point in Parallel(measurement_points):
             results += Calipers.measure_size(fabbed_object, f"{x_axis_point} degrees along the x axis")
-        for y_axis_point in measurement_points:
+        for y_axis_point in Parallel(measurement_points):
             results += Calipers.measure_size(fabbed_object, f"{y_axis_point} degrees along the y axis")
-        for z_axis_point in measurement_points:
+        for z_axis_point in Parallel(measurement_points):
             results += Calipers.measure_size(fabbed_object, f"{z_axis_point} degrees along the z axis")
 
     summarize(results.get_all_data())
@@ -166,5 +163,5 @@ def test_software_tool():
 
 if __name__ == "__main__":
     render_flowchart(geometric_features)
-    # render_flowchart(mechanical_and_shrinkage_features)
-    # render_flowchart(test_software_tool)
+    render_flowchart(mechanical_and_shrinkage_features)
+    render_flowchart(test_software_tool)

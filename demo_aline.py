@@ -3,7 +3,7 @@ from numpy import arange
 from instruction import instruction
 from iterators import Series, Parallel, include_last
 from measurement import BatchMeasurements
-from design import VolumeFile
+from design import GeometryFile
 from decorator import fedt_experiment
 from flowchart_render import render_flowchart
 from lib import *
@@ -25,7 +25,7 @@ def cross_section_ratios():
     stl = StlEditor.cube((4,4,60))
     results = BatchMeasurements.empty()
 
-    for bending_direction in Parallel(['d7','d8&d6','d1&d5','d3','d2&d4']):
+    for bending_direction in Parallel(['d7','d8 and d6','d1 and d5','d3','d2 and d4']):
         for cross_section_ratio in Parallel(arange(1,8+include_last)):
             for repetition in Parallel(range(3)):
                 fabbed_object = Printer.slice_and_print(stl,
@@ -56,4 +56,4 @@ def bend_vs_thickness():
 
 if __name__ == "__main__":
     render_flowchart(cross_section_ratios)
-    # render_flowchart(bend_vs_thickness)
+    render_flowchart(bend_vs_thickness)

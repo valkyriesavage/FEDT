@@ -81,5 +81,5 @@ def effect_of_interplate_distance_vertical():
 
 if __name__ == "__main__":
     render_flowchart(effect_of_b_horizontal)
-    # render_flowchart(effect_of_incision_number)
-    # render_flowchart(effect_of_interplate_distance_vertical)
+    render_flowchart(effect_of_incision_number)
+    render_flowchart(effect_of_interplate_distance_vertical)

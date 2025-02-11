@@ -1,6 +1,6 @@
 import copy
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Type
 from control import MODE, Execute
 from instruction import instruction, note
 
@@ -12,80 +12,82 @@ class VirtualWorldObject:
     uid: int
     version: int
     metadata: dict[str, object]
+    file_location: str
 
-    def __init__(self, metadata):
+    def __init__(self, file_location: str,  metadata: dict[str, object] = {}):
         global CURRENT_UID
         self.uid = CURRENT_UID
         CURRENT_UID += 1
+        self.file_location = file_location
         self.metadata = metadata
         self.version = 0
-        note("this creates object #{}".format(self.uid))
+        note("this creates virtual object #{}{}".format(self.uid, " at {}".format(self.file_location) if self.file_location else ''))
 
     def __hash__(self):
         return self.uid
 
     def __repr__(self) -> str:
-        return "Virtual" + str(self.uid) + 'v' + str(self.version)
+        return "{} {}v{}".format(type(self).__name__, self.uid, self.version)
     
-    def updateVersion(self, newkey, newval):
+    def updateVersion(self, newkey: str, newval: object, instr: str | None = None):
+        if instr:
+            instruction(instr)
         versions = []
         if VERSIONS in self.metadata:
             versions = self.metadata[VERSIONS]
-        versions.append(copy.deepcopy(self))
+        versions.append(copy.copy(self))
         self.version += 1
-        self.metadata.update({VERSIONS: versions, newkey: newval})
-        note("(this creates a new version of #{}, which we call {})".format(self.uid, str(self)))
+        if newkey in self.metadata:
+            self.metadata[newkey] = "{}, {}".format(self.metadata[newkey], newval)
+        else:
+            self.metadata[newkey] = newval
+        self.metadata.update({VERSIONS: versions})
+        note("(this creates a new version of #{}: {}v{})".format(self.uid, self.uid, self.version))
+
+@dataclass
+class GeometryFile(VirtualWorldObject):
+
+    def __init__(self, file_location: str):
+        super().__init__(file_location, {'file_location':file_location})
+
+    def __hash__(self):
+        return self.uid
+
+    def __repr__(self) -> str:
+        return super(GeometryFile,self).__repr__()
+
+@dataclass
+class ConfigurationFile(VirtualWorldObject):
+
+    def __init__(self, file_location: str):
+        super().__init__(file_location, {'file_location':file_location})
+
+    def __hash__(self):
+        return self.uid
+
+    def __repr__(self) -> str:
+        return super(ConfigurationFile,self).__repr__()
+
+@dataclass
+class CAMFile(VirtualWorldObject):
+
+    def __init__(self, file_location: str):
+        super().__init__(file_location, {'file_location':file_location})
+
+    def __hash__(self):
+        return self.uid
     
-@dataclass
-class LineFile(VirtualWorldObject):
-    LINE_FILE = 'line file'
-    svg_location = ''
-
-    def __init__(self, svg_location):
-        super().__init__({'svg_location':svg_location})
-        self.svg_location = svg_location
-
-    def __hash__(self):
-        return self.uid
-
     def __repr__(self) -> str:
-        return "Virtual" + str(self.uid) + 'v' + str(self.version)
+        return super(CAMFile,self).__repr__()
 
-@dataclass
-class VolumeFile(VirtualWorldObject):
-    VOLUME_FILE = 'volume file'
-    stl_location = ''
-
-    def __init__(self, stl_location):
-        super().__init__({'stl_location':stl_location})
-        self.stl_location = stl_location
-
-    def __hash__(self):
-        return self.uid
-
-    def __repr__(self) -> str:
-        return "Virtual" + str(self.uid) + 'v' + str(self.version)
-
-@dataclass
-class GCodeFile(VirtualWorldObject):
-    GCODE_FILE = 'gcode file'
-    gcode_location = ''
-
-    def __init__(self, gcode_location):
-        super().__init__({'gcode_location':gcode_location})
-        self.gcode_location = gcode_location
-
-    def __hash__(self):
-        return self.uid
-
-    def __repr__(self) -> str:
-        return "Virtual" + str(self.uid) + 'v' + str(self.version)
-
-def design(metadata: dict[str, object],
-              instr: str | None = None) -> VirtualWorldObject:
+def design(file_location: str,
+           filetype=VirtualWorldObject,
+           metadata: dict[str, object] = {},
+           instr: str | None = None) -> VirtualWorldObject:
     if instr:
         instruction(instr)
 
-    obj = VirtualWorldObject(metadata)
+    obj = filetype(file_location)
+    obj.metadata.update(metadata)
 
     return obj
