@@ -3,6 +3,7 @@ import io
 from contextlib import redirect_stdout
 import math
 import os
+import textwrap
 
 from graphviz import Digraph
 from PIL import Image
@@ -18,12 +19,20 @@ def next_id():
     id_counter += 1
     return f"node{id_counter}"
 
-def create_styled_node(dot, label, parent=None, is_header=False, block_type=None, invisible=False):
+def create_styled_node(dot, label, parent=None, is_header=False, block_type=None, invisible=False, max_char_width=150):
     global indent
     if not shutup:
         print(' '*(indent+4) + f'making a node: {label}, with parent {parent}')
+
+    # this is something weird coming from having ''' '''-type multiline literals :shrug:
+    label = label.replace("\\n', '",'').strip()
+
+    if len(label) > max_char_width:
+        # let's make some newlines, awwwwwww yeahhhhhhhh
+        label = textwrap.fill(label, max_char_width)
+
     # Set node attributes based on type and whether it's a header
-    label = '<<b>{}</b>>'.format(label) if is_header else label
+    #label = '<<b>{}</b>>'.format(label) if is_header else label # sadly we can't make this work with textwrap
     style = 'invis' if invisible else 'filled'
     shape = 'rectangle'
     width = '2'
@@ -182,7 +191,7 @@ def build_flowchart_recursive(dot, node, current_parent, pare_down=True):
 
     # process the node
     if node.tag in ['instruction','note','header']:
-        last_id = create_styled_node(dot, node.text.strip(), is_header=node.tag=='header', parent=current_parent) # TODO some weird artefact text generated in some places, not sure why
+        last_id = create_styled_node(dot, node.text, is_header=node.tag=='header', parent=current_parent) # TODO some weird artefact text generated in some places, not sure why
     elif node.tag == 'in-series':
         last_id = process_in_series(dot, current_parent, node, pare_down=pare_down)
     elif node.tag == 'in-parallel':
