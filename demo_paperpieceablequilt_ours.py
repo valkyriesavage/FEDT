@@ -7,7 +7,6 @@ from flowchart import FlowChart
 from instruction import instruction
 from iterators import Series, Parallel, include_last, shuffle
 from measurement import BatchMeasurements, ImmediateMeasurements
-from design import VolumeFile
 from decorator import fedt_experiment
 from flowchart_render import render_flowchart
 from lib import *
@@ -26,7 +25,7 @@ def measure_runtime():
     partial_sketches = []
     edgeCounts = BatchMeasurements.empty()
     for i in Parallel(range(15)): # how many different things were tried? I see 15 different designs in the paper
-        sketch = LineFile("sample{}.sketch".format(i))
+        sketch = GeometryFile("sample{}.sketch".format(i))
         partial_sketches.append(sketch)
         edgeCounts += Human.judge_something(sketch, "how many edges?")
 

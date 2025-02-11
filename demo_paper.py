@@ -35,7 +35,7 @@ def test_weight():
 
 @fedt_experiment
 def test_paint_layers():
-    flower = Laser.fab(LineFile('flower.svg'), material='wood')
+    flower = Laser.fab(GeometryFile('flower.svg'), material='wood')
 
     photos = ImmediateMeasurements.empty()
     is_reasonable = False
@@ -51,8 +51,8 @@ def test_paint_layers():
 
 @fedt_experiment
 def test_user_assembly_time():
-    simple = Printer.slice_and_print(VolumeFile("simple_assembly.stl"))
-    complex = Printer.slice_and_print(VolumeFile("complex_assembly.stl"))
+    simple = Printer.slice_and_print(GeometryFile("simple_assembly.stl"))
+    complex = Printer.slice_and_print(GeometryFile("complex_assembly.stl"))
 
     timings = ImmediateMeasurements.empty()
 

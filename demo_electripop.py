@@ -45,7 +45,7 @@ class CustomSimulator:
 def optimize_simulation():
     configure_for_electripop()
 
-    test_files = [LineFile(fname) for fname in ['compound_slits.svg', 'nested_flaps.svg', 'dragonfly.svg']]
+    test_files = [GeometryFile(fname) for fname in ['compound_slits.svg', 'nested_flaps.svg', 'dragonfly.svg']]
 
     ground_truths = BatchMeasurements.empty()
     simmed = BatchMeasurements.empty()
@@ -67,7 +67,7 @@ def optimize_simulation():
 def electrical_inflation():
     configure_for_electripop()
 
-    fabbed_object = Laser.fab(LineFile('snowman.svg'))
+    fabbed_object = Laser.fab(GeometryFile('snowman.svg'))
     
     elapsed_times = BatchMeasurements.empty()
     for repetition in Series(range(10)):
@@ -81,7 +81,7 @@ def electrical_inflation():
 def physical_inflation():
     configure_for_electripop()
 
-    fabbed_objects = [Laser.fab(LineFile(fname), material="mylar") for fname in ['snowman.svg','christmas_tree.svg']]
+    fabbed_objects = [Laser.fab(GeometryFile(fname), material="mylar") for fname in ['snowman.svg','christmas_tree.svg']]
     
     elapsed_times = BatchMeasurements.empty()
     for obj in Parallel(fabbed_objects):
@@ -94,7 +94,7 @@ def physical_inflation():
 @fedt_experiment
 def electrical_deflation():
     configure_for_electripop()
-    snowman = Laser.fab(LineFile('snowman.svg'), material="mylar")
+    snowman = Laser.fab(GeometryFile('snowman.svg'), material="mylar")
 
     current_measures = ImmediateMeasurements.empty()
     instruction('connect a 1kOhm resistor to the plate')
@@ -110,7 +110,7 @@ def electrical_deflation():
 @fedt_experiment
 def physical_deflation_demo():
     configure_for_electripop()
-    snowman = Laser.fab(LineFile('snowman.svg'), material="mylar")
+    snowman = Laser.fab(GeometryFile('snowman.svg'), material="mylar")
     elapsed_times = BatchMeasurements.empty()
     elapsed_times += Stopwatch.measure_time(snowman, "deflate fully")
     summarize(elapsed_times.get_all_data())
@@ -119,7 +119,7 @@ def physical_deflation_demo():
 def volumetric_change_demo():
     configure_for_electripop()
     instruction("set up the snowman linefile and programmatically inflate it")
-    snowman_virt = LineFile('snowman.svg')
+    snowman_virt = GeometryFile('snowman.svg')
     snowman_phys = Laser.fab(snowman_virt, material="mylar")
     volumes = BatchMeasurements.empty()
     volumes += ManualGeometryScanner.scan(snowman_phys)
@@ -129,7 +129,7 @@ def volumetric_change_demo():
 @fedt_experiment
 def fabrication_time_demo():
     configure_for_electripop()
-    snowman = LineFile('snowman.svg')
+    snowman = GeometryFile('snowman.svg')
     elapsed_times = BatchMeasurements.empty()
     elapsed_times += Stopwatch.measure_time(snowman, "fabricate on the laser")
     summarize(elapsed_times.get_all_data())
@@ -138,7 +138,7 @@ def fabrication_time_demo():
 def geometric_accuracy():
     configure_for_electripop()
 
-    test_files = [LineFile(fname) for fname in ['rose.svg', 'snowman.svg', 'christmas_tree.svg']]
+    test_files = [GeometryFile(fname) for fname in ['rose.svg', 'snowman.svg', 'christmas_tree.svg']]
     # the same cut objects were used until they broke and had to be re-cut. not possible to encode currently.
 
     ground_truths = BatchMeasurements.empty()
@@ -163,9 +163,9 @@ def user_experience():
 
 if __name__ == "__main__":
     render_flowchart(optimize_simulation)
-    # render_flowchart(physical_inflation)
-    # render_flowchart(electrical_inflation)
-    # render_flowchart(electrical_deflation)
-    # render_flowchart(physical_deflation)
-    # render_flowchart(fabrication_time)
-    # render_flowchart(geometric_accuracy)
+    render_flowchart(physical_inflation)
+    render_flowchart(electrical_inflation)
+    render_flowchart(electrical_deflation)
+    render_flowchart(physical_deflation_demo)
+    render_flowchart(fabrication_time_demo)
+    render_flowchart(geometric_accuracy)

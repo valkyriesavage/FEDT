@@ -41,8 +41,8 @@ def test_density_and_materials():
 @fedt_experiment
 def design_versus_stiffness():
     results = BatchMeasurements.empty()
-    tab_conditions_files = [("cut tabs", LineFile("default_ruffle_cuttabs.svg")),
-                            ("no tabs + tape", LineFile("default_ruffle_notabs.svg"))]
+    tab_conditions_files = [("cut tabs", GeometryFile("default_ruffle_cuttabs.svg")),
+                            ("no tabs + tape", GeometryFile("default_ruffle_notabs.svg"))]
     loads = [0,10,20,50,100,200]
 
     for tab_condition, ruffle_file in Parallel(tab_conditions_files):
@@ -67,5 +67,5 @@ def design_versus_stiffness():
     summarize(results.get_all_data())
 
 if __name__ == "__main__":
-    #render_flowchart(test_density_and_materials) # broken due to too many loops
-    render_flowchart(design_versus_stiffness) # broken due to too many loops
+    render_flowchart(test_density_and_materials)
+    render_flowchart(design_versus_stiffness)

@@ -45,7 +45,7 @@ class CustomSimulator:
 def optimize_simulation():
     configure_for_electripop()
 
-    test_files = [LineFile(fname) for fname in ['compound_slits.svg', 'nested_flaps.svg', 'dragonfly.svg']]
+    test_files = [GeometryFile(fname) for fname in ['compound_slits.svg', 'nested_flaps.svg', 'dragonfly.svg']]
 
     ground_truths = BatchMeasurements.empty()
     simmed = BatchMeasurements.empty()
@@ -73,7 +73,7 @@ def electrical_inflation():
 def physical_inflation():
     configure_for_electripop()
 
-    fabbed_objects = [Laser.fab(LineFile(fname), material="mylar") for fname in ['snowman.svg','christmas_tree.svg']]
+    fabbed_objects = [Laser.fab(GeometryFile(fname), material="mylar") for fname in ['snowman.svg','christmas_tree.svg']]
     
     elapsed_times = BatchMeasurements.empty()
     for obj in Parallel(fabbed_objects):
@@ -86,7 +86,7 @@ def physical_inflation():
 @fedt_experiment
 def electrical_deflation():
     configure_for_electripop()
-    snowman = Laser.fab(LineFile('snowman.svg'), material="mylar")
+    snowman = Laser.fab(GeometryFile('snowman.svg'), material="mylar")
 
     current_measures = ImmediateMeasurements.empty()
     instruction('connect a 1kOhm resistor to the plate')
@@ -102,7 +102,7 @@ def electrical_deflation():
 def physical_deflation():
     # discuss whether this is an experiment, or a measurement/characterization
     configure_for_electripop()
-    snowman = Laser.fab(LineFile('snowman.svg'), material="mylar")
+    snowman = Laser.fab(GeometryFile('snowman.svg'), material="mylar")
     elapsed_times = BatchMeasurements.empty()
     elapsed_times += Stopwatch.measure_time(snowman, "deflate fully")
     summarize(elapsed_times.get_all_data())
@@ -112,7 +112,7 @@ def volumetric_change():
     # discuss whether this is an experiment, or a measurement/characterization
     configure_for_electripop()
     instruction("set up the snowman linefile and programmatically inflate it")
-    snowman_virt = LineFile('snowman.svg')
+    snowman_virt = GeometryFile('snowman.svg')
     snowman_phys = Laser.fab(snowman_virt, material="mylar")
     volumes = BatchMeasurements.empty()
     volumes += ManualGeometryScanner.scan(snowman_phys)
@@ -123,7 +123,7 @@ def volumetric_change():
 def fabrication_time():
     # discuss whether this is an experiment, or a measurement/characterization
     configure_for_electripop()
-    snowman = LineFile('snowman.svg')
+    snowman = GeometryFile('snowman.svg')
     elapsed_times = BatchMeasurements.empty()
     elapsed_times += Stopwatch.measure_time(snowman, "fabricate on the laser")
     summarize(elapsed_times.get_all_data())
@@ -132,7 +132,7 @@ def fabrication_time():
 def geometric_accuracy():
     configure_for_electripop()
 
-    test_files = [LineFile(fname) for fname in ['rose.svg', 'snowman.svg', 'christmas_tree.svg']]
+    test_files = [GeometryFile(fname) for fname in ['rose.svg', 'snowman.svg', 'christmas_tree.svg']]
 
     ground_truths = BatchMeasurements.empty()
     simmed = BatchMeasurements.empty()
@@ -154,10 +154,10 @@ def user_experience():
     pass
 
 if __name__ == "__main__":
-    # render_flowchart(optimize_simulation)
-    # render_flowchart(physical_inflation)
-    # render_flowchart(electrical_inflation)
+    render_flowchart(optimize_simulation)
+    render_flowchart(physical_inflation)
+    render_flowchart(electrical_inflation)
     render_flowchart(electrical_deflation)
-    # render_flowchart(physical_deflation)
-    # render_flowchart(fabrication_time)
-    # render_flowchart(geometric_accuracy)
+    render_flowchart(physical_deflation)
+    render_flowchart(fabrication_time)
+    render_flowchart(geometric_accuracy)

@@ -92,7 +92,10 @@ def generate_fake_node(node_list, item_type="par"):
                 last = num
                 continue
             this_step = num - last
-            this_mult = num/last
+            try:
+                this_mult = num/last
+            except ZeroDivisionError:
+                this_mult = 0
             if not (math.isclose(this_step, step) or math.isclose(this_mult, mult)): # future loops, check the step/mult
                 is_numerical_sequence = False
                 break

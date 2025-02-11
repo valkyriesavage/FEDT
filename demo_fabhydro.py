@@ -3,7 +3,7 @@ from numpy import arange
 from instruction import instruction
 from iterators import Series, Parallel, include_last
 from measurement import BatchMeasurements, ImmediateMeasurements
-from design import VolumeFile
+from design import GeometryFile
 from decorator import fedt_experiment
 from flowchart_render import render_flowchart
 from lib import *
@@ -14,7 +14,7 @@ def summarize(data):
 
 @fedt_experiment
 def resin_types():
-    stl = VolumeFile('bellows_1mm_priorwork_recompiled.stl')
+    stl = GeometryFile('bellows_1mm_priorwork_recompiled.stl')
 
     compression_results = BatchMeasurements.empty()
     tension_results = BatchMeasurements.empty()
@@ -39,7 +39,7 @@ def bend_vs_thickness():
     for thickness in Parallel(arange(1,5.5+include_last,.5)):
         stl = StlEditor.cube((20,30,thickness))
         fabbed_object = Printer.slice_and_print(stl)
-        for repetition in range(3): # it was somewhat unofficial how many times each was repeated
+        for repetition in Series(arange(1,3+include_last)): # it was somewhat unofficial how many times each was repeated
             instruction(f"fix object #{fabbed_object.uid} at one end and hang a load of 0.49N at the other end")
             instruction("take a photo of the object and use a protractor on the image")
             bend_results += Protractor.measure_angle(fabbed_object,"angle of tip below 90 degrees")
@@ -51,7 +51,7 @@ def min_wall_thickness():
 
     pressure_results = BatchMeasurements.empty()
 
-    base_stl = VolumeFile("wall_thickness_test.stl")
+    base_stl = GeometryFile("wall_thickness_test.stl")
     for orientation in Parallel([0,90]):
         stl = StlEditor.rotate(base_stl, orientation)
         for repetition in Parallel(range(3)):
@@ -64,7 +64,7 @@ def min_wall_thickness():
 @fedt_experiment
 def min_wall_spacing():
     acceptability_results = ImmediateMeasurements.empty()
-    base_stl = VolumeFile("thin_wall.stl")
+    base_stl = GeometryFile("thin_wall.stl")
     neighbours_separated = True
     separation = 2.5
     while neighbours_separated:
@@ -84,7 +84,7 @@ def min_thin_wall_area():
     for edge_length in Parallel(arange(6,15+include_last)):
         stl_loc = Human.do_and_respond(f"create an STL with edge length {edge_length}, thin wall 0.7mm, other walls 5mm",
                                           "where is the STL?")
-        stl = VolumeFile(stl_loc)
+        stl = GeometryFile(stl_loc)
         fabbed_object = Printer.slice_and_print(stl)
         instruction("pump 20psi into the fabricated object")
         expansion_results += Calipers.measure_size(fabbed_object,"vertical expansion height")
@@ -96,7 +96,7 @@ def lasting():
     # this actually didn't happen in 16 days, because we couldn't print 48 of them in a single day.
     # 4-5 per layer in a printer, 2-3 hours for a print. only 20 per day, and it was used for other stuff
     # measuring based on the day that the cube was printed. : this is not possible to encode currently.
-    stl = VolumeFile("side_11mm_wall_1mm.stl")
+    stl = GeometryFile("side_11mm_wall_1mm.stl")
     fabbed_objects = []
     for repetition in Parallel(range(48)):
         fabbed_objects.append(Printer.slice_and_print(stl, repetition=repetition))
@@ -116,11 +116,10 @@ def lasting():
     summarize([pre_weights.get_all_data(),post_weights.get_all_data()])
 
 if __name__ == "__main__":
-    # render_flowchart(resin_types)
-    # render_flowchart(bend_vs_thickness)
-    # render_flowchart(min_wall_thickness)
+    render_flowchart(resin_types)
+    render_flowchart(bend_vs_thickness)
+    render_flowchart(min_wall_thickness)
     render_flowchart(min_wall_spacing)
-    # render_flowchart(min_thin_wall_area)
-    # render_flowchart(pneumatic_vs_hydraulic)
-    # render_flowchart(lasting) # crashes
+    render_flowchart(min_thin_wall_area)
+    render_flowchart(lasting)
     #print(lasting())

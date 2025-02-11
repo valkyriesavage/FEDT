@@ -1,5 +1,4 @@
 from math import floor
-import random
 
 from numpy import arange
 
@@ -7,7 +6,6 @@ from flowchart import FlowChart
 from instruction import instruction
 from iterators import Series, Parallel, include_last, shuffle
 from measurement import BatchMeasurements, ImmediateMeasurements
-from design import VolumeFile
 from decorator import fedt_experiment
 from flowchart_render import render_flowchart
 from lib import *
@@ -38,7 +36,7 @@ class CustomProgram:
 def compare_knit_textures_from_dbs():
     textures_from_db = []
     for i in Parallel(range(300)):
-        textures_from_db.append(LineFile("texture{}.knit".format(i)))
+        textures_from_db.append(GeometryFile("texture{}.knit".format(i)))
 
     for texture in Parallel(textures_from_db):
         CustomProgram.modify_knitdesign(texture, "tile to 60x60, fill gaps with knit stitches")
@@ -77,7 +75,7 @@ def compare_knit_textures_from_dbs():
 
 @fedt_experiment
 def crowdsource_knitcarve_comparison():
-    textures = [LineFile(f) for f in ['knitpurl_large.knit', 'knitpurl_small.knit',
+    textures = [GeometryFile(f) for f in ['knitpurl_large.knit', 'knitpurl_small.knit',
                                         'twist_large.knit', 'twist_small.knit',
                                         'cable_large.knit', 'cable_small.knit',
                                         'lace_large.knit', 'lace_small.knit']]

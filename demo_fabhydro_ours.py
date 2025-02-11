@@ -3,7 +3,7 @@ from numpy import arange
 from instruction import instruction
 from iterators import Series, Parallel, include_last
 from measurement import BatchMeasurements
-from design import VolumeFile
+from design import GeometryFile
 from decorator import fedt_experiment
 from flowchart_render import render_flowchart
 from lib import *
@@ -14,7 +14,7 @@ def summarize(data):
 
 @fedt_experiment
 def resin_types():
-    stl = VolumeFile('bellows_1mm.stl')
+    stl = GeometryFile('bellows_1mm.stl')
 
     compression_results = BatchMeasurements.empty()
     tension_results = BatchMeasurements.empty()
@@ -52,7 +52,7 @@ def min_wall_thickness():
 
     pressure_results = BatchMeasurements.empty()
 
-    base_stl = VolumeFile("wall_thickness_test.stl")
+    base_stl = GeometryFile("wall_thickness_test.stl")
     for orientation in Parallel([0,90]):
         stl = StlEditor.rotate(base_stl, orientation)
         for repetition in Parallel(range(3)):
@@ -75,7 +75,7 @@ def min_thin_wall_area():
     for edge_length in Parallel(arange(6,15+include_last)):
         stl_loc = Human.do_and_respond(f"create an STL with edge length {edge_length}, thin wall 0.7mm, other walls 5mm",
                                           "where is the STL?")
-        stl = VolumeFile(stl_loc)
+        stl = GeometryFile(stl_loc)
         fabbed_object = Printer.slice_and_print(stl)
         instruction("pump 20psi into the fabricated object")
         expansion_results += Calipers.measure_size(fabbed_object,"vertical expansion height")
@@ -90,7 +90,7 @@ def pneumatic_vs_hydraulic():
     # pre-knowledge: there would be a huge difference, but unclear how much.
     expansion_results = BatchMeasurements.empty()
 
-    stl = VolumeFile("single_actuator_single_generator.stl")
+    stl = GeometryFile("single_actuator_single_generator.stl")
     for fill in Parallel(['water','air']):
         fabbed_object = Printer.slice_and_print(stl)
         filled_object = Human.post_process(fabbed_object,f"fill object with {fill}")
@@ -103,7 +103,7 @@ def lasting():
     # this actually didn't happen in 16 days, because we couldn't print 48 of them in a single day.
     # 4-5 per layer in a printer, 2-3 hours for a print. only 20 per day, and it was used for other stuff
     # measuring based on the day that the cube was printed.
-    stl = VolumeFile("side_11mm_wall_1mm.stl")
+    stl = GeometryFile("side_11mm_wall_1mm.stl")
     fabbed_objects = []
     for repetition in Parallel(range(48)):
         fabbed_objects.append(Printer.slice_and_print(stl, repetition=repetition))
@@ -123,11 +123,11 @@ def lasting():
     summarize([pre_weights.get_all_data(),post_weights.get_all_data()])
 
 if __name__ == "__main__":
-    # render_flowchart(resin_types)
-    # render_flowchart(bend_vs_thickness)
-    # render_flowchart(min_wall_thickness)
-    # render_flowchart(min_wall_spacing)
-    # render_flowchart(min_thin_wall_area)
-    # render_flowchart(pneumatic_vs_hydraulic)
-    render_flowchart(lasting) # crashes
+    render_flowchart(resin_types)
+    render_flowchart(bend_vs_thickness)
+    render_flowchart(min_wall_thickness)
+    render_flowchart(min_wall_spacing)
+    render_flowchart(min_thin_wall_area)
+    render_flowchart(pneumatic_vs_hydraulic)
+    render_flowchart(lasting)
     #print(lasting())

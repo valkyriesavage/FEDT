@@ -7,7 +7,6 @@ from flowchart import FlowChart
 from instruction import instruction
 from iterators import Series, Parallel, include_last, shuffle
 from measurement import BatchMeasurements, ImmediateMeasurements
-from design import VolumeFile
 from decorator import fedt_experiment
 from flowchart_render import render_flowchart
 from lib import *
@@ -23,7 +22,7 @@ class CustomProgram:
 
 @fedt_experiment
 def compare_sizings():
-    knit_texture = LineFile("fgcat_bgtile.knit")
+    knit_texture = GeometryFile("fgcat_bgtile.knit")
 
     photos = BatchMeasurements.empty()
     knitted = []
