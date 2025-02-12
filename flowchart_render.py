@@ -3,6 +3,7 @@ import io
 from contextlib import redirect_stdout
 import math
 import os
+import re
 import textwrap
 
 from graphviz import Digraph
@@ -26,10 +27,9 @@ def create_styled_node(dot, label, parent=None, is_header=False, block_type=None
 
     # this is something weird coming from having ''' '''-type multiline literals :shrug:
     label = label.replace("\\n', '",'').strip()
-
-    if len(label) > max_char_width:
-        # let's make some newlines, awwwwwww yeahhhhhhhh
-        label = textwrap.fill(label, max_char_width)
+    label = re.sub('\\s{2,}','',label)
+    # let's make some newlines, awwwwwww yeahhhhhhhh
+    label = textwrap.fill(label, max_char_width)
 
     # Set node attributes based on type and whether it's a header
     #label = '<<b>{}</b>>'.format(label) if is_header else label # sadly we can't make this work with textwrap

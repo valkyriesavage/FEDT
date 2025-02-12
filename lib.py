@@ -849,70 +849,43 @@ class StlEditor:
 
 class KnittingMachine:
 
-    @staticmethod
-    def knit(knitfile: GeometryFile) -> RealWorldObject:
-        return fabricate({'fname':knitfile.file_location})
-        input(f"load {gcode.gcode_location} onto the printer and hit knit. enter when finished.")
-    
+    MACHINE = 'machine'
+    YARN = 'yarn'
+    TENSION = 'tension'
+
+    default_knitting_settings = {
+        MACHINE: 'Shima Seiki',
+        YARN: 'tamm pettit',
+        TENSION: '5'
+    }
+
     @staticmethod
     @explicit_checker
-    def slice_and_print(knit_file: GeometryFile,
-                        defaults: dict = {},
-                        explicit_args = None,
-                        **kwargs
-                        ) -> RealWorldObject:
-        return fabricate({'fname':knit_file.file_location})
-
-        from control import MODE, Execute
-
-        gcode = ''
-
-        if volume_file.file_location == '':
-            instruction("Slice the file.",
-                        latex_details = {SUBJECT: Slicer,
-                                            VERB: 'sliced',
-                                            OBJECT: volume_file,
-                                            SETTINGS: stored_values})
-
-        gcode = 2
-
-
-        stored_values = {CAMFile.file_description: gcode}
+    def knit(knitfile: CAMFile,
+             defaults: dict = {},
+             explicit_args = None,
+             **kwargs
+             ) -> RealWorldObject:
+        stored_values = {'fname':knitfile.file_location}
         if explicit_args:
             stored_values.update(explicit_args)
         if kwargs:
-            stored_values.update(**kwargs) # they might have arguments that aren't printer arguments
+            stored_values.update(**kwargs) # they might have arguments that aren't machine arguments
         
-        all_values = dict.copy(Slicer.default_slicer_settings)
-        all_values.update(Printer.default_printer_settings)
+        all_values = {}
+        all_values.update(KnittingMachine.default_knitting_settings)
         all_values.update(defaults)
         all_values.update(stored_values)
 
-        fabbed =  fabricate(stored_values)
-        if isinstance(MODE, Execute):
-            Printer.print(gcode)
-        else:
-            instruction(f"Run the printer, creating object #{fabbed.uid}",
-                    fabbing = True,
-                    latex_details = {SUBJECT: Printer,
-                                        VERB: 'printed',
-                                        OBJECT: volume_file,
-                                        SETTINGS: all_values,
-                                        FABBED_SOMETHING: True})
-
-
-        note(f"object #{fabbed.uid} has been fabricated!")
-        
-        return fabbed
+        return fabricate(all_values, f'load up {knitfile.file_location} and start the knitting machine with settings {all_values}')
     
     @staticmethod  
     def describe():
-        return ''
         setup = '''We used a {machine}. Our default settings were {defaults}.'''.format(
                 **{
-                    'machine': str(Printer.default_printer_settings[Printer.PRINTER]),
-                    'defaults': ', '.join([str(x) + ':' + str(y) for x, y in zip(Slicer.default_slicer_settings.keys(),
-                                                                                 Slicer.default_slicer_settings.values())])
+                    'machine': str(KnittingMachine.default_knitting_settings[KnittingMachine.MACHINE]),
+                    'defaults': ', '.join([str(x) + ':' + str(y) for x, y in zip(KnittingMachine.default_knitting_settings.keys(),
+                                                                                 KnittingMachine.default_knitting_settings.values())])
                 })
         return setup
 
@@ -920,79 +893,43 @@ class KnitCompiler:
 
     @staticmethod
     def design(specification: str=None) -> GeometryFile:
-        return GeometryFile()
         if not specification:
-            instruction("Get the stl file from the website.")
+            instruction("Get the knitting design from the website.")
         else:
-            instruction(f"Design an STL file like {specification}")
+            instruction(f"Design a knittable file like {specification}")
         
         file_location = ''
 
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            file_location = input("where is the stl file?")
+            file_location = input("where is the knitting file?")
         
         designed = GeometryFile(file_location)
         designed.metadata.update({"specification":specification})
         return designed
     
     @staticmethod
-    def edit(stl: GeometryFile, specification: str) -> GeometryFile:
-        return GeometryFile()
-        instruction(f"Edit {stl.file_location} like {specification}")
-        file_location = stl.file_location
+    def edit(knitfile: GeometryFile, specification: str) -> GeometryFile:
+        instruction(f"Edit {knitfile.file_location} like {specification}")
+        file_location = knitfile.file_location
         from control import MODE, Execute
         if isinstance(MODE, Execute):
-            file_location = input(f"What is the location of the modified stl?")
-        HAND_EDIT = "hand-edited"
-        if HAND_EDIT in stl.metadata:
-            specification = stl.metadata[HAND_EDIT] + ", then " + specification
+            file_location = input(f"What is the location of the modified knitfile?")
+        
+        knitfile.updateVersion('hand-edit', specification)
+        knitfile.file_location = file_location
 
-        versions = []
-        if 'beep' in stl.metadata:
-            versions = stl.metadata['beep']
-        versions.append(copy.deepcopy(stl))
-        stl.version += 1
-        stl.metadata.update({'beep': versions, HAND_EDIT: specification})
-
-        return stl
+        return knitfile
 
     @staticmethod
-    def modify_feature_by_hand(volume_file:GeometryFile,
+    def modify_feature_by_hand(knitfile:GeometryFile,
                                feature_name: str,
                                feature_value: str|float) -> GeometryFile:
-        return GeometryFile()
-        instruction(f'modify the file {volume_file.file_location} to have feature {feature_name} with value {feature_value}')
-        from control import MODE, Execute
-        file_location = volume_file.file_location
-        versions = []
-        if 'beep' in volume_file.metadata:
-            versions = volume_file.metadata['beep']
-            versions.append(copy.deepcopy(volume_file))
-        volume_file.version += 1
-        volume_file.metadata.update({'beep': versions, feature_name: feature_value})
-        if isinstance(MODE, Execute):
-            file_location = input(f"what is the location of the modified stl with {feature_name} value {feature_value}?")
-        volume_file.file_location = file_location
-        return volume_file
-    
-    @staticmethod
-    def extract_2D_profile(volume_file: GeometryFile,
-                        feature_name: str) -> GeometryFile:
-        return GeometryFile()
-        instruction(f'extract an svg profile from {volume_file.file_location} of {feature_name}')
-        from control import MODE, Execute
-        svg_location = ''
-        if isinstance(MODE, Execute):
-            svg_location = input("what is the location of the svg profile?")
-        extracted = GeometryFile(svg_location)
-        extracted.metadata.update({"source": volume_file})
-        return extracted
+        return KnitCompiler.edit(knitfile, f"set feature {feature_name} to {feature_value}")
 
     @staticmethod
     def describe():
-        return ''
-        setup = '''We used FreeCAD to manipulate our STL files.'''
+        setup = '''We used KnitSpeak to manipulate our knitting files.'''
         return setup
 
 class Multimeter:
