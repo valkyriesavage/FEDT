@@ -14,11 +14,15 @@ from lib import *
 def summarize(data):
     return "Oh wow, great data!"
 
-class CustomProgram:
-    def section_and_optimize(sketch: VirtualWorldObject):
-        instruction("section and optimize {}".format(sketch))
-        sketch.updateVersion("Section", sketch)
-        return sketch
+class CustomProgram(DesignSoftware):
+    @staticmethod
+    def modify_design(designfile: GeometryFile, feature_name: str, feature_value: str|int):
+        designfile.updateVersion(feature_name, feature_value, f"modify design {designfile.file_location} by setting {feature_name} to {feature_value}")
+        return designfile
+
+    @staticmethod
+    def section_and_optimize(sketch: GeometryFile):
+        return CustomProgram.modify_design(sketch, "sectioned and optimized", "true")
 
 @fedt_experiment
 def measure_runtime():

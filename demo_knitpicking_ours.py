@@ -13,23 +13,23 @@ from lib import *
 def summarize(data):
     return "Oh wow, great data!"
 
-class CustomProgram:
-    def modify_knitdesign(knitfile: VirtualWorldObject, specification: str):
-        instruction("modify design: {}".format(specification))
-        knitfile.updateVersion("edit", specification)
+class CustomProgram(DesignSoftware):
+    @staticmethod
+    def modify_design(knitfile: GeometryFile, feature_name: str, feature_value: str|int):
+        knitfile.updateVersion(feature_name, feature_value, f"modify design: {knitfile.file_location} by setting {feature_name} to {feature_value}")
         return knitfile
 
-    def knitcarve(knitfile: VirtualWorldObject, specification: str):
-        instruction("knitcarve: {}".format(specification))
-        knitfile.updateVersion("KnitCarve", specification)
-        return knitfile
+    @staticmethod
+    def knitcarve(knitfile: GeometryFile, specification: str):
+        return CustomProgram.modify_design(knitfile, 'knitcarve', specification)
 
-    def basicremove(knitfile: VirtualWorldObject, specification: str):
-        instruction("naive remove: {}".format(specification))
-        knitfile.updateVersion("NaiveCarve", specification)
-        return knitfile
+    @staticmethod
+    def basicremove(knitfile: GeometryFile, specification: str):
+        return CustomProgram.modify_design(knitfile, 'knitcarve', specification)
     
+    @staticmethod
     def showToCrowdworker(obj: RealWorldObject, worker: int):
+        # don't increment the version, because this isn't really postprocessing
         pass
 
 @fedt_experiment
@@ -38,13 +38,11 @@ def compare_knit_textures_from_dbs():
     for i in Parallel(range(300)):
         textures_from_db.append(GeometryFile("texture{}.knit".format(i)))
 
-    for texture in Parallel(textures_from_db):
-        CustomProgram.modify_knitdesign(texture, "tile to 60x60, fill gaps with knit stitches")
-        CustomProgram.modify_knitdesign(texture, "add 12-stitch checkered knit/purl to edges")
-
     knitted = []
     weights = BatchMeasurements.empty()
     for texture in Parallel(textures_from_db):
+        CustomProgram.modify_design(texture, "tile", "60x60 (fill gaps with knit stitches)")
+        CustomProgram.modify_design(texture, "edge", "12-stitch checkered knit/purl to edges")
         single_knitted = KnittingMachine.knit(texture)
         Human.post_process(single_knitted, "add eyelets to centre and end of each edge (8 eyelets)")
         knitted.append(single_knitted)
@@ -99,7 +97,7 @@ def crowdsource_knitcarve_comparison():
             naive[carve_level][texture] = naive_phys
             
     
-    workerpool_size = 20 #200
+    workerpool_size = 200
     ratings = ImmediateMeasurements.empty()
     textures = list(base.keys())
     for worker in Parallel(arange(1,workerpool_size+include_last)):

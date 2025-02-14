@@ -14,10 +14,10 @@ from lib import *
 def summarize(data):
     return "Oh wow, great data!"
 
-class CustomProgram:
-    def edit(knitfile: VirtualWorldObject, specification: str):
-        instruction("edit: {}".format(specification))
-        knitfile.updateVersion("edit", specification)
+class CustomProgram(DesignSoftware):
+    @staticmethod
+    def modify_design(knitfile: GeometryFile, feature_name: str, feature_value: str|int):
+        knitfile.updateVersion(feature_name, feature_value, f"modify design: {knitfile.file_location} by setting {feature_name} to {feature_value}")
         return knitfile
 
 @fedt_experiment
@@ -25,9 +25,8 @@ def compare_sizings():
     knit_texture = GeometryFile("fgcat_bgtile.knit")
 
     photos = BatchMeasurements.empty()
-    knitted = []
     for size in Parallel(['small','medium','large']):
-        CustomProgram.edit(knit_texture, "resize to {}".format(size))
+        CustomProgram.modify_design(knit_texture, "size", size)
         single_knitted = KnittingMachine.knit(knit_texture)
         Human.post_process(single_knitted, "stretch out (as much as possible?) and insert pins")
         photos += Camera.take_picture(single_knitted, "whole object")
