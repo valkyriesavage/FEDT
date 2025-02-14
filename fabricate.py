@@ -1,8 +1,11 @@
+import abc
 import copy
 from dataclasses import dataclass
 from typing import Callable
 from control import MODE, Execute
 from instruction import instruction, note
+from decorator import explicit_checker
+from design import GeometryFile, ConfigurationFile, CAMFile
 
 CURRENT_UID = 0
 VERSIONS = 'versions'
@@ -47,6 +50,34 @@ def fabricate(metadata: dict[str, object],
     if instr:
         instruction(instr)
 
-    obj = RealWorldObject(dict(metadata))
+    obj = RealWorldObject(metadata)
 
     return obj
+
+
+###### this part is a little bit more structurey stuff, which can be used in the library
+
+class FabricationDevice():
+    __metaclass__ = abc.ABCMeta
+
+    @staticmethod
+    @abc.abstractmethod
+    @explicit_checker
+    def fab(input_geometry: GeometryFile,
+            configuration: ConfigurationFile|None=None,
+            toolpath: CAMFile|None=None,
+            default_settings: dict[str, object]|None=None,
+            **kwargs) -> RealWorldObject:
+        raise NotImplemented
+
+    @staticmethod
+    def create_object(non_default_settings: dict[str, object], instr: str|None) -> RealWorldObject:
+        return fabricate(non_default_settings, instr)
+
+class PostProcessDevice():
+    __metaclass__ = abc.ABCMeta
+
+    @staticmethod
+    @abc.abstractmethod
+    def postprocess_object(feature: str, value: str) -> RealWorldObject:
+        raise NotImplemented

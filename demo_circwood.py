@@ -80,7 +80,7 @@ def test_laser_power_and_speed():
                      (20,40),
                      (15,40),
                      (10,20),(10,30)]
-    setting_names = Laser.prep_cam(cut_speeds=[speed for speed,power in speeds_powers],
+    config_file = Laser.create_config(cut_speeds=[speed for speed,power in speeds_powers],
                                    cut_powers=[power for speed,power in speeds_powers])
 
     line_file = SvgEditor.build_geometry(SvgEditor.draw_line)
@@ -88,7 +88,7 @@ def test_laser_power_and_speed():
 
     for cut_speed, cut_power in Parallel(speeds_powers):
         for repetition in Parallel(range(4)):
-            fabbed_object = Laser.fab(line_file, setting_names=setting_names,
+            fabbed_object = Laser.fab(line_file, config_file=config_file,
                                       cut_speed=cut_speed, cut_power=cut_power,
                                       color_to_setting=Laser.SvgColor.GREEN,
                                       repetition=repetition,

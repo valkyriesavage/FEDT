@@ -2,6 +2,7 @@ import math
 
 from numpy import arange
 
+from design import VirtualWorldObject
 from instruction import instruction
 from iterators import Series, Parallel, Infinite, include_last
 from fabricate import RealWorldObject
@@ -15,10 +16,11 @@ from lib import *
 def summarize(data):
     return "Oh wow, great data!"
 
-def configure_for_electripop():
-    Laser.default_laser_settings[Laser.MATERIAL] = 'mylar'
-    Laser.default_laser_settings[Laser.CUT_SPEED] = 100
-    Laser.default_laser_settings[Laser.CUT_POWER] = 5
+electripop_laser_defaults = {
+    Laser.MATERIAL: 'mylar',
+    Laser.CUT_SPEED: 100,
+    Laser.CUT_POWER: 5
+}
 
 class ManualGeometryScanner:
     geometry_scan = Measurement(
@@ -43,7 +45,6 @@ class CustomSimulator:
 
 @fedt_experiment
 def optimize_simulation():
-    configure_for_electripop()
 
     test_files = [GeometryFile(fname) for fname in ['compound_slits.svg', 'nested_flaps.svg', 'dragonfly.svg']]
 
@@ -51,11 +52,11 @@ def optimize_simulation():
     simmed = BatchMeasurements.empty()
 
     for f in Parallel(test_files):
-        fabbed_object = Laser.fab(f, material="mylar") # not clear what machine was used. they also mention vinyl cutters and scissors
+        fabbed_object = Laser.fab(f, default_settings=electripop_laser_defaults) # not clear what machine was used. they also mention vinyl cutters and scissors
         ground_truths += ManualGeometryScanner.scan(fabbed_object)
         for weight_of_be_exp in Parallel(arange(-3,6+include_last)):
             for weight_of_ee_exp in Parallel(arange(-1, 1+include_last, .2)):
-                sim = VirtualWorldObject({'weight of bending energy': math.pow(10, weight_of_be_exp), # based on the figure, this is my guess
+                sim = VirtualWorldObject('file.sim', {'weight of bending energy': math.pow(10, weight_of_be_exp),
                                             'weight of electrical energy': math.pow(10, weight_of_ee_exp),
                                             'file': CustomSimulator.runsimulation(f, weight_of_be_exp, weight_of_ee_exp)})
                 simmed += ManualGeometryScanner.scan(sim)
@@ -71,9 +72,7 @@ def electrical_inflation():
 
 @fedt_experiment
 def physical_inflation():
-    configure_for_electripop()
-
-    fabbed_objects = [Laser.fab(GeometryFile(fname), material="mylar") for fname in ['snowman.svg','christmas_tree.svg']]
+    fabbed_objects = [Laser.fab(GeometryFile(fname), default_settings=electripop_laser_defaults) for fname in ['snowman.svg','christmas_tree.svg']]
     
     elapsed_times = BatchMeasurements.empty()
     for obj in Parallel(fabbed_objects):
@@ -85,8 +84,7 @@ def physical_inflation():
 
 @fedt_experiment
 def electrical_deflation():
-    configure_for_electripop()
-    snowman = Laser.fab(GeometryFile('snowman.svg'), material="mylar")
+    snowman = Laser.fab(GeometryFile('snowman.svg'), default_settings=electripop_laser_defaults)
 
     current_measures = ImmediateMeasurements.empty()
     instruction('connect a 1kOhm resistor to the plate')
@@ -101,8 +99,7 @@ def electrical_deflation():
 @fedt_experiment
 def physical_deflation():
     # discuss whether this is an experiment, or a measurement/characterization
-    configure_for_electripop()
-    snowman = Laser.fab(GeometryFile('snowman.svg'), material="mylar")
+    snowman = Laser.fab(GeometryFile('snowman.svg'), default_settings=electripop_laser_defaults)
     elapsed_times = BatchMeasurements.empty()
     elapsed_times += Stopwatch.measure_time(snowman, "deflate fully")
     summarize(elapsed_times.get_all_data())
@@ -110,10 +107,9 @@ def physical_deflation():
 @fedt_experiment
 def volumetric_change():
     # discuss whether this is an experiment, or a measurement/characterization
-    configure_for_electripop()
     instruction("set up the snowman linefile and programmatically inflate it")
     snowman_virt = GeometryFile('snowman.svg')
-    snowman_phys = Laser.fab(snowman_virt, material="mylar")
+    snowman_phys = Laser.fab(snowman_virt, default_settings=electripop_laser_defaults)
     volumes = BatchMeasurements.empty()
     volumes += ManualGeometryScanner.scan(snowman_phys)
     volumes += ManualGeometryScanner.scan(snowman_virt)
@@ -122,7 +118,6 @@ def volumetric_change():
 @fedt_experiment
 def fabrication_time():
     # discuss whether this is an experiment, or a measurement/characterization
-    configure_for_electripop()
     snowman = GeometryFile('snowman.svg')
     elapsed_times = BatchMeasurements.empty()
     elapsed_times += Stopwatch.measure_time(snowman, "fabricate on the laser")
@@ -130,7 +125,6 @@ def fabrication_time():
 
 @fedt_experiment
 def geometric_accuracy():
-    configure_for_electripop()
 
     test_files = [GeometryFile(fname) for fname in ['rose.svg', 'snowman.svg', 'christmas_tree.svg']]
 
@@ -138,7 +132,7 @@ def geometric_accuracy():
     simmed = BatchMeasurements.empty()
 
     for f in Parallel(test_files):
-        fabbed_object = Laser.fab(f, material="mylar") # not clear what machine was used. they also mention vinyl cutters and scissors
+        fabbed_object = Laser.fab(f, default_settings=electripop_laser_defaults) # not clear what machine was used. they also mention vinyl cutters and scissors
         ground_truths += ManualGeometryScanner.scan(fabbed_object)
         for sim_repetition in Parallel(range(100)):
             sim = VirtualWorldObject({'file': CustomSimulator.runsimulation(f)})

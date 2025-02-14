@@ -14,8 +14,9 @@ from zipfile import ZipFile
 from flowchart import SUBJECT, VERB, OBJECT, SETTINGS, FABBED_SOMETHING
 from instruction import instruction, note
 from measurement import Measurement, BatchMeasurements
-from fabricate import fabricate, RealWorldObject, CURRENT_UID
-from design import design, VirtualWorldObject, GeometryFile, CAMFile
+from fabricate import fabricate, RealWorldObject, FabricationDevice, CURRENT_UID
+from design import design, GeometryFile, ConfigurationFile, CAMFile, DesignSoftware, \
+                    ConfigSoftware, ToolpathSoftware, NotApplicableInThisWorkflowException
 from decorator import explicit_checker
 
 from config import *
@@ -34,7 +35,7 @@ POST_PROCESS = 'post-process'
 INTERACTION = 'interaction'
 TIME = 'time'
 
-class Laser:
+class Laser(ConfigSoftware, ToolpathSoftware, FabricationDevice):
     CUT_POWER = "cut power"
     CUT_SPEED = "speed"
     CUT_FREQUENCY = "frequency"
@@ -46,6 +47,8 @@ class Laser:
     MAPPINGS = "mappings from colors to cut lines"
 
     LASERVARS = [CUT_POWER,CUT_SPEED,CUT_FREQUENCY,MATERIAL,THICKNESS,FOCAL_HEIGHT_MM]
+
+    DEFAULT_CONFIG_FILE = ConfigurationFile('default')
 
     class SvgColor:
         RED = (255,0,0)
@@ -78,7 +81,8 @@ class Laser:
         return "{}.{}.{}.{}.{}".format(material,thickness,cut_power,cut_speed,frequency)
 
     @staticmethod
-    def prep_cam(cut_powers=[default_laser_settings[CUT_POWER]],
+    def create_config(defaults=default_laser_settings,
+                    cut_powers=[default_laser_settings[CUT_POWER]],
                     cut_speeds=[default_laser_settings[CUT_SPEED]],
                     frequencies=[default_laser_settings[CUT_FREQUENCY]],
                     materials=[default_laser_settings[MATERIAL]],
@@ -131,7 +135,28 @@ class Laser:
 
         instruction("please open Visicut and Options > Import Settings > " + temp_vcsettings)
 
-        return generated_setting_names
+        config_file = ConfigurationFile(temp_vcsettings)
+        config_file.setting_names = generated_setting_names
+
+        return config_file
+    
+    @staticmethod
+    def modify_config(config: ConfigurationFile,
+                      feature_name: str, feature_value: str|int) -> ConfigurationFile:
+        # TODO: likely there is a way to do this, but modifying a config on the fly hasn't been needed
+        # in any of the papers we looked at. starting from scratch seems fine.
+        raise NotImplemented("just create a config from scratch; don't try to edit one")
+    
+
+    @staticmethod
+    def create_toolpath(design: GeometryFile,
+                        config: ConfigurationFile) -> CAMFile:
+        raise NotApplicableInThisWorkflowException("Lasers run by Visicut don't create explicit toolpaths")
+    
+    @staticmethod
+    def modify_toolpath(design: GeometryFile,
+                        feature_name: str, feature_value: str|int) -> CAMFile:
+        raise NotApplicableInThisWorkflowException("Lasers run by Visicut don't create explicit toolpaths")
         
     @staticmethod
     def do_fab(line_file: GeometryFile,
@@ -238,7 +263,8 @@ class Laser:
     @staticmethod
     @explicit_checker
     def fab(line_file: GeometryFile,
-            setting_names: dict = {},
+            config_file: ConfigurationFile|None=None,
+            toolpath: CAMFile|None=None, # always none for laser, since we don't generate an explicit CAMFile
             material: str = default_laser_settings[MATERIAL],
             thickness: str = default_laser_settings[THICKNESS],
             cut_speed: int = default_laser_settings[CUT_SPEED],
@@ -251,8 +277,6 @@ class Laser:
             explicit_args = None,
             **kwargs
             ) -> RealWorldObject:
-    
-        instruction(f"Ensure {material} is in the bed.")
 
         user_chosen_settings = {}
         user_chosen_settings.update(kwargs)
@@ -262,6 +286,8 @@ class Laser:
         all_settings.update(default_settings)
         all_settings.update(dict(user_chosen_settings))
 
+        instruction(f"Ensure {all_settings['material']} is in the bed.")
+
         stored_values = {"line_file": line_file}
         stored_values.update(explicit_args)
         stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
@@ -270,17 +296,17 @@ class Laser:
         if isinstance(MODE, Execute):
             # figure out if they set up a mapping request
             colors_to_mappings = Laser.default_laser_settings[Laser.MAPPINGS]
-            if setting_names:
-                desired_setting = setting_names[Laser.generate_setting_key(default_settings['material'] if 'material' in default_settings else material,
-                                                                           default_settings['thickness'] if 'thickness' in default_settings else thickness,
-                                                                           default_settings['cut_power'] if 'cut_power' in default_settings else cut_power,
-                                                                           default_settings['cut_speed'] if 'cut_speed' in default_settings else cut_speed,
-                                                                           default_settings['frequency'] if 'frequency' in default_settings else frequency)]
+            if config_file is not None and config_file.setting_names:
+                desired_setting = config_file.setting_names[Laser.generate_setting_key(default_settings['material'] if 'material' in default_settings else material,
+                                                                                        default_settings['thickness'] if 'thickness' in default_settings else thickness,
+                                                                                        default_settings['cut_power'] if 'cut_power' in default_settings else cut_power,
+                                                                                        default_settings['cut_speed'] if 'cut_speed' in default_settings else cut_speed,
+                                                                                        default_settings['frequency'] if 'frequency' in default_settings else frequency)]
                 colors_to_mappings[color_to_setting] = desired_setting
             # actually call the laser
             Laser.do_fab(line_file,
-                            mapping_file=default_settings['mapping_file'] if 'mapping_file' in default_settings else mapping_file,
-                            focal_height_mm=default_settings['focal_height_mm'] if 'focal_height_mm' in default_settings else focal_height_mm)
+                            mapping_file=all_settings['mapping_file'],
+                            focal_height_mm=all_settings['focal_height_mm'])
         else:
             data = None
             if "setting_names" in user_chosen_settings:
@@ -316,7 +342,7 @@ class Laser:
                 })
         return setup
 
-class SvgEditor:
+class SvgEditor(DesignSoftware):
 
     laser_bed = Laser.default_laser_settings[Laser.LASER_BED]
 
@@ -431,7 +457,7 @@ class SvgEditor:
         setup = '''We used drawsvg to create our geometries.'''
         return setup
 
-class Slicer:
+class Slicer(ToolpathSoftware):
     MATERIAL = 'material'
     TEMPERATURE = 'temperature'
     NOZZLE = 'nozzle'
@@ -678,7 +704,7 @@ class JankyUltimakerSlicer(Slicer):
     def describe():
         return '''Ultimaker Slicer'''
 
-class Printer:
+class Printer(FabricationDevice):
     PRINTER = 'printer'
     SLICER = 'slicer'
 
@@ -766,7 +792,7 @@ class Printer:
                 })
         return setup
 
-class StlEditor:
+class StlEditor(DesignSoftware):
 
     @staticmethod
     def design(specification: str=None) -> GeometryFile:
@@ -847,7 +873,7 @@ class StlEditor:
         setup = '''We used FreeCAD to manipulate our STL files.'''
         return setup
 
-class KnittingMachine:
+class KnittingMachine(FabricationDevice):
 
     MACHINE = 'machine'
     YARN = 'yarn'
@@ -889,7 +915,7 @@ class KnittingMachine:
                 })
         return setup
 
-class KnitCompiler:
+class KnitCompiler(DesignSoftware, ConfigSoftware):
 
     @staticmethod
     def design(specification: str=None) -> GeometryFile:

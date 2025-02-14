@@ -25,6 +25,7 @@ def test_materials():
     coatings = ['fire retardant', 'no coating']
 
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
+
     fabbed_objects: list[RealWorldObject] = []
     for material in Parallel(materials):
         for coating in Parallel(coatings):
@@ -71,7 +72,7 @@ def test_optimal_number_of_scans():
 def test_laser_power_and_speed():
     speeds = arange(20,80+include_last,10)
     powers = arange(10,50+include_last,5)
-    setting_names = Laser.prep_cam(cut_speeds=speeds, cut_powers=powers)
+    config_file = Laser.create_config(cut_speeds=speeds, cut_powers=powers)
 
     line_file = SvgEditor.build_geometry(SvgEditor.draw_circle)
     results = BatchMeasurements.empty()
@@ -79,7 +80,7 @@ def test_laser_power_and_speed():
     for cut_speed in Parallel(speeds):
       for cut_power in Parallel(powers):
           for repetition in Parallel(range(4)):
-            fabbed_object = Laser.fab(line_file, setting_names=setting_names,
+            fabbed_object = Laser.fab(line_file, config_file=config_file,
                                       cut_speed=cut_speed, cut_power=cut_power,
                                       color_to_setting=Laser.SvgColor.GREEN,
                                       repetition=repetition,

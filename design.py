@@ -1,3 +1,4 @@
+import abc
 import copy
 from dataclasses import dataclass
 from typing import Callable, Type
@@ -91,3 +92,53 @@ def design(file_location: str,
     obj.metadata.update(metadata)
 
     return obj
+
+###### this part is a little bit more structurey stuff, which can be used in the library
+###### ..... AND to clarify what kinds of custom software people are building ....!
+
+    
+class NotApplicableInThisWorkflowException(Exception):
+    pass
+
+class DesignSoftware():
+    __metaclass__ = abc.ABCMeta
+    
+    @staticmethod
+    @abc.abstractmethod
+    def create_design(features: dict[str,object]) -> GeometryFile:
+        raise NotImplemented
+
+    @staticmethod
+    @abc.abstractmethod
+    def modify_design(design: GeometryFile,
+                      feature_name: str, feature_value: str|int) -> GeometryFile:
+        raise NotImplemented
+
+class ConfigSoftware():
+    __metaclass__ = abc.ABCMeta
+
+    @staticmethod
+    @abc.abstractmethod
+    def create_config(defaults=dict[str,object]|None, **kwargs) -> ConfigurationFile:
+        raise NotImplemented
+    
+    @staticmethod
+    @abc.abstractmethod
+    def modify_config(config: ConfigurationFile,
+                      feature_name: str, feature_value: str|int) -> ConfigurationFile:
+        raise NotImplemented
+
+class ToolpathSoftware():
+    __metaclass__ = abc.ABCMeta
+
+    @staticmethod
+    @abc.abstractmethod
+    def create_toolpath(design: GeometryFile,
+                        config: ConfigurationFile) -> CAMFile:
+        raise NotImplemented
+    
+    @staticmethod
+    @abc.abstractmethod
+    def modify_toolpath(design: GeometryFile,
+                        feature_name: str, feature_value: str|int) -> CAMFile:
+        raise NotImplemented
