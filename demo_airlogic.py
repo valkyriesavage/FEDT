@@ -22,7 +22,7 @@ def airflow_gatetypes():
 
     results = BatchMeasurements.empty()
     for stl in Parallel(all_widget_files):
-        fabbed_object = Printer.slice_and_print(GeometryFile(stl))
+        fabbed_object = Printer.fab(GeometryFile(stl))
         for input_massflow in Series(['5e^-5','9.5e^-5','14e^-5','18.5e^-5']):
             instruction(f"set the air compressor to {input_massflow} and connect the object")
             results += Anemometer.measure_airflow(fabbed_object, f"input massflow at {input_massflow}")
@@ -40,7 +40,7 @@ def or_orientations():
     for print_angle in Parallel(arange(0,90+include_last,22.5)):
         rotated_gate = StlEditor.rotate(or_gate, print_angle)
         for repetition in Parallel(range(4)):
-            fabbed_object = Printer.slice_and_print(rotated_gate, repetition=repetition)
+            fabbed_object = Printer.fab(rotated_gate, repetition=repetition)
             fabbed_objects.append(fabbed_object)
     for fabbed_object in Parallel(fabbed_objects):    
         for input_massflow in Series(['5e^-5','9.5e^-5','14e^-5','18.5e^-5']):
@@ -55,8 +55,8 @@ def or_bendradius():
 
     results = BatchMeasurements.empty()
     for bend_radius in Parallel(arange(0,20+include_last,5)):
-        gate_with_bend = StlEditor.modify_feature_by_hand(or_gate, "bent inlet", bend_radius)
-        fabbed_object = Printer.slice_and_print(gate_with_bend)
+        gate_with_bend = StlEditor.modify_design(or_gate, "bent inlet", bend_radius)
+        fabbed_object = Printer.fab(gate_with_bend)
         for input_massflow in Series(['5e^-5','9.5e^-5','14e^-5','18.5e^-5']):
                 instruction(f"set the air compressor to {input_massflow} and connect the object")
                 results += Anemometer.measure_airflow(fabbed_object, f"input massflow at {input_massflow}")
@@ -72,7 +72,7 @@ def output_airneeds():
 
     airflow = BatchMeasurements.empty()
     for widget in Parallel(output_widgets):
-        fabbed_object = Printer.slice_and_print(GeometryFile(widget))
+        fabbed_object = Printer.fab(GeometryFile(widget))
         instruction(f"connect object #{fabbed_object.uid} to the air compressor", header=True)
         instruction(f"increase the air pressure by {epsilon} at a time until the object starts to work")
         airflow += Anemometer.measure_airflow(fabbed_object, 'minimum working pressure')

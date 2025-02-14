@@ -4,7 +4,6 @@ from numpy import arange
 
 from instruction import instruction
 from measurement import BatchMeasurements
-from design import VolumeFile
 from decorator import fedt_experiment
 from flowchart_render import render_flowchart
 from iterators import Parallel, Series, include_last, shuffle
@@ -49,15 +48,16 @@ PYRAMID = None
 
 def get_pyramid():
     global PYRAMID
+    fabbed_object = PYRAMID
     if PYRAMID is None:
-        geometry_file = VolumeFile("pyramid.stl")
+        geometry_file = GeometryFile("pyramid.stl")
 
         for coverage_condition in Parallel(['high','low']):
             for distance_condition in Parallel(['near','far']):
                 for mirror_condition in Parallel(range(1,2)):
-                    StlEditor.edit(geometry_file, f"add an electrode with coverage {coverage_condition} and distance {distance_condition}")
+                    StlEditor.modify_design(geometry_file, "electrode", "coverage {coverage_condition} and distance {distance_condition}")
 
-        fabbed_object = Printer.slice_and_print(geometry_file)
+        fabbed_object = Printer.fab(geometry_file)
 
     PYRAMID = fabbed_object
     return PYRAMID

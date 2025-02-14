@@ -4,7 +4,6 @@ from numpy import arange
 
 from instruction import instruction
 from measurement import BatchMeasurements
-from design import VolumeFile
 from decorator import fedt_experiment
 from flowchart_render import render_flowchart
 from iterators import Parallel, Series, include_last
@@ -58,7 +57,7 @@ def placement_response():
 
     electrodes = list(range(7))
 
-    fabbed_object = Printer.slice_and_print(VolumeFile("pyramid.stl"))
+    fabbed_object = Printer.fab(GeometryFile("pyramid.stl"))
     raw_results = BatchMeasurements.empty()
     test_values = BatchMeasurements.empty()
 
@@ -76,7 +75,7 @@ def placement_response():
 
 @fedt_experiment
 def force_response():
-    fabbed_object = Printer.slice_and_print(VolumeFile("pyramid.stl")) # same single object for both experiments?
+    fabbed_object = Printer.fab(GeometryFile("pyramid.stl")) # same single object for both experiments?
 
     ground_truth = BatchMeasurements.empty()
     test_values = BatchMeasurements.empty()
@@ -97,5 +96,5 @@ def force_response():
 
 
 if __name__ == "__main__":
-    # render_flowchart(placement_response)
+    render_flowchart(placement_response)
     render_flowchart(force_response)

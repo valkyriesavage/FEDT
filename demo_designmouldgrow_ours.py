@@ -1,5 +1,6 @@
 from numpy import arange
 
+from design import DesignSoftware
 from flowchart_render import render_flowchart
 from instruction import instruction
 from iterators import Series, Parallel, include_last
@@ -13,13 +14,31 @@ def compare(dataset1, dataset2):
 def summarize(data):
     return "Oh wow, great data!"
 
-class CustomModellingTool:
+class CustomModellingTool(DesignSoftware):
     # call the custom modelling tool that they created
     @staticmethod
     def sphere(radius: float=10.) -> GeometryFile:
         return design('custom.stl', GeometryFile,
                       {'target_radius':radius},
                       f"use the custom tool to model a sphere with radius {radius}")
+    
+    @staticmethod
+    def create_design(features: dict[str,object]) -> GeometryFile:
+        return design('custom.stl', GeometryFile,
+                      features,
+                      f"use the custom tool to model {features}")
+
+    @staticmethod
+    def modify_design(design: GeometryFile,
+                      feature_name: str, feature_value: str|int) -> GeometryFile:
+        from control import MODE, Execute
+        file_location = design.file_location
+        if isinstance(MODE, Execute):
+            file_location = input(f"What is the location of the modified geometry file?")
+        
+        design.updateVersion(feature_name, feature_value)
+        design.file_location = file_location
+        return design
 
 def prep_materials():
     instruction("remove pathogens by pouring boiling water through strainer")
@@ -41,7 +60,7 @@ def geometric_features():
     prep_materials() # how was this timed? just constant prepping in rotation, or?
 
     for geometry_file in Parallel(geometries):
-        mould = Printer.slice_and_print(geometry_file)
+        mould = Printer.fab(geometry_file)
         for myco_material in Series(['30% coffee inclusions', 'no inclusions']):
             fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")
             Environment.wait_up_to_time_single(fabbed_object, num_weeks=1)
@@ -75,7 +94,7 @@ def mechanical_and_shrinkage_features():
 
     shrinkage_results = BatchMeasurements.empty()
     mechanical_results = BatchMeasurements.empty()
-    mould = Printer.slice_and_print(scaled_mould)
+    mould = Printer.fab(scaled_mould)
 
     fabbed_objects = []
 
@@ -114,7 +133,7 @@ def test_software_tool():
     prep_materials()
 
     results = BatchMeasurements.empty()
-    mould = Printer.slice_and_print(software_generated_mould)
+    mould = Printer.fab(software_generated_mould)
     myco_material = "30% coffee inclusions"
     for repetition in Parallel(arange(1,3+include_last)):
         fabbed_object = Human.post_process(mould, f"mould mycomaterial {myco_material}")

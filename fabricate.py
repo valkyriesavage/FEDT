@@ -63,7 +63,7 @@ class FabricationDevice():
     @staticmethod
     @abc.abstractmethod
     @explicit_checker
-    def fab(input_geometry: GeometryFile,
+    def fab(input_geometry: GeometryFile|None=None,
             configuration: ConfigurationFile|None=None,
             toolpath: CAMFile|None=None,
             default_settings: dict[str, object]|None=None,
@@ -73,6 +73,11 @@ class FabricationDevice():
     @staticmethod
     def create_object(non_default_settings: dict[str, object], instr: str|None) -> RealWorldObject:
         return fabricate(non_default_settings, instr)
+    
+    @staticmethod
+    @abc.abstractmethod
+    def describe(default_settings):
+        raise NotImplemented
 
 class PostProcessDevice():
     __metaclass__ = abc.ABCMeta

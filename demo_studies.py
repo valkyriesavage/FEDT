@@ -24,9 +24,9 @@ def test_print_shrinkage():
 
     for infill_pattern in Parallel(['honeycomb','triangles','grid']):
         for repetition in Parallel(range(5)):
-            fabbed_object = Printer.slice_and_print(cube,
-                                                    infill_pattern=infill_pattern,
-                                                    repetition=repetition)
+            fabbed_object = Printer.fab(cube,
+                                        infill_pattern=infill_pattern,
+                                        repetition=repetition)
             shrinkage_measurements += Calipers.measure_size(fabbed_object, "x-axis")
             shrinkage_measurements += Calipers.measure_size(fabbed_object, "y-axis")
             shrinkage_measurements += Calipers.measure_size(fabbed_object, "z-axis")
@@ -81,8 +81,8 @@ def test_user_assembly_time():
     treatments = shuffle(["simple_first"] * 2 + ["complex_first"] * 2)
 
     for (user, treatment) in Parallel(enumerate(treatments)):
-        simple_assembly = Printer.slice_and_print(simple)
-        complex_assembly = Printer.slice_and_print(complex)
+        simple_assembly = Printer.fab(simple)
+        complex_assembly = Printer.fab(complex)
         order = []
         if treatment == "simple_first":
             order = [simple_assembly, complex_assembly]
@@ -98,7 +98,7 @@ def test_user_assembly_time():
 if __name__ == "__main__":
     # create a flowchart
     render_flowchart(test_print_shrinkage)
-    # render_flowchart(test_force_at_break)
+    render_flowchart(test_force_at_break)
 
     # run an experiment
     # from control import MODE, Execute
@@ -107,5 +107,5 @@ if __name__ == "__main__":
     # test_print_shrinkage()
 
     # other sample flowcharts
-    # render_flowchart(test_paint_layers)
-    # render_flowchart(test_user_assembly_time)
+    render_flowchart(test_paint_layers)
+    render_flowchart(test_user_assembly_time)

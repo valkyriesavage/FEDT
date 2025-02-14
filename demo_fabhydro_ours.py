@@ -19,7 +19,7 @@ def resin_types():
     compression_results = BatchMeasurements.empty()
     tension_results = BatchMeasurements.empty()
     for resin in Parallel(['standard','tenacious','f39/f69']):
-        fabbed_object = Printer.slice_and_print(stl, material=resin)
+        fabbed_object = Printer.fab(stl, material=resin)
         instruction(f"compress object #{fabbed_object.uid} as much as possible (?)") # with what? how much?
         compression_results += Calipers.measure_size(fabbed_object,"height after compression")
         instruction(f"extend object #{fabbed_object.uid} as much as possible (?)") # with what? how much?
@@ -36,7 +36,7 @@ def bend_vs_thickness():
 
     for thickness in Parallel(arange(1,5.5+include_last,.5)):
         stl = StlEditor.cube((20,30,thickness))
-        fabbed_object = Printer.slice_and_print(stl)
+        fabbed_object = Printer.fab(stl)
         instruction(f"fix object #{fabbed_object.uid} at one end and hang a load of 0.49N at the other end")
         bend_results += Protractor.measure_angle(fabbed_object,"angle of tip below 90 degrees")
         # measurements were repeated multiple times. this was improvised!
@@ -56,7 +56,7 @@ def min_wall_thickness():
     for orientation in Parallel([0,90]):
         stl = StlEditor.rotate(base_stl, orientation)
         for repetition in Parallel(range(3)):
-            fabbed_object = Printer.slice_and_print(stl, repeitition=repetition)
+            fabbed_object = Printer.fab(stl, repeitition=repetition)
             instruction(f"inflate object #{fabbed_object.uid} until it ruptures")
             pressure_results += PressureSensor.measure_pressure(fabbed_object,"pressure at rupture")
 
@@ -76,7 +76,7 @@ def min_thin_wall_area():
         stl_loc = Human.do_and_respond(f"create an STL with edge length {edge_length}, thin wall 0.7mm, other walls 5mm",
                                           "where is the STL?")
         stl = GeometryFile(stl_loc)
-        fabbed_object = Printer.slice_and_print(stl)
+        fabbed_object = Printer.fab(stl)
         instruction("pump 20psi into the fabricated object")
         expansion_results += Calipers.measure_size(fabbed_object,"vertical expansion height")
 
@@ -92,7 +92,7 @@ def pneumatic_vs_hydraulic():
 
     stl = GeometryFile("single_actuator_single_generator.stl")
     for fill in Parallel(['water','air']):
-        fabbed_object = Printer.slice_and_print(stl)
+        fabbed_object = Printer.fab(stl)
         filled_object = Human.post_process(fabbed_object,f"fill object with {fill}")
         expansion_results += Calipers.measure_size(filled_object,"displacement of tip")
 
@@ -106,7 +106,7 @@ def lasting():
     stl = GeometryFile("side_11mm_wall_1mm.stl")
     fabbed_objects = []
     for repetition in Parallel(range(48)):
-        fabbed_objects.append(Printer.slice_and_print(stl, repetition=repetition))
+        fabbed_objects.append(Printer.fab(stl, repetition=repetition))
 
     pre_weights = BatchMeasurements.empty()
     post_weights = BatchMeasurements.empty()

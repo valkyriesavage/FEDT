@@ -461,12 +461,12 @@ class Slicer(ToolpathSoftware):
     MATERIAL = 'material'
     TEMPERATURE = 'temperature'
     NOZZLE = 'nozzle'
-    LAYER_HEIGHT = 'layer height'
-    INFILL_PATTERN = 'infill pattern'
-    INFILL_DENSITY = 'infill density'
-    WALL_THICKNESS = 'wall thickness'
+    LAYER_HEIGHT = 'layer_height'
+    INFILL_PATTERN = 'infill_pattern'
+    INFILL_DENSITY = 'infill_density'
+    WALL_THICKNESS = 'wall_thickness'
     SPEED = 'speed'
-    BED_HEAT = 'bed heating'
+    BED_HEAT = 'bed_heating'
 
     default_slicer_settings = {
         MATERIAL: 'PLA',
@@ -481,23 +481,27 @@ class Slicer(ToolpathSoftware):
     }
 
     @staticmethod
-    def slice(volume_file: GeometryFile,
-              **kwargs) -> CAMFile:
-
-        instruction(f"slice {volume_file.file_location} in the slicing software with settings {kwargs}",
-                    fabbing = True,
-                    latex_details = {SUBJECT: Slicer,
-                                        VERB: 'sliced',
-                                        OBJECT: volume_file,
-                                        SETTINGS: kwargs,
-                                        FABBED_SOMETHING: False})
+    def create_toolpath(design: GeometryFile,
+                        config: ConfigurationFile|None=None,
+                        **kwargs) -> CAMFile:
+        
+        if config is not None:
+            instruction(f"slice {design.file_location} in the slicing software with configuration {config.file_location}")
+                    # fabbing = True,
+                    # latex_details = {SUBJECT: Slicer,
+                    #                     VERB: 'sliced',
+                    #                     OBJECT: design,
+                    #                     SETTINGS: kwargs,
+                    #                     FABBED_SOMETHING: False})
+        else:
+            instruction(f"slice {design.file_location} in the slicing software with settings {kwargs}")
         from control import MODE, Execute
         gcode_location = ''
         if isinstance(MODE, Execute):
             gcode_location = input("where is the sliced file located? ")
         
-        gcode_file = design(gcode_location, CAMFile)
-        gcode_file.metadata.update(kwargs)
+        kwargs.update({'config_file':config})
+        gcode_file = CAMFile(gcode_location, kwargs)
         return gcode_file
 
     @staticmethod
@@ -506,15 +510,17 @@ class Slicer(ToolpathSoftware):
 
 class PrusaSlicer(Slicer):
     @staticmethod
-    def slice(volume_file: GeometryFile,
-                temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
-                nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
-                layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
-                infill_pattern: str = Slicer.default_slicer_settings[Slicer.INFILL_PATTERN],
-                infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
-                wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
-                material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
-                **kwargs) -> CAMFile:
+    def create_toolpath(volume_file: GeometryFile,
+                        config: ConfigurationFile|None=None,
+                        temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
+                        nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
+                        layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
+                        infill_pattern: str = Slicer.default_slicer_settings[Slicer.INFILL_PATTERN],
+                        infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
+                        wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
+                        material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
+                        defaults: dict[str, object]={},
+                        **kwargs) -> CAMFile:
         gcode_location = ''
         argdict = {
             '--layer-height': layer_height,
@@ -555,7 +561,8 @@ class PrusaSlicer(Slicer):
 
 class JankyBambuSlicer(Slicer):
     @staticmethod
-    def slice(volume_file: GeometryFile,
+    def create_toolpath(volume_file: GeometryFile,
+                        config: ConfigurationFile|None=None,
                 temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
                 nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
                 layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
@@ -604,7 +611,8 @@ class JankyBambuSlicer(Slicer):
 
 class BambuSlicer(Slicer):
     @staticmethod
-    def slice(volume_file: GeometryFile,
+    def create_toolpath(volume_file: GeometryFile,
+                        config: ConfigurationFile|None=None,
                 temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE], # unused
                 nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE], # used only in calc of walls
                 layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
@@ -657,7 +665,8 @@ class BambuSlicer(Slicer):
     
 class JankyUltimakerSlicer(Slicer):
     @staticmethod
-    def slice(volume_file: GeometryFile,
+    def create_toolpath(volume_file: GeometryFile,
+                        config: ConfigurationFile|None=None,
                 temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
                 nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
                 layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
@@ -719,24 +728,27 @@ class Printer(FabricationDevice):
     
     @staticmethod
     @explicit_checker
-    def slice_and_print(volume_file: GeometryFile,
-                        printer: str = default_printer_settings[PRINTER],
-                        material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
-                        temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
-                        nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
-                        layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
-                        infill_pattern: str = Slicer.default_slicer_settings[Slicer.INFILL_PATTERN],
-                        infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
-                        wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
-                        slicer: Slicer = default_printer_settings[SLICER],
-                        defaults: dict = {},
-                        explicit_args = None,
-                        **kwargs
-                        ) -> RealWorldObject:
+    def fab(input_geometry: GeometryFile|None=None,
+            configuration: ConfigurationFile|None=None,
+            toolpath: CAMFile|None=None,
+            printer: str = default_printer_settings[PRINTER],
+            slicer: Slicer = default_printer_settings[SLICER],
+            material: str = Slicer.default_slicer_settings[Slicer.MATERIAL],
+            temperature: str = Slicer.default_slicer_settings[Slicer.TEMPERATURE],
+            nozzle: str = Slicer.default_slicer_settings[Slicer.NOZZLE],
+            layer_height: str = Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT],
+            infill_pattern: str = Slicer.default_slicer_settings[Slicer.INFILL_PATTERN],
+            infill_density: str = Slicer.default_slicer_settings[Slicer.INFILL_DENSITY],
+            wall_thickness: str = Slicer.default_slicer_settings[Slicer.WALL_THICKNESS],
+            defaults: dict = {},
+            explicit_args = None,
+            **kwargs
+            ) -> RealWorldObject:
+        
+        if input_geometry is None and toolpath is None:
+            raise Exception("You have to provide either a geometry or a CAM file to fab on this machine")
 
         from control import MODE, Execute
-
-        gcode = ''
 
         stored_values = {}
         if explicit_args:
@@ -756,20 +768,21 @@ class Printer(FabricationDevice):
         #                                     OBJECT: volume_file,
         #                                     SETTINGS: stored_values})
 
-        gcode = slicer.slice(volume_file,
-                    printer=defaults['printer'] if 'printer' in defaults else printer,
-                    temperature=defaults['temperature'] if 'temperature' in defaults else temperature,
-                    nozzle=defaults['nozzle'] if 'nozzle' in defaults else nozzle,
-                    layer_height=defaults['layer_height'] if 'layer_height' in defaults else layer_height,
-                    infill_pattern=defaults['infill_pattern'] if 'infill_pattern' in defaults else infill_pattern,
-                    infill_density=defaults['infill_density'] if 'infill_density' in defaults else infill_density,
-                    wall_thickness=defaults['wall_thickness'] if 'wall_thickness' in defaults else wall_thickness,
-                    material=defaults['material'] if 'material' in defaults else material,
-                    **kwargs)
+        if toolpath is None:
+            # TODO / FIXME : I would like to call this as **all_values, but that throws some kind of error for getting multiple
+            # arguments of the same name. I can't figure out where it's coming from.
+            toolpath = slicer.create_toolpath(input_geometry, configuration,                        
+                                                temperature=all_values['temperature'],
+                                                nozzle=all_values['nozzle'],
+                                                layer_height=all_values['layer_height'],
+                                                infill_pattern=all_values['infill_pattern'],
+                                                infill_density=all_values['infill_density'],
+                                                wall_thickness=all_values['wall_thickness'],
+                                                material=all_values['material'])
 
         fabbed = fabricate(stored_values, "Run the printer")
         if isinstance(MODE, Execute):
-            Printer.print(gcode)
+            Printer.print(toolpath)
         # else:
         #     instruction(f"Run the printer, creating object #{fabbed.uid}",
         #             fabbing = True,
@@ -783,23 +796,26 @@ class Printer(FabricationDevice):
         return fabbed
     
     @staticmethod  
-    def describe():
-        setup = '''We used a {machine}. Our default settings were {defaults}.'''.format(
+    def describe(default_settings):
+        if not 'machine' in default_settings:
+            default_settings['machine'] = Printer.default_printer_settings[Printer.PRINTER]
+        machine = default_settings.pop('machine')
+        setup = '''We used a {machine}. Our default settings were {default_settings}.'''.format(
                 **{
-                    'machine': str(Printer.default_printer_settings[Printer.PRINTER]),
-                    'defaults': ', '.join([str(x) + ':' + str(y) for x, y in zip(Slicer.default_slicer_settings.keys(),
-                                                                                 Slicer.default_slicer_settings.values())])
+                    'machine': machine,
+                    'default_settings': ', '.join([str(x) + ':' + str(y) for x, y in zip(default_settings.keys(),
+                                                                                         default_settings.values())])
                 })
         return setup
 
 class StlEditor(DesignSoftware):
 
     @staticmethod
-    def design(specification: str=None) -> GeometryFile:
-        if not specification:
-            instruction("Get the stl file from the website.")
+    def create_design(features: dict[str, object]) -> GeometryFile:
+        if len(features.keys()) == 0:
+            instruction("Get the STL file from the website.")
         else:
-            instruction(f"Design an STL file like {specification}")
+            instruction(f"Design an STL file with {features}")
         
         file_location = ''
 
@@ -807,44 +823,31 @@ class StlEditor(DesignSoftware):
         if isinstance(MODE, Execute):
             file_location = input("where is the stl file?")
         
-        return design(file_location, GeometryFile, {"specification":specification})
+        return design(file_location, GeometryFile, features)
     
     @staticmethod
-    def edit(stl: GeometryFile, specification: str) -> GeometryFile:
-        instruction(f"Edit {stl.file_location} like {specification}")
+    def modify_design(stl: GeometryFile, feature_name: str, feature_value: str) -> GeometryFile:
+        instruction(f"Edit {stl.file_location} to set {feature_name} to {feature_value}")
+        
+        stl.updateVersion(feature_name, feature_value)
+
         from control import MODE, Execute
         if isinstance(MODE, Execute):
             file_location = input(f"What is the location of the modified stl?")
             stl.file_location = file_location
-        
-        stl.updateVersion("hand-edited", specification)
 
         return stl
-
-    @staticmethod
-    def modify_feature_by_hand(volume_file:GeometryFile,
-                               feature_name: str,
-                               feature_value: str|float) -> GeometryFile:
-        instruction(f'modify the file {volume_file.file_location} to have feature {feature_name} with value {feature_value}')
-        from control import MODE, Execute
-        if isinstance(MODE, Execute):
-            file_location = input(f"What is the location of the modified stl?")
-            volume_file.file_location = file_location
-        
-        volume_file.updateVersion(feature_name, feature_value)
-
-        return volume_file
 
     @staticmethod
     def cube(size: tuple=(1,1,1),
              scale: float=1.) -> GeometryFile:
         # TODO import freecad and all that jazz
-        return design("",GeometryFile,instr=f"create a cube with size {size}, scale {scale}")
+        return design("cube.stl",GeometryFile,instr=f"create a cube with size {size}, scale {scale}")
     
     @staticmethod
     def sphere(radius: float=10.) -> GeometryFile:
         # TODO import freecad and all that jazz
-        return design("",GeometryFile,instr=f"create a sphere with radius {radius}")
+        return design("sphere.stl",GeometryFile,instr=f"create a sphere with radius {radius}")
 
     @staticmethod
     def extract_profile(volume_file: GeometryFile,

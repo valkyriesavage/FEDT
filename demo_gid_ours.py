@@ -6,7 +6,7 @@ from flowchart import FlowChart
 from instruction import instruction
 from iterators import Series, Parallel, include_last
 from measurement import BatchMeasurements
-from design import VolumeFile
+from design import VirtualWorldObject
 from decorator import fedt_experiment
 from flowchart_render import render_flowchart
 from lib import *
@@ -21,9 +21,9 @@ class Blender:
 
 @fedt_experiment
 def find_bottom_spacings():
-    large_object = VolumeFile("large from thingiverse.stl")
-    medium_object = VolumeFile("medium from thingiverse.stl")
-    small_object = VolumeFile("small from thingiverse.stl")
+    large_object = GeometryFile("large from thingiverse.stl")
+    medium_object = GeometryFile("medium from thingiverse.stl")
+    small_object = GeometryFile("small from thingiverse.stl")
 
     bottom_angle_results = BatchMeasurements.empty()
     bottom_width_results = BatchMeasurements.empty()
@@ -35,11 +35,11 @@ def find_bottom_spacings():
     for obj_file in Parallel([large_object,medium_object,small_object]):
 
         for bottom_angle in Parallel(arange(0,180+include_last,1)): # or was it arange(0,6+include_last,1) ?
-            fabbed_object = Printer.slice_and_print(obj_file, bottom_angle=bottom_angle)
+            fabbed_object = Printer.fab(obj_file, bottom_angle=bottom_angle)
             bottom_angle_results += Camera.take_picture(fabbed_object, "bottom")
         
         for bottom_width in Parallel(arange(0.35,0.6+include_last,.01)): # or was it arange(0.35,0.35+0.06+include_last,.01) ?
-            fabbed_object = Printer.slice_and_print(obj_file, bottom_width=bottom_width)
+            fabbed_object = Printer.fab(obj_file, bottom_width=bottom_width)
             bottom_width_results += Camera.take_picture(fabbed_object, "bottom")
         
         for infill_pattern in Parallel(['trihexagon','triangular','grid']):
@@ -49,9 +49,9 @@ def find_bottom_spacings():
             else: # if it's grid
                 infill_angles = arange(0,90+include_last,1) # or was it arange(0,6+include_last,1) ?
             for infill_angle in Parallel(infill_angles):
-                fabbed_object = Printer.slice_and_print(obj_file,
-                                                        infill_pattern=infill_pattern,
-                                                        infill_rotation=infill_angle)
+                fabbed_object = Printer.fab(obj_file,
+                                            infill_pattern=infill_pattern,
+                                            infill_rotation=infill_angle)
                 fabbed_object = Human.post_process(fabbed_object, "hold a light above the object")
                 picture = Camera.take_picture(fabbed_object, "bottom")
                 infill_angle_results += picture
@@ -59,8 +59,8 @@ def find_bottom_spacings():
                     infill_pattern_results += picture
         
         for infill_density in Parallel(arange(2.6, 3.2+include_last, 0.1)): # or was it arange(2.6, 2.6+0.7+include_last, 0.1) ?
-            fabbed_object = Printer.slice_and_print(obj_file,
-                                                    infill_density=infill_density)
+            fabbed_object = Printer.fab(obj_file,
+                                        infill_density=infill_density)
             infill_density_results += Camera.take_picture(fabbed_object, "bottom")
 
     
@@ -88,8 +88,8 @@ def random_param_set():
 
 @fedt_experiment
 def cross_validation():
-    large = [VolumeFile("large obj from thingiverse.stl")] * 10
-    medium = [VolumeFile("medium obj from thingiverse.stl")] * 6
+    large = [GeometryFile("large obj from thingiverse.stl")] * 10
+    medium = [GeometryFile("medium obj from thingiverse.stl")] * 6
     objs = large + medium
 
     filament = 'white'
@@ -98,13 +98,13 @@ def cross_validation():
 
     for obj in Parallel(objs):
         bottom_angle, bottom_width, infill_pattern, infill_rotation, infill_density = random_param_set()
-        fabbed_object = Printer.slice_and_print(obj,
-                                                infill_pattern=infill_pattern,
-                                                infill_rotation=infill_rotation,
-                                                bottom_angle=bottom_angle,
-                                                bottom_width=bottom_width,
-                                                infill_density=infill_density,
-                                                filament_color=filament)
+        fabbed_object = Printer.fab(obj,
+                                    infill_pattern=infill_pattern,
+                                    infill_rotation=infill_rotation,
+                                    bottom_angle=bottom_angle,
+                                    bottom_width=bottom_width,
+                                    infill_density=infill_density,
+                                    filament_color=filament)
         fabbed_object = Human.post_process(fabbed_object, "hold a light above the object") # I'm assuming this happened
         all_object_results += Camera.take_picture(fabbed_object, "bottom")
 
@@ -112,7 +112,7 @@ def cross_validation():
 
 @fedt_experiment
 def materials_lighting_thicknesses():
-    model = VolumeFile("keycover.stl")
+    model = GeometryFile("keycover.stl")
     filament_colors = ['red', 'yellow', 'blue', 'orange', 'green', 'purple', 'black', 'white']
     bottom_line_angles = list(arange(0,180+include_last,(180-0)/6)) # evenly spaced for 6 types of prints?
     bottom_line_widths = list(arange(0.35,0.6+include_last,(.6-.35)/6)) # evenly spaced for 6 types of prints? : doesn't conform to table
@@ -122,10 +122,10 @@ def materials_lighting_thicknesses():
 
     for color in Parallel(filament_colors):
         for config_id in Parallel(range(len(bottom_line_angles))):
-            fabbed_object = Printer.slice_and_print(model,
-                                                    filament_color=color,
-                                                    bottom_line_angle=bottom_line_angles[config_id],
-                                                    bottom_line_width=bottom_line_widths[config_id])
+            fabbed_object = Printer.fab(model,
+                                        filament_color=color,
+                                        bottom_line_angle=bottom_line_angles[config_id],
+                                        bottom_line_width=bottom_line_widths[config_id])
             for light_intensity in Series(light_intensities):
                 fabbed_object = Human.post_process(fabbed_object, f"light brightness of {light_intensity}")
                 lighted_photos += Camera.take_picture(fabbed_object, "bottom")
@@ -134,7 +134,7 @@ def materials_lighting_thicknesses():
 
 @fedt_experiment
 def different_printers():
-    model = VolumeFile("keycover.stl") # maybe?
+    model = GeometryFile("keycover.stl") # maybe?
     # they are only testing bottom line widths and angles, so I am assuming they use the same 6 configurations as above
     bottom_line_angles = list(arange(0,180+include_last,(180-0)/6)) # evenly spaced for 6 types of prints
     bottom_line_widths = list(arange(0.35,0.6+include_last,(.6-.35)/6)) # evenly spaced for 6 types of prints
@@ -147,10 +147,10 @@ def different_printers():
 
     for printer in Parallel(printers):
         for config_id in Parallel(range(len(bottom_line_angles))):
-            fabbed_object = Printer.slice_and_print(model,
-                                                    printer=printer,
-                                                    bottom_line_angle = bottom_line_angles[config_id],
-                                                    bottom_line_width = bottom_line_widths[config_id])
+            fabbed_object = Printer.fab(model,
+                                        printer=printer,
+                                        bottom_line_angle = bottom_line_angles[config_id],
+                                        bottom_line_width = bottom_line_widths[config_id])
             photos += Camera.take_picture(fabbed_object, "bottom")
             instruction("Use a microscope to make the following measurements")
             width_deviation_results += Calipers.measure_size(fabbed_object, "width of trace")
@@ -176,14 +176,14 @@ def camera_distance():
 
 @fedt_experiment
 def camera_angle():
-    models = [VolumeFile('thingi10kdb.stl')] * 600
+    models = [GeometryFile('thingi10kdb.stl')] * 600
     angles = [f"at {deg} deg, along azimuth {azimuth}" for deg in [4, 6, 8, 10, 12] for azimuth in range(8)]
 
     images = BatchMeasurements.empty()
     
     for model in Parallel(models):
         bottom_angle, bottom_width, infill_pattern, infill_rotation, infill_density = random_param_set()
-        gcode = Slicer.slice(model,
+        gcode = Slicer.create_toolpath(model,
                                 infill_pattern=infill_pattern,
                                 infill_rotation=infill_rotation,
                                 bottom_angle=bottom_angle,
@@ -197,9 +197,9 @@ def camera_angle():
 
 
 if __name__ == "__main__":
-    # render_flowchart(find_bottom_spacings) # broken due to too many loops
-    # render_flowchart(cross_validation)
-    # render_flowchart(materials_lighting_thicknesses) # broken due to too many loops
-    # render_flowchart(different_printers)
+    render_flowchart(find_bottom_spacings)
+    render_flowchart(cross_validation)
+    render_flowchart(materials_lighting_thicknesses)
+    render_flowchart(different_printers)
     render_flowchart(camera_distance)
-    # render_flowchart(camera_angle) # crashes
+    render_flowchart(camera_angle)

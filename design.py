@@ -48,8 +48,8 @@ class VirtualWorldObject:
 @dataclass
 class GeometryFile(VirtualWorldObject):
 
-    def __init__(self, file_location: str):
-        super().__init__(file_location, {'file_location':file_location})
+    def __init__(self, file_location: str, features: dict[str,object]={}):
+        super().__init__(file_location, features)
 
     def __hash__(self):
         return self.uid
@@ -60,8 +60,8 @@ class GeometryFile(VirtualWorldObject):
 @dataclass
 class ConfigurationFile(VirtualWorldObject):
 
-    def __init__(self, file_location: str):
-        super().__init__(file_location, {'file_location':file_location})
+    def __init__(self, file_location: str, features: dict[str,object]={}):
+        super().__init__(file_location, features)
 
     def __hash__(self):
         return self.uid
@@ -72,8 +72,8 @@ class ConfigurationFile(VirtualWorldObject):
 @dataclass
 class CAMFile(VirtualWorldObject):
 
-    def __init__(self, file_location: str):
-        super().__init__(file_location, {'file_location':file_location})
+    def __init__(self, file_location: str, features: dict[str,object]={}):
+        super().__init__(file_location, features)
 
     def __hash__(self):
         return self.uid
@@ -134,7 +134,7 @@ class ToolpathSoftware():
     @staticmethod
     @abc.abstractmethod
     def create_toolpath(design: GeometryFile,
-                        config: ConfigurationFile) -> CAMFile:
+                        config: ConfigurationFile, **kwargs) -> CAMFile:
         raise NotImplemented
     
     @staticmethod

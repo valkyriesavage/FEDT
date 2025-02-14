@@ -11,16 +11,16 @@ from lib import *
 def summarize(data):
     return "Oh wow, great data!"
 
-def configure_for_aline():
-    Slicer.default_slicer_settings[Slicer.TEMPERATURE] = 200
-    Slicer.default_slicer_settings[Slicer.SPEED] = 5000
-    Slicer.default_slicer_settings[Slicer.BED_HEAT] = 0
-    Slicer.default_slicer_settings[Slicer.LAYER_HEIGHT] = 0.1
-    Slicer.default_slicer_settings[Slicer.NOZZLE] = 0.4
+aline_defaults = {
+    Slicer.TEMPERATURE: 200,
+    Slicer.SPEED: 5000,
+    Slicer.BED_HEAT: 0,
+    Slicer.LAYER_HEIGHT: '0.1 mm',
+    Slicer.NOZZLE: '0.4 mm'
+}
 
 @fedt_experiment
 def cross_section_ratios():
-    configure_for_aline()
 
     stl = StlEditor.cube((4,4,60))
     results = BatchMeasurements.empty()
@@ -28,10 +28,11 @@ def cross_section_ratios():
     for bending_direction in Parallel(['d7','d8 and d6','d1 and d5','d3','d2 and d4']):
         for cross_section_ratio in Parallel(arange(1,8+include_last)):
             for repetition in Parallel(range(3)):
-                fabbed_object = Printer.slice_and_print(stl,
-                                                        direction = bending_direction,
-                                                        cross_section_ratio = cross_section_ratio,
-                                                        repetition = repetition)
+                fabbed_object = Printer.fab(stl,
+                                            direction = bending_direction,
+                                            cross_section_ratio = cross_section_ratio,
+                                            repetition = repetition,
+                                            defaults=aline_defaults)
                 actuated_object = Human.post_process(fabbed_object, "trigger the object in hot water")
                 results += Protractor.measure_angle(actuated_object, "triggered angle")
     
@@ -40,15 +41,15 @@ def cross_section_ratios():
 
 @fedt_experiment
 def bend_vs_thickness():
-    configure_for_aline()
 
     results = BatchMeasurements.empty()
 
     for thickness in Parallel(arange(1,6+include_last)):
         stl = StlEditor.cube((thickness,thickness,60))
         for bending_direction in Parallel(['diagonal','orthogonal']):
-                fabbed_object = Printer.slice_and_print(stl,
-                                                        direction = bending_direction)
+                fabbed_object = Printer.fab(stl,
+                                            direction = bending_direction,
+                                            defaults=aline_defaults)
                 actuated_object = Human.post_process(fabbed_object, "trigger the object in hot water")
                 results += Protractor.measure_angle(actuated_object, "triggered angle")
 
