@@ -193,7 +193,7 @@ def camera_angle():
     
     for model in Parallel(models):
         bottom_angle, bottom_width, infill_pattern, infill_rotation, infill_density = random_param_set()
-        gcode = Slicer.slice(model,
+        gcode = Slicer.create_toolpath(model,
                                 infill_pattern=infill_pattern,
                                 infill_rotation=infill_rotation,
                                 bottom_angle=bottom_angle,

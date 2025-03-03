@@ -139,6 +139,6 @@ class ToolpathSoftware():
     
     @staticmethod
     @abc.abstractmethod
-    def modify_toolpath(design: GeometryFile,
+    def modify_toolpath(toolpath: CAMFile,
                         feature_name: str, feature_value: str|int) -> CAMFile:
         raise NotImplemented

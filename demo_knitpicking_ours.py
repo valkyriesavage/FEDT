@@ -102,7 +102,7 @@ def crowdsource_knitcarve_comparison():
     textures = list(base.keys())
     for worker in Parallel(arange(1,workerpool_size+include_last)):
         carve_level = worker % 5 + 1
-        comparator = naive if worker % 2 else carve
+        comparator = naive if worker % 2 else carve # do I understand this line and the one above it correctly?
         for texture in Parallel(shuffle(textures)):
             CustomProgram.showToCrowdworker(comparator[carve_level][texture], worker)
             CustomProgram.showToCrowdworker(base[texture], worker)

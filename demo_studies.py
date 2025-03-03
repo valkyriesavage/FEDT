@@ -98,7 +98,7 @@ def test_user_assembly_time():
 if __name__ == "__main__":
     # create a flowchart
     render_flowchart(test_print_shrinkage)
-    render_flowchart(test_force_at_break)
+    # render_flowchart(test_force_at_break)
 
     # run an experiment
     # from control import MODE, Execute
@@ -107,5 +107,5 @@ if __name__ == "__main__":
     # test_print_shrinkage()
 
     # other sample flowcharts
-    render_flowchart(test_paint_layers)
-    render_flowchart(test_user_assembly_time)
+    # render_flowchart(test_paint_layers)
+    # render_flowchart(test_user_assembly_time)

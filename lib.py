@@ -36,15 +36,15 @@ INTERACTION = 'interaction'
 TIME = 'time'
 
 class Laser(ConfigSoftware, ToolpathSoftware, FabricationDevice):
-    CUT_POWER = "cut power"
-    CUT_SPEED = "speed"
+    CUT_POWER = "cut_power"
+    CUT_SPEED = "cut_speed"
     CUT_FREQUENCY = "frequency"
     MATERIAL = "material"
     THICKNESS = "thickness"
-    FOCAL_HEIGHT_MM = "focal height mm"
-    LASERDEVICE = "laser device"
-    LASER_BED = "laser bed size in mm"
-    MAPPINGS = "mappings from colors to cut lines"
+    FOCAL_HEIGHT_MM = "focal_height_mm"
+    LASERDEVICE = "laserdevice"
+    LASER_BED_MM = "laser_bed_mm"
+    MAPPINGS = "mappings"
 
     LASERVARS = [CUT_POWER,CUT_SPEED,CUT_FREQUENCY,MATERIAL,THICKNESS,FOCAL_HEIGHT_MM]
 
@@ -63,7 +63,7 @@ class Laser(ConfigSoftware, ToolpathSoftware, FabricationDevice):
         THICKNESS: "3.0mm",
         FOCAL_HEIGHT_MM: "2.5mm",
         LASERDEVICE: "Epilog Helix",
-        LASER_BED: {
+        LASER_BED_MM: {
             'width': 24 * 2.54 * 10, # in mm
             'height': 18 * 2.54 * 10 # in mm
         },
@@ -154,7 +154,7 @@ class Laser(ConfigSoftware, ToolpathSoftware, FabricationDevice):
         raise NotApplicableInThisWorkflowException("Lasers run by Visicut don't create explicit toolpaths")
     
     @staticmethod
-    def modify_toolpath(design: GeometryFile,
+    def modify_toolpath(toolpath: CAMFile,
                         feature_name: str, feature_value: str|int) -> CAMFile:
         raise NotApplicableInThisWorkflowException("Lasers run by Visicut don't create explicit toolpaths")
         
@@ -305,8 +305,8 @@ class Laser(ConfigSoftware, ToolpathSoftware, FabricationDevice):
                 colors_to_mappings[color_to_setting] = desired_setting
             # actually call the laser
             Laser.do_fab(line_file,
-                            mapping_file=all_settings['mapping_file'],
-                            focal_height_mm=all_settings['focal_height_mm'])
+                            mapping_file=all_settings['mapping_file'] if 'mapping_file' in all_settings else None,
+                            focal_height_mm=all_settings[Laser.FOCAL_HEIGHT_MM])
         else:
             data = None
             if "setting_names" in user_chosen_settings:
@@ -335,16 +335,16 @@ class Laser(ConfigSoftware, ToolpathSoftware, FabricationDevice):
         setup = '''We used a {machine} with bed size {bedsize} and Visicut. Our default settings were {defaults}.'''.format(
                 **{
                     'machine': str(Laser.default_laser_settings[Laser.LASERDEVICE]),
-                    'bedsize': str(Laser.default_laser_settings[Laser.LASER_BED]),
+                    'bedsize': str(Laser.default_laser_settings[Laser.LASER_BED_MM]),
                     'defaults': ', '.join([str(x) + ':' + str(y) for x, y in zip(Laser.default_laser_settings.keys(),
                                                                                  Laser.default_laser_settings.values())
-                                                                              if x not in [Laser.LASERDEVICE, Laser.LASER_BED]])
+                                                                              if x not in [Laser.LASERDEVICE, Laser.LASER_BED_MM]])
                 })
         return setup
 
 class SvgEditor(DesignSoftware):
 
-    laser_bed = Laser.default_laser_settings[Laser.LASER_BED]
+    laser_bed = Laser.default_laser_settings[Laser.LASER_BED_MM]
 
     @staticmethod
     def design(specification: str=None, vars: dict={}) -> GeometryFile:
@@ -881,11 +881,15 @@ class KnittingMachine(FabricationDevice):
     MACHINE = 'machine'
     YARN = 'yarn'
     TENSION = 'tension'
+    MODE = 'knitting mode'
+    NUM_COLORS = 'number of yarns/colors'
 
     default_knitting_settings = {
         MACHINE: 'Shima Seiki',
         YARN: 'tamm pettit',
-        TENSION: '5'
+        TENSION: '5',
+        MODE: 'flat',
+        NUM_COLORS: '1'
     }
 
     @staticmethod
@@ -905,6 +909,9 @@ class KnittingMachine(FabricationDevice):
         all_values.update(KnittingMachine.default_knitting_settings)
         all_values.update(defaults)
         all_values.update(stored_values)
+
+        instruction(f'cast on the number of stitches required for {knitfile.file_location}')
+        instruction(f'set up the machine carriages')
 
         return fabricate(all_values, f'load up {knitfile.file_location} and start the knitting machine with settings {all_values}')
     
