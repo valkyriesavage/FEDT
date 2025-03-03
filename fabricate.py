@@ -79,6 +79,13 @@ class FabricationDevice():
     def describe(default_settings):
         raise NotImplemented
 
+    def __repr__(cls):
+        return f"{cls.__name__}"
+
+class NameableDevice(type):
+    def __repr__(cls):
+        return f"{cls.__name__}"
+
 class PostProcessDevice():
     __metaclass__ = abc.ABCMeta
 
