@@ -82,7 +82,7 @@ class CAMFile(VirtualWorldObject):
         return super(CAMFile,self).__repr__()
 
 def design(file_location: str,
-           filetype=VirtualWorldObject,
+           filetype: type[VirtualWorldObject]=VirtualWorldObject,
            metadata: dict[str, object] = {},
            instr: str | None = None) -> VirtualWorldObject:
     if instr:
