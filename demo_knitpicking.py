@@ -57,7 +57,7 @@ def compare_knit_textures_from_dbs():
 
     for single_knitted in Parallel(knitted):
         Human.post_process(single_knitted, "lay on sandpaper")
-        photos += Camera.take_picture(single_knitted) # this is the one that went into the opacity measurement, automatic (black pixel count)
+        photos += Camera.take_picture(single_knitted) # this is the one that went into the opacity measurement, automatic (black pixel count). data was collected and used but not reported in the paper, only in a db later.
         dims += Calipers.measure_size(single_knitted, "unstretched length") # early samples measured with photos, then automatically with a reference object
         dims += Calipers.measure_size(single_knitted, "unstreteched width")
         for dimension in Series(['length', 'width']): # no concern about being plastic, but they did the following steps in consistent order anyway
