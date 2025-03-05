@@ -43,14 +43,28 @@ def test_force_at_break():
 
     breakage_points = BatchMeasurements.empty()
 
+    svgs = []
+    fabbed_objects = []
     for rect_length in Parallel(arange(50,100+include_last,25)):
         svg = SvgEditor.build_geometry(draw_rect, CAD_vars={'rect_length':rect_length})
+        svgs.append(svg)
         #svg = SvgEditor.design(vars={'rect_length':rect_length})
         for material in Parallel(['wood','acrylic']):
             fabbed_object = Laser.fab(svg, material=material)
+            fabbed_objects.append(fabbed_object)
             instruction("place the object with 1cm overlapping a shelf at each end and the remainder suspended")
             instruction("place weights on the object until it breaks")
             breakage_points += Scale.measure_weight(fabbed_object,"total weight placed at break")
+            print("SVGs")
+            for svg in Series(svgs):
+                print(svg.metadata)
+
+    print("SVGs")
+    for svg in Series(svgs):
+        print(svg.metadata)
+    print("fabbedies")
+    for fabbed_object in Series(fabbed_objects):
+        print(fabbed_object.metadata['line_file'].metadata)
     
     summarize(breakage_points.get_all_data())
 
@@ -101,11 +115,11 @@ if __name__ == "__main__":
     # render_flowchart(test_force_at_break)
 
     # run an experiment
-    # from control import MODE, Execute
-    # control.MODE = Execute()
-    # test_force_at_break()
+    from control import MODE, Execute
+    control.MODE = Execute()
+    test_force_at_break()
     # test_print_shrinkage()
 
     # other sample flowcharts
     # render_flowchart(test_paint_layers)
-    render_flowchart(test_user_assembly_time)
+    # render_flowchart(test_user_assembly_time)
