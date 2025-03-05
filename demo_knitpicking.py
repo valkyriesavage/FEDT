@@ -36,15 +36,17 @@ class CustomProgram(DesignSoftware):
 def compare_knit_textures_from_dbs():
     textures_from_db = []
     for i in Parallel(range(306)):
-        textures_from_db.append(GeometryFile("texture{}.knit".format(i)))
+        texture = design("texture{}.ks".format(i), GeometryFile, {
+            'tile': '60x60 (fill gaps with knit stitches)',
+            'edge': '12-stitch checkered knit/purl to edges',
+            'eyelets': 'eyelets at centre and end of each edge (8 total)'
+        })
+        textures_from_db.append(texture)
 
     knitted = []
     weights = BatchMeasurements.empty()
     for texture in Parallel(textures_from_db):
-        CustomProgram.modify_design(texture, "tile", "60x60 (fill gaps with knit stitches)") # automatable or manual?
-        CustomProgram.modify_design(texture, "edge", "12-stitch checkered knit/purl to edges")
         single_knitted = KnittingMachine.knit(texture)
-        Human.post_process(single_knitted, "add eyelets to centre and end of each edge (8 eyelets)")
         knitted.append(single_knitted)
         weights += Scale.measure_weight(single_knitted)
     
@@ -55,13 +57,13 @@ def compare_knit_textures_from_dbs():
 
     for single_knitted in Parallel(knitted):
         Human.post_process(single_knitted, "lay on sandpaper")
-        photos += Camera.take_picture(single_knitted)
-        dims += Calipers.measure_size(single_knitted, "unstretched length")
+        photos += Camera.take_picture(single_knitted) # this is the one that went into the opacity measurement, automatic (black pixel count)
+        dims += Calipers.measure_size(single_knitted, "unstretched length") # early samples measured with photos, then automatically with a reference object
         dims += Calipers.measure_size(single_knitted, "unstreteched width")
-        Human.post_process(single_knitted, "hook onto the rig and load with 608g")
-        photos += Camera.take_picture(single_knitted) # was there a photo of it stretched? I'm not clear on where opacity results are
-        dims += Calipers.measure_size(single_knitted, "stretched length")
-        dims += Calipers.measure_size(single_knitted, "stretched width")
+        for dimension in Series(['length', 'width']): # no concern about being plastic, but they did the following steps in consistent order anyway
+            Human.post_process(single_knitted, f"hook onto the rig and load with 608g on {dimension}")
+            photos += Camera.take_picture(single_knitted)
+            dims += Calipers.measure_size(single_knitted, f"stretched {dimension}")
 
     summarize(dims.get_all_data())
     summarize(photos.get_all_data())
@@ -69,9 +71,9 @@ def compare_knit_textures_from_dbs():
 @fedt_experiment
 def crowdsource_knitcarve_comparison():
     textures = [GeometryFile(f) for f in ['knitpurl_large.knit', 'knitpurl_small.knit',
-                                        'twist_large.knit', 'twist_small.knit',
-                                        'cable_large.knit', 'cable_small.knit',
-                                        'lace_large.knit', 'lace_small.knit']]
+                                            'twist_large.knit', 'twist_small.knit',
+                                            'cable_large.knit', 'cable_small.knit',
+                                            'lace_large.knit', 'lace_small.knit']]
 
     base = {}
     carve = {}
@@ -96,11 +98,11 @@ def crowdsource_knitcarve_comparison():
     ratings = ImmediateMeasurements.empty()
     textures = list(base.keys())
     for worker in Parallel(arange(1,workerpool_size+include_last)):
-        carve_level = worker % 5 + 1
-        comparator = naive if worker % 2 else carve # do I understand assignments per this line and the one above it correctly?
+        carve_level = worker % 5 + 1 # to avoid them noticing the fabric is shrinking
+        comparator = naive if worker % 2 else carve
         for texture in Parallel(shuffle(textures)):
-            CustomProgram.showToCrowdworker(comparator[carve_level][texture], worker)
-            CustomProgram.showToCrowdworker(base[texture], worker)
+            for knit_object in shuffle([comparator[carve_level][texture], base[texture]]):
+                CustomProgram.showToCrowdworker(knit_object, worker)
             for aspect in Series(['skew','size','number of whole repetitions','stretch','opacity']):
                 ratings += Human.judge_something(comparator[carve_level][texture], "worker {} compare to {} based on {}".format(worker, base[texture], aspect))
             
