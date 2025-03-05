@@ -436,9 +436,18 @@ class SvgEditor(DesignSoftware):
         # TODO : this is actually building the object slightly wrong!
         stored_values = {}
         if explicit_args:
-            stored_values.update(explicit_args)
+            for key, arg in explicit_args.items():
+                if type(arg) == dict:
+                    stored_values.update(arg)
+                else:
+                    stored_values[key] = arg
         if kwargs:
-            stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
+            for key, arg in kwargs.items():
+                if type(arg) == dict:
+                    stored_values.update(arg)
+                else:
+                    stored_values[key] = arg
+            #stored_values.update(**kwargs) # they might have arguments that aren't laser arguments
 
         virtual_object = design(svg_fullpath, GeometryFile, stored_values)
 
