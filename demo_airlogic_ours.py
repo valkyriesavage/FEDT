@@ -22,7 +22,6 @@ def airflow_gatetypes():
 
     results = BatchMeasurements.empty()
     for stl in Parallel(all_widget_files):
-        print("i am going to try")
         fabbed_object = Printer.fab(GeometryFile(stl))
         for input_massflow in Series(['5e^-5','9.5e^-5','14e^-5','18.5e^-5']):
             instruction(f"set the air compressor to {input_massflow} and connect the object")
