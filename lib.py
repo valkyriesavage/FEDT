@@ -48,8 +48,6 @@ class Laser(ConfigSoftware, ToolpathSoftware, FabricationDevice):
 
     LASERVARS = [CUT_POWER,CUT_SPEED,CUT_FREQUENCY,MATERIAL,THICKNESS,FOCAL_HEIGHT_MM]
 
-    DEFAULT_CONFIG_FILE = ConfigurationFile('default')
-
     class SvgColor:
         RED = (255,0,0)
         GREEN = (0,255,0)

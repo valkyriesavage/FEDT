@@ -15,11 +15,13 @@ class VirtualWorldObject:
     metadata: dict[str, object]
     file_location: str
 
-    def __init__(self, file_location: str,  metadata: dict[str, object] = {}):
+    def __init__(self, file_location: str,  metadata: dict[str, object]|None = None):
         global CURRENT_UID
         self.uid = CURRENT_UID
         CURRENT_UID += 1
         self.file_location = file_location
+        if metadata is None:
+            metadata = dict()
         self.metadata = metadata
         self.version = 0
         note("this creates virtual object #{}{}".format(self.uid, " at {}".format(self.file_location) if self.file_location else ''))
@@ -48,7 +50,7 @@ class VirtualWorldObject:
 @dataclass
 class GeometryFile(VirtualWorldObject):
 
-    def __init__(self, file_location: str, features: dict[str,object]={}):
+    def __init__(self, file_location: str, features: dict[str,object]|None=None):
         super().__init__(file_location, features)
 
     def __hash__(self):
@@ -60,7 +62,7 @@ class GeometryFile(VirtualWorldObject):
 @dataclass
 class ConfigurationFile(VirtualWorldObject):
 
-    def __init__(self, file_location: str, features: dict[str,object]={}):
+    def __init__(self, file_location: str, features: dict[str,object]|None=None):
         super().__init__(file_location, features)
 
     def __hash__(self):
@@ -72,7 +74,7 @@ class ConfigurationFile(VirtualWorldObject):
 @dataclass
 class CAMFile(VirtualWorldObject):
 
-    def __init__(self, file_location: str, features: dict[str,object]={}):
+    def __init__(self, file_location: str, features: dict[str,object]|None=None):
         super().__init__(file_location, features)
 
     def __hash__(self):
@@ -88,7 +90,7 @@ def design(file_location: str,
     if instr:
         instruction(instr)
 
-    obj = filetype(file_location)
+    obj = filetype(file_location, {})
     obj.metadata.update(metadata)
 
     return obj

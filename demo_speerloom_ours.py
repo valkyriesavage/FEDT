@@ -241,7 +241,7 @@ def evaluate_cost_requirements():
     pass # not a digital fabrication experiment
 
 if __name__ == "__main__":
-    # render_flowchart(evaluate_weaving_quality)
-    # render_flowchart(evaluate_warping_efficiency)
+    render_flowchart(evaluate_weaving_quality)
+    render_flowchart(evaluate_warping_efficiency)
     render_flowchart(evaluate_weaving_efficiency)
     # render_flowchart(evaluate_cost_requirements)

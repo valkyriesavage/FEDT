@@ -19,7 +19,7 @@ def summarize(data):
 def test_print_shrinkage():
 
     cube = GeometryFile("expt_stls/cube.stl")
-
+ 
     shrinkage_measurements = BatchMeasurements.empty()
 
     for infill_pattern in Parallel(['honeycomb','triangles','grid']):
@@ -55,16 +55,6 @@ def test_force_at_break():
             instruction("place the object with 1cm overlapping a shelf at each end and the remainder suspended")
             instruction("place weights on the object until it breaks")
             breakage_points += Scale.measure_weight(fabbed_object,"total weight placed at break")
-            print("SVGs")
-            for svg in Series(svgs):
-                print(svg.metadata)
-
-    print("SVGs")
-    for svg in Series(svgs):
-        print(svg.metadata)
-    print("fabbedies")
-    for fabbed_object in Series(fabbed_objects):
-        print(fabbed_object.metadata['line_file'].metadata)
     
     summarize(breakage_points.get_all_data())
 
