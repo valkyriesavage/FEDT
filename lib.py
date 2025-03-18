@@ -431,7 +431,6 @@ class SvgEditor(DesignSoftware):
             svg_fullpath = os.path.join(svg_location, svg_fname)
             d.save_svg(svg_fullpath)
 
-        # TODO : this is actually building the object slightly wrong!
         stored_values = {}
         if explicit_args:
             for key, arg in explicit_args.items():
