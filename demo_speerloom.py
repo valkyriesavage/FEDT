@@ -49,6 +49,7 @@ class SPEERLoomGUI(DesignSoftware, ConfigSoftware, ToolpathSoftware):
 
 class SPEERLoom(FabricationDevice, metaclass=NameableDevice):
     uid = 'SPEERLOOM'
+    num_loom_threads = 40
     @staticmethod
     def configure(settings: dict[str, object]):
         instruction(f"configure SPEERLoom like {settings}")
@@ -73,6 +74,7 @@ class SPEERLoom(FabricationDevice, metaclass=NameableDevice):
     
 class TC2Loom(FabricationDevice, metaclass=NameableDevice):
     uid = 'TC2LOOM'
+    num_loom_threads = 440
     @staticmethod
     def configure(settings: dict[str, object]):
         instruction(f"configure loom like {settings}")
@@ -97,6 +99,7 @@ class TC2Loom(FabricationDevice, metaclass=NameableDevice):
 
 class Jacq3GLoom(FabricationDevice, metaclass=NameableDevice):
     uid = 'JACQ3GLOOM'
+    num_loom_threads = 120
     @staticmethod
     def configure(settings: dict[str, object]):
         instruction(f"configure loom like {settings}")
@@ -121,6 +124,7 @@ class Jacq3GLoom(FabricationDevice, metaclass=NameableDevice):
 
 class AlbaughLoom(FabricationDevice, metaclass=NameableDevice):
     uid = 'ALBAUGHLOOM'
+    num_loom_threads = 40
     @staticmethod
     def configure(settings: dict[str, object]):
         instruction(f"configure loom like {settings}")
@@ -145,6 +149,7 @@ class AlbaughLoom(FabricationDevice, metaclass=NameableDevice):
 
 class AshfordLoom(FabricationDevice, metaclass=NameableDevice):
     uid = 'ASHFORDLOOM'
+    num_loom_threads = 320
     @staticmethod
     def configure(settings: dict[str, object]):
         instruction(f"configure loom like {settings}")
@@ -170,55 +175,61 @@ class AshfordLoom(FabricationDevice, metaclass=NameableDevice):
 class Tensiometer:
     tension = Measurement(
         name="tension",
-        description="The tension of a particular yarn.",
+        description="The tension of a particular yarn at a location.",
         procedure="""
             Insert the yarn to be measured into the device, read the display.
             """,
         units="grams",
-        feature="final stage")
+        feature="final stage yarn 0")
 
     @staticmethod
-    def measure_tension(obj: RealWorldObject, feature: str=tension.feature) -> BatchMeasurements:
-        instruction(f"Measure object #{obj.uid}.", header=True)
+    def measure_tension(obj: RealWorldObject, feature: str=tension.feature, yarn: int='1') -> BatchMeasurements:
+        instruction(f"Measure object #{obj.uid}, {feature}, yarn {yarn}.", header=True)
         instruction(Tensiometer.tension.procedure)
-        return BatchMeasurements.single(obj, Tensiometer.tension.set_feature(feature))
+        return BatchMeasurements.single(obj, Tensiometer.tension.set_feature(f"{feature}, yarn {yarn}"))
 
 
 @fedt_experiment
 def evaluate_weaving_quality():
-    pattern = GeometryFile('plainweave.csv') # plainweave. there were a few custom patterns, especially for Jacq3g. a custom pattern they made.
-    all_objects = [] # a 12-weave pattern also on the Jacq3g. plainweave, overshot pattern.
+    pattern = GeometryFile('plainweave.csv')
+    all_objects = []
 
     # tension
     u1_tensions = BatchMeasurements.empty()
     u2_tensions = BatchMeasurements.empty()
     for loom in Parallel([SPEERLoom, AshfordLoom]):
-        woven = loom.fab(pattern)
-        all_objects.append(woven)
-        # and they also experimented with the different compression levels of the spring
-        # moving it by .1mm over about 1mm
-        for N in Series(arange(0, 1+include_last, .1)): # what values can N (spring force) take? is this series or parallel?
-            Human.post_process(woven, f"set N to {N}") # testing coefficient of friction on tensioning discs being used
-            for stage in Series(["T1", "T2"]): # did theoretical calculations, and measured each thread by hand and compared to theory
-                u1_tensions += Tensiometer.measure_tension(woven, f"stage {stage}")
-        for T2 in Series(range(10)): # what values did T2 take? is this series or parallel?
-            Human.post_process(woven, f"set T2 to {T2}") # 
-            u2_tensions += Tensiometer.measure_tension(woven, f"stage T3")
-            # final results come in the cloth that has been woven
-            # as soon as the warp is tied on, the tensiometer can be used
-            # so there were different weights on the yarn, and that was what was varied
-            # up until the point of slip -> this is a while loop
+        for N in Series(arange(0, 1+include_last, .1)): # could be Parallel, but easier in Series
+            loom.configure({"N": N})
+            woven = loom.fab(pattern)
+            all_objects.append(woven)
+            for woven_thread in Parallel(range(0,loom.num_loom_threads)):
+                for stage in Series(["T1", "T2"]):
+                    u1_tensions += Tensiometer.measure_tension(woven, f"stage {stage}", woven_thread)
+
+        T2 = 100 # <- my best guess?
+        loom.configure({"T2": T2})
+        slipped = False
+        while not slipped:
+            woven = loom.fab(pattern)
+            for woven_thread in Parallel(range(0,loom.num_loom_threads)):
+                u2_tensions += Tensiometer.measure_tension(woven, f"stage T3", woven_thread)
+            T2 += 10 # <- also a guess?
+            loom.configure({"T2": T2})
+            slipped = (Human.do_and_respond("adjust the weights", "did the thread slip?") == 'yes')
     
     summarize(u1_tensions.get_all_data())
     summarize(u2_tensions.get_all_data())
 
     # warp yarns and EPI
+    quality_patterns = [pattern, GeometryFile('custompattern.csv'), GeometryFile('overshot.csv'), GeometryFile('12weave.csv')]
     quality = BatchMeasurements.empty()
-    for loom in Parallel([SPEERLoom, Jacq3GLoom, AlbaughLoom, AshfordLoom, TC2Loom]):
-        woven = loom.fab(pattern)
-        all_objects.append(woven)
-        quality += Human.judge_something(woven, "number of warp yarns")
-        quality += Human.judge_something(woven, "ends per inch")
+    for pattern in Parallel(quality_patterns):
+        for loom in Parallel([SPEERLoom, Jacq3GLoom, AlbaughLoom, AshfordLoom, TC2Loom]):
+            woven = loom.fab(pattern)
+            all_objects.append(woven)
+            quality += Human.judge_something(woven, "number of warp yarns")
+            quality += Human.judge_something(woven, "ends per inch")
+            # in some cases, these judgements came from images of fabricated objects instead of making them locally
 
     summarize(quality.get_all_data())
 
@@ -226,21 +237,14 @@ def evaluate_weaving_quality():
 def evaluate_warping_efficiency():
     timings = ImmediateMeasurements.empty()
     for loom in Parallel([SPEERLoom, Jacq3GLoom, AlbaughLoom, AshfordLoom, TC2Loom]):
-        if loom == TC2Loom:
-            timings += Human.judge_something(loom, "how long it takes to set up")
-        else:
-            timings += Stopwatch.measure_time(loom, "set up warps")
-            # want to make sure different people do this
-            # it takes 10-20 hours, so she asked people who were going to do it how long it took
-            # sort of a convenience thing
-            # sometimes in teams!
+        timings += Human.judge_something(loom, "how long it takes to set up")
+        # normally, a Stopwatch would do this, but they asked people to time themselves when
+        # convenient, so I have encoded it as a judgement
     summarize(timings.get_all_data())
 
 @fedt_experiment
 def evaluate_weaving_efficiency():
-    pattern = GeometryFile("plainweave.csv") # how many patterns? does shedding time depend on pattern?
-    # in serial actuation, it's faster to actuate less warp yarns
-    # this was a worst case scenario (50% of yarns being raised)
+    pattern = GeometryFile("plainweave.csv") # worst case scenario for shedding time
     timings = BatchMeasurements.empty()
     for loom in Parallel([SPEERLoom, Jacq3GLoom, AlbaughLoom, AshfordLoom, TC2Loom]):
         physical_object = loom.fab(pattern)
