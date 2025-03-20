@@ -186,8 +186,8 @@ class Tensiometer:
 
 @fedt_experiment
 def evaluate_weaving_quality():
-    pattern = GeometryFile('basicpattern.csv') # how many patterns?
-    all_objects = []
+    pattern = GeometryFile('plainweave.csv') # plainweave. there were a few custom patterns, especially for Jacq3g. a custom pattern they made.
+    all_objects = [] # a 12-weave pattern also on the Jacq3g. plainweave, overshot pattern.
 
     # tension
     u1_tensions = BatchMeasurements.empty()
@@ -195,13 +195,19 @@ def evaluate_weaving_quality():
     for loom in Parallel([SPEERLoom, AshfordLoom]):
         woven = loom.fab(pattern)
         all_objects.append(woven)
-        for N in Series(range(10)): # what values can N (spring force) take? is this series or parallel?
-            Human.post_process(woven, f"set N to {N}")
-            for stage in Series(["T1", "T2"]):
+        # and they also experimented with the different compression levels of the spring
+        # moving it by .1mm over about 1mm
+        for N in Series(arange(0, 1+include_last, .1)): # what values can N (spring force) take? is this series or parallel?
+            Human.post_process(woven, f"set N to {N}") # testing coefficient of friction on tensioning discs being used
+            for stage in Series(["T1", "T2"]): # did theoretical calculations, and measured each thread by hand and compared to theory
                 u1_tensions += Tensiometer.measure_tension(woven, f"stage {stage}")
         for T2 in Series(range(10)): # what values did T2 take? is this series or parallel?
-            Human.post_process(woven, f"set T2 to {T2}")
+            Human.post_process(woven, f"set T2 to {T2}") # 
             u2_tensions += Tensiometer.measure_tension(woven, f"stage T3")
+            # final results come in the cloth that has been woven
+            # as soon as the warp is tied on, the tensiometer can be used
+            # so there were different weights on the yarn, and that was what was varied
+            # up until the point of slip -> this is a while loop
     
     summarize(u1_tensions.get_all_data())
     summarize(u2_tensions.get_all_data())
@@ -224,11 +230,17 @@ def evaluate_warping_efficiency():
             timings += Human.judge_something(loom, "how long it takes to set up")
         else:
             timings += Stopwatch.measure_time(loom, "set up warps")
+            # want to make sure different people do this
+            # it takes 10-20 hours, so she asked people who were going to do it how long it took
+            # sort of a convenience thing
+            # sometimes in teams!
     summarize(timings.get_all_data())
 
 @fedt_experiment
 def evaluate_weaving_efficiency():
-    pattern = GeometryFile("basicpattern.csv") # how many patterns? does shedding time depend on pattern?
+    pattern = GeometryFile("plainweave.csv") # how many patterns? does shedding time depend on pattern?
+    # in serial actuation, it's faster to actuate less warp yarns
+    # this was a worst case scenario (50% of yarns being raised)
     timings = BatchMeasurements.empty()
     for loom in Parallel([SPEERLoom, Jacq3GLoom, AlbaughLoom, AshfordLoom, TC2Loom]):
         physical_object = loom.fab(pattern)

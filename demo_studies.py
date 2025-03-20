@@ -105,11 +105,11 @@ if __name__ == "__main__":
     # render_flowchart(test_force_at_break)
 
     # run an experiment
-    from control import MODE, Execute
-    control.MODE = Execute()
-    test_force_at_break()
+    # from control import MODE, Execute
+    # control.MODE = Execute()
+    # test_force_at_break()
     # test_print_shrinkage()
 
     # other sample flowcharts
     # render_flowchart(test_paint_layers)
-    # render_flowchart(test_user_assembly_time)
+    render_flowchart(test_user_assembly_time)
