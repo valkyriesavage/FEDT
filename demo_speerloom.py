@@ -206,14 +206,14 @@ def evaluate_weaving_quality():
                 for stage in Series(["T1", "T2"]):
                     u1_tensions += Tensiometer.measure_tension(woven, f"stage {stage}", woven_thread)
 
-        T2 = 100 # <- my best guess?
+        T2 = 75 # g of tension, added with weights
         loom.configure({"T2": T2})
         slipped = False
         while not slipped:
             woven = loom.fab(pattern)
             for woven_thread in Parallel(range(0,loom.num_loom_threads)):
                 u2_tensions += Tensiometer.measure_tension(woven, f"stage T3", woven_thread)
-            T2 += 10 # <- also a guess?
+            T2 += 5
             loom.configure({"T2": T2})
             slipped = (Human.do_and_respond("adjust the weights", "did the thread slip?") == 'yes')
     

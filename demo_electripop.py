@@ -126,21 +126,34 @@ def fabrication_time_demo():
     elapsed_times += Stopwatch.measure_time(snowman, "fabricate on the laser")
     summarize(elapsed_times.get_all_data())
 
+SNOWMAN = None
+ROSE = None
+TREE = None
+def get_objects():
+    global SNOWMAN, ROSE, TREE
+    
+    if SNOWMAN == None or Human.do_and_respond("check if snowman is broken", "is it broken?") == 'yes':
+        SNOWMAN = Laser.fab(GeometryFile("snowman.svg"))
+    if ROSE == None or Human.do_and_respond("check if rose is broken", "is it broken?") == 'yes':
+        ROSE = Laser.fab(GeometryFile("rose.svg"))
+    if TREE == None or Human.do_and_respond("check if tree is broken", "is it broken?") == 'yes':
+        TREE = Laser.fab(GeometryFile("christmastree.svg"))
+        
+    return [SNOWMAN, ROSE, TREE]
+
 @fedt_experiment
 def geometric_accuracy():
 
-    test_files = [GeometryFile(fname) for fname in ['rose.svg', 'snowman.svg', 'christmas_tree.svg']]
-    # the same cut objects were used until they broke and had to be re-cut. not possible to encode currently.
+    test_objects = get_objects()
 
     ground_truths = BatchMeasurements.empty()
     simmed = BatchMeasurements.empty()
 
-    for f in Parallel(test_files):
-        fabbed_object = Laser.fab(f, default_settings=electripop_laser_defaults) # done on lasercutter
+    for fabbed_object in Parallel(test_objects):
         instruction("inflate the object")
         ground_truths += ManualGeometryScanner.scan(fabbed_object)
         for sim_repetition in Parallel(range(100)):
-            sim = VirtualWorldObject('file.sim', {'file': CustomSimulator.runsimulation(f), 'repetition': sim_repetition})
+            sim = VirtualWorldObject('file.sim', {'file': CustomSimulator.runsimulation(fabbed_object.metadata['line_file']), 'repetition': sim_repetition})
             simmed += ManualGeometryScanner.scan(sim)
             simmed += Stopwatch.measure_time(sim, "converge simulation")
         
