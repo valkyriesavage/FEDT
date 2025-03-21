@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 import inspect
 from typing import Literal, Union
+from xml.sax.saxutils import escape
 
 LATEX_DETAILS = 'latex_details'
 SUBJECT = 'subject'
@@ -56,7 +57,7 @@ class Instr(Node):
                 self.latexable[SUBJECT] = self.latexable[SUBJECT].describe()
 
     def toXML(self) -> str:
-        return f"<instruction>{self.instr}</instruction>"
+        return f"<instruction>{escape(self.instr)}</instruction>"
 
     def toLatex(self) -> str:
         if hasattr(self,"latexable"):
@@ -75,7 +76,7 @@ class Note(Node):
                 self.latexable[SUBJECT] = self.latexable[SUBJECT].describe()
 
     def toXML(self) -> str:
-        return f"<note>{self.instr}</note>"
+        return f"<note>{escape(self.instr)}</note>"
 
     def toLatex(self) -> str:
         if hasattr(self,"latexable"):
@@ -88,7 +89,7 @@ class Header(Node):
     header: str
 
     def toXML(self) -> str:
-        return f"<header>{self.header}</header>"
+        return f"<header>{escape(self.header)}</header>"
 
     def toLatex(self) -> str:
         return ''
@@ -130,7 +131,7 @@ class Infinite(Node):
     nodes: list[Node]
 
     def toXML(self) -> str:
-        return f"<loop condition=\"{self.cond}\">{''.join(map(lambda x: f'<loop-item>{x.toXML()}</loop-item>', self.nodes))}</loop>"
+        return f"<loop condition=\"{escape(self.cond)}\">{''.join(map(lambda x: f'<loop-item>{x.toXML()}</loop-item>', self.nodes))}</loop>"
 
     def toLatex(self) -> str:
         return f"Until the condition was met, we tested {' '.join([x.toLatex() for x in self.nodes])}"

@@ -209,7 +209,7 @@ def evaluate_weaving_quality():
         T2 = 75 # g of tension, added with weights
         loom.configure({"T2": T2})
         slipped = False
-        while not slipped:
+        while not slipped and T2 <= 200:
             woven = loom.fab(pattern)
             for woven_thread in Parallel(range(0,loom.num_loom_threads)):
                 u2_tensions += Tensiometer.measure_tension(woven, f"stage T3", woven_thread)
