@@ -13,7 +13,7 @@ Execute mode is triggered with `control.MODE = Execute()`.
 
 ## dependencies
 
-PIL (for flowchart visualization)
-graphviz (for flowchart visualization)
-drawsvg (for doing svg authoring, only if you use those modules)
-freecad (for doing stl authoring, only if you use those modules)
+* PIL (for flowchart visualization)
+* graphviz (for flowchart visualization)
+* drawsvg (for doing svg authoring, only if you use those modules)
+* freecad (for doing stl authoring, only if you use those modules)
